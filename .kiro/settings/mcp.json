@@ -5,7 +5,7 @@
       "args": [
         "mcp-server-git",
         "--repository",
-        "/Users/kobayashi-tak/workspace/ai-coding/aws-exam-agent"
+        "/Users/kobayashi-tak/workspace/aws-exam-agent"
       ],
       "env": {},
       "disabled": false,
