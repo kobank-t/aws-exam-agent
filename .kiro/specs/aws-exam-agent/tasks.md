@@ -11,6 +11,13 @@
 - **統合重視**: 各コンポーネントを段階的に統合
 - **品質確保**: 各段階でのテスト実行と品質チェック
 
+## 現在の状況
+
+- **完了済み**: 要件定義、設計書（9 ファイル分割）、コーディング規約
+- **現在フェーズ**: 実装フェーズ開始準備完了
+- **コードベース**: 未実装（README.md、WORK_LOG.md、設計書のみ存在）
+- **次回開始**: タスク 1（Python 開発環境セットアップ）から実装開始
+
 ## タスクリスト
 
 ### Phase 1: 環境セットアップ
@@ -19,7 +26,7 @@
 
   - プロジェクト構造の作成（app/配下集約）
   - uv 環境と pyproject.toml の設定
-  - 依存関係の定義（boto3、pydantic、pytest 等）
+  - 依存関係の定義（boto3、pydantic、pytest、moto 等）
   - 開発ツール設定（Ruff、pre-commit、VS Code 設定）
   - 基本的なディレクトリ構造とファイル作成
   - _Requirements: 全体の基盤_
@@ -33,12 +40,14 @@
   - AWS 認証情報とリージョン設定の確認
   - _Requirements: AWS インフラ基盤_
 
-- [ ] 3. TypeScript/E2E テスト環境のセットアップ
-  - Playwright 環境の構築
+- [ ] 3. テスト環境のセットアップ
+  - pytest 環境の構築
+  - moto（AWS モック）の設定
+  - Playwright E2E テスト環境の構築
   - TypeScript コーディング規約の適用
-  - E2E テスト用ディレクトリ構造の作成
+  - 単体テスト・統合テスト・E2E テスト用ディレクトリ構造の作成
   - 基本的なテスト設定ファイルの作成
-  - _Requirements: E2E テスト基盤_
+  - _Requirements: テスト基盤_
 
 ### Phase 2: データ基盤とコア機能
 
@@ -268,8 +277,8 @@ dev-dependencies = [
 
 ### コーディング規約の遵守
 
-- [Python コーディング規約](../../steering/python-coding-standards.md) に従った実装
-- [TypeScript コーディング規約](../../steering/typescript-coding-standards.md) に従った E2E テスト実装
+- [Python コーディング規約](../../steering/python-coding-standards.md)に従った実装
+- [TypeScript コーディング規約](../../steering/typescript-coding-standards.md)に従った E2E テスト実装
 
 ### テスト戦略
 
