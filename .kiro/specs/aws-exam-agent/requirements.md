@@ -2,7 +2,7 @@
 
 ## Introduction
 
-AWS Exam Coach は、AI エージェントによる自動問題生成を核とした組織内コラボレーション学習プラットフォームの MVP（Minimum Viable Product）です。200 名のエンジニア組織において、AWS Certified Solutions Architect - Professional の学習を通じてコミュニケーション活性化とスキルトランスファーを促進します。
+AWS Exam Agent は、Strands Agents フレームワークと AWS Bedrock AgentCore を活用した AI エージェントによる自動問題生成を核とした組織内コラボレーション学習プラットフォームの MVP（Minimum Viable Product）です。200 名のエンジニア組織において、AWS Certified Solutions Architect - Professional の学習を通じてコミュニケーション活性化とスキルトランスファーを促進します。
 
 **主要目的:**
 
@@ -12,8 +12,16 @@ AWS Exam Coach は、AI エージェントによる自動問題生成を核と�
 
 **対象組織:** エンジニア中心の 200 名組織
 **利用環境:** 社内、会社支給 PC・iPhone、Microsoft Teams チャネル
-**技術方式:** Power Automate + HTTP リクエスト + Teams リアクション
+**技術方式:** AgentCore Runtime + API Gateway + Power Automate + HTTP リクエスト + Teams リアクション
 **戦略:** 段階的リリースでフィードバック収集、注目集まったら専用画面開発
+
+**AI エージェント基盤:**
+
+- **フレームワーク**: Strands Agents (AWS 製オープンソース)
+- **実行環境**: AWS Bedrock AgentCore Runtime (Preview) + API Gateway ハイブリッド構成
+- **MCP 統合**: Model Context Protocol による標準化されたコンテキスト提供
+- **マルチエージェント**: Agent-as-Tools パターンによる専門エージェント連携
+- **外部連携**: API Gateway + Lambda による Power Automate・スケジュール連携
 
 **MVP 情報源:** AWS 公式ドキュメント、Solutions Architect - Professional 試験ガイド
 **将来拡張予定:** FAQ、What's New、Well-Architected Framework、ベストプラクティスガイド、他の AWS 認定資格への対応
@@ -46,28 +54,30 @@ AWS Exam Coach は、AI エージェントによる自動問題生成を核と�
 
 ### Requirement 3
 
-**User Story:** As a システム管理者, I want AI エージェントが自動的に試験問題を生成する機能, so that 常に最新で質の高い練習問題を学習者に提供することができる
+**User Story:** As a システム管理者, I want Strands Agents フレームワークによるマルチエージェントシステムが自動的に試験問題を生成する機能, so that 常に最新で質の高い練習問題を学習者に提供することができる
 
 #### Acceptance Criteria
 
-1. WHEN システムが問題生成を開始する THEN AI エージェント SHALL AWS 公式ドキュメントおよび Solutions Architect - Professional 試験ガイドから関連する最新情報を取得する
-2. WHEN AI エージェントが情報を取得する THEN システム SHALL 取得した情報を基に実際のビジネスシナリオを想定した複雑な問題文を生成する
-3. WHEN AI エージェントが問題文を生成する THEN システム SHALL 1 つの正解と 3 つの説得力のある不正解選択肢を生成する
-4. WHEN AI エージェントが選択肢を生成する THEN システム SHALL 各選択肢が Professional レベルの知識を要求する内容であることを確認する
-5. WHEN AI エージェントが問題を完成させる THEN システム SHALL 正解の詳細な理由、不正解選択肢の具体的な問題点、関連する AWS サービスの説明を含む包括的な解説を生成する
-6. IF 生成された問題が品質基準を満たす THEN システム SHALL 問題をデータベースに保存し、学習者に提供する
-7. IF 生成された問題が品質基準を満たさない THEN システム SHALL 問題を破棄し、再生成を試行する
+1. WHEN システムが問題生成を開始する THEN 監督者エージェント SHALL Agent-as-Tools パターンで専門エージェントを呼び出す
+2. WHEN AWS 情報取得エージェントが呼び出される THEN システム SHALL MCP (Model Context Protocol) を通じて AWS Documentation MCP Server および AWS Knowledge MCP Server から最新情報を取得する
+3. WHEN 問題生成エージェントが呼び出される THEN システム SHALL 取得した情報を基に実際のビジネスシナリオを想定した複雑な問題文を生成する
+4. WHEN 問題生成エージェントが選択肢を生成する THEN システム SHALL 1 つの正解と 3 つの説得力のある不正解選択肢を Professional レベルで生成する
+5. WHEN 品質管理エージェントが呼び出される THEN システム SHALL 生成された問題の技術的正確性と適切な難易度を検証する
+6. WHEN エージェント間の連携が発生する THEN システム SHALL ストリーミング対応により各エージェントの処理状況をリアルタイムで監視する
+7. IF 生成された問題が品質基準を満たす THEN システム SHALL 問題をデータベースに保存し、学習者に提供する
+8. IF 生成された問題が品質基準を満たさない THEN システム SHALL 問題を破棄し、再生成を試行する
 
 ### Requirement 4
 
-**User Story:** As a システム管理者, I want AI エージェントが特定の AWS サービスやトピックに基づいて問題を生成できる機能, so that 体系的で網羅的な学習コンテンツを提供することができる
+**User Story:** As a システム管理者, I want MCP 統合により特定の AWS サービスやトピックに基づいて問題を生成できる機能, so that 体系的で網羅的な学習コンテンツを提供することができる
 
 #### Acceptance Criteria
 
 1. WHEN システム管理者が問題生成を指示する THEN システム SHALL 特定の AWS サービス（EC2、S3、VPC 等）またはトピック（セキュリティ、コスト最適化等）を指定できる
-2. WHEN 特定のサービスが指定される THEN AI エージェント SHALL そのサービスの高度な機能、制限事項、ベストプラクティスに焦点を当てた問題を生成する
-3. WHEN 特定のトピックが指定される THEN AI エージェント SHALL そのトピックに関連する複数の AWS サービスを組み合わせた統合的な問題を生成する
-4. IF 指定されたサービスまたはトピックの情報が不足している THEN システム SHALL AWS 公式ドキュメントおよび試験ガイドから追加情報を自動取得する
+2. WHEN 特定のサービスが指定される THEN AWS 情報取得エージェント SHALL MCP Server を通じてそのサービスの高度な機能、制限事項、ベストプラクティスに関する最新情報を取得する
+3. WHEN 特定のトピックが指定される THEN システム SHALL そのトピックに関連する複数の AWS サービスを組み合わせた統合的な問題を生成する
+4. IF 指定されたサービスまたはトピックの情報が不足している THEN システム SHALL MCP Client を通じて AWS Documentation MCP Server から追加情報を自動取得する
+5. WHEN MCP Server との通信が発生する THEN システム SHALL uvx コマンドによる標準化されたサーバー起動方式を使用する
 
 ### Requirement 5
 
@@ -84,11 +94,12 @@ AWS Exam Coach は、AI エージェントによる自動問題生成を核と�
 
 ### Requirement 6
 
-**User Story:** As a システム管理者, I want 定期的に新しい問題を配信できる機能, so that 継続的な学習機会を組織に提供できる
+**User Story:** As a システム管理者, I want AgentCore Runtime 上で動作するエージェントが定期的に新しい問題を配信できる機能, so that 継続的な学習機会を組織に提供できる
 
 #### Acceptance Criteria
 
-1. WHEN システム管理者が配信スケジュールを設定する THEN システム SHALL 指定された時間に自動的に新しい問題を Teams チャネルに投稿する
+1. WHEN システム管理者が配信スケジュールを設定する THEN システム SHALL EventBridge スケジュールから AgentCore Runtime を呼び出して自動的に新しい問題を Teams チャネルに投稿する
 2. WHEN 新しい問題が投稿される THEN システム SHALL 前回の問題の参加状況（参加者数、正答率等）を簡潔に表示する
-3. WHEN 問題配信が完了する THEN システム SHALL 配信ログを記録し、参加状況を分析できるデータを蓄積する
-4. IF 配信エラーが発生する THEN システム SHALL エラー内容をログに記録し、管理者に通知する
+3. WHEN 問題配信が完了する THEN システム SHALL AgentCore のオブザーバビリティ機能により配信ログを記録し、参加状況を分析できるデータを蓄積する
+4. WHEN エージェント処理中にエラーが発生する THEN システム SHALL CloudWatch Logs および AgentCore トレース機能によりエラー内容を記録し、管理者に通知する
+5. IF Bedrock の分間クォータに達する THEN システム SHALL 複数のモデル（Claude Opus 4、Claude Sonnet 4、Claude 3.7 Sonnet、Claude 3 Haiku）を使い分けてリトライを実行する

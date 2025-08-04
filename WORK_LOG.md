@@ -172,16 +172,20 @@
 
 - **完了フェーズ**: Spec 作成ワークフロー（要件定義・設計・タスクリスト）
 - **現在フェーズ**: 実装フェーズ開始準備完了
+- **現在の作業**: タスクリスト・設計書の最終確認とセッション継続性保存
 - **次回開始タスク**: タスク 1「Python 開発環境のセットアップ」
-- **セッション状況**: 作業記録の継続性確保・次回セッション準備完了
-- **中断理由**: セッション継続性保存（作業区切り・次回セッション準備）
+- **セッション状況**: 設計書レビュー完了・実装開始準備完了
+- **中断理由**: セッション継続性保存（実装フェーズ開始前の作業区切り）
 
 ### 次回セッション開始時のアクション
 
-1. **タスクリスト確認**: `.kiro/specs/aws-exam-agent/tasks.md` でタスク 1 の詳細確認
-2. **実装開始**: Python 開発環境セットアップから TDD アプローチで開始
-3. **設計書参照**: 必要に応じて `.kiro/specs/aws-exam-agent/design/` の関連設計書を参照
-4. **継続性維持**: この WORK_LOG.md で前回作業内容を確認してから開始
+1. **作業記録確認**: この WORK_LOG.md で前回作業内容を確認
+2. **タスク 1 開始**: `.kiro/specs/aws-exam-agent/tasks.md` のタスク 1「Python 開発環境のセットアップ」を実行
+   - プロジェクト構造の作成（AgentCore 中心設計）
+   - uv 環境と pyproject.toml の設定
+   - 依存関係の定義（strands-agents、bedrock-agentcore、pytest、moto 等）
+3. **設計書参照**: 実装時は `.kiro/specs/aws-exam-agent/design/02-architecture.md` を参照
+4. **TDD アプローチ**: テスト駆動開発で段階的実装開始
 
 ### 重要な技術的コンテキスト
 
@@ -216,10 +220,11 @@ aws-exam-agent/
 #### 次回セッションで読むべき重要情報
 
 - **タスク 1 詳細**: `.kiro/specs/aws-exam-agent/tasks.md` の「1. Python 開発環境のセットアップ」
+- **プロジェクト構成**: `.kiro/specs/aws-exam-agent/design/02-architecture.md` の「プロジェクト構成（AgentCore 中心設計）」
 - **Python コーディング規約**: `.kiro/steering/python-coding-standards.md`
-- **アーキテクチャ設計**: `.kiro/specs/aws-exam-agent/design/02-architecture.md`
+- **デプロイ設計**: `.kiro/specs/aws-exam-agent/design/06-deployment.md` の AgentCore デプロイ戦略
 
 ---
 
 **作業者**: kobank-t  
-**最終更新**: 2025 年 8 月 4 日（セッション継続性保存・実装フェーズ準備完了）
+**最終更新**: 2025 年 8 月 4 日（セッション継続性保存・実装フェーズ開始準備完了）

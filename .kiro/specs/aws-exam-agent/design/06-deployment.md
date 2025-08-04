@@ -45,7 +45,7 @@ app/agent/
 
 **主要設定項目:**
 
-- **LLM モデル**: Claude 4 Sonnet (anthropic.claude-4-sonnet-20250522-v1:0)
+- **LLM モデル**: Claude Sonnet 4 (anthropic.claude-sonnet-4-20250514-v1:0)
 - **デフォルト値**: サービス=EC2、トピック=VPC
 - **出力形式**: 構造化 JSON（問題文、選択肢、正解、解説）
 - **環境変数**: DynamoDB テーブル名、AgentCore Runtime ARN
@@ -77,30 +77,30 @@ echo "✅ Agent deployment completed!"
 # 3. プロジェクトルートに戻る
 cd ../..
 
-# 4. SAM デプロイ
-echo "🚀 Deploying Lambda function..."
+# 4. 補助インフラ SAM デプロイ（API Gateway + Lambda）
+echo "🚀 Deploying API Gateway and Lambda..."
 cd infrastructure/
 sam build
 sam deploy --no-confirm-changeset --no-fail-on-empty-changeset \
-  --stack-name aws-exam-coach \
+  --stack-name aws-exam-agent-api \
   --s3-bucket ${AWS_SAM_DEPLOYMENT_BUCKET} \
   --capabilities CAPABILITY_IAM \
   --parameter-overrides \
-    BedrockAgentId=${BEDROCK_AGENT_ID} \
     AgentRuntimeArn=${AGENT_RUNTIME_ARN} \
     ApiKeyValue=${API_KEY}
 
-echo "✅ Full deployment completed!"
+echo "✅ Hybrid deployment completed!"
 ```
 
 #### 4. Lambda 統合設計（app/lambda/lambda_function.py）
 
-**Lambda 関数の責務:**
+**Lambda 関数の責務（外部連携専用）:**
 
 - **リクエスト解析**: API Gateway / EventBridge からの入力処理
-- **AgentCore 呼び出し**: Bedrock AgentCore Runtime との統合
-- **レスポンス処理**: 生成結果の構造化・返却
+- **AgentCore 呼び出し**: Bedrock AgentCore Runtime への問題生成依頼
+- **レスポンス処理**: AgentCore からの結果受信・構造化
 - **Teams 配信**: Power Automate 経由での問題配信
+- **エラーハンドリング**: AgentCore 呼び出し失敗時の処理
 
 **処理フロー:**
 
@@ -225,7 +225,7 @@ curl -X POST "https://api.example.com/generate" \
 
 ```mermaid
 graph LR
-    A[Teams メンバー] --> B[@AWS-Coach 問題生成]
+    A[Teams メンバー] --> B["@AWS-Coach 問題生成"]
     B --> C[Power Automate<br/>キーワード検知]
     C --> D[権限チェック]
     D --> E[HTTP API呼び出し]

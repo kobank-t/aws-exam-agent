@@ -1,44 +1,52 @@
 # AI 問題生成エンジン詳細設計
 
-## システム構成 (Bedrock AgentCore + Strands Agents)
+## システム構成 (AgentCore Runtime + Strands Agents マルチエージェント)
 
 ```mermaid
 graph TB
-    subgraph "API Layer"
-        A[API Gateway] --> B[Lambda Function]
-        C[EventBridge Schedule] --> B
+    subgraph "トリガー層"
+        A[EventBridge Schedule] --> B[AgentCore Runtime]
+        C[API Gateway] --> D[Lambda Function]
+        D --> B
     end
 
     subgraph "AWS Bedrock AgentCore Runtime"
-        B --> D[Strands Agent]
-        D --> E[問題生成エージェント]
-        D --> F[品質管理エージェント]
-        D --> G[情報取得エージェント]
+        B --> E[監督者エージェント<br/>Strands Agent]
 
-        E --> H[Amazon Bedrock<br/>Claude 4 Sonnet]
-        F --> I[品質検証ツール]
-        G --> J[MCP Client]
+        E --> F[@tool AWS情報取得エージェント]
+        E --> G[@tool 問題生成エージェント]
+        E --> H[@tool 品質管理エージェント]
 
-        K[AgentCore Memory] --> D
-        L[AgentCore Identity] --> D
+        F --> I[MCP Client<br/>AWS Docs/Knowledge]
+        G --> J[Amazon Bedrock<br/>Claude 3.5 Sonnet/Haiku]
+        H --> K[品質検証ツール]
+
+        L[AgentCore Memory] --> E
+        M[AgentCore オブザーバビリティ] --> E
+        N[ストリーミング処理] --> E
+    end
+
+    subgraph "MCP Server 層"
+        O[AWS Documentation MCP<br/>uvx awslabs.aws-documentation-mcp-server]
+        P[AWS Knowledge MCP<br/>uvx awslabs.aws-knowledge-mcp-server]
     end
 
     subgraph "データ・キャッシュ層"
-        M[DynamoDB]
-        N[DynamoDB Cache]
+        Q[DynamoDB]
+        R[DynamoDB Cache]
     end
 
-    subgraph "外部システム・プロトコル"
-        O[AWS Documentation MCP]
-        P[AWS Knowledge MCP]
-        Q[Power Automate]
+    subgraph "外部システム"
+        S[Power Automate]
+        T[Teams チャネル]
     end
 
-    D --> M
-    D --> N
-    J --> O
-    J --> P
-    B --> Q
+    I --> O
+    I --> P
+    E --> Q
+    E --> R
+    B --> S
+    S --> T
 ```
 
 ## 詳細シーケンス図
@@ -99,39 +107,66 @@ sequenceDiagram
 
 ## コンポーネント詳細設計
 
-### 1. Strands Agents ベース問題生成エージェント
+### 1. マルチエージェント構成 (Agent-as-Tools パターン)
 
-#### エージェント構成
+#### 監督者エージェント
 
 - **エージェントフレームワーク**: Strands Agents
-- **LLM プロバイダー**: Amazon Bedrock (Claude 4 Sonnet)
+- **LLM プロバイダー**: Amazon Bedrock (Claude Opus 4)
 - **メモリ管理**: AgentCore Memory (短期・長期記憶)
-- **情報取得ツール**: MCP 統合による外部情報アクセス
+- **役割**: 専門エージェントの統合・調整・最終品質確認
+- **ハイブリッド推論**: 即時応答モード + 拡張思考モード
 
-#### 情報取得ツール設計
+#### AWS 情報取得エージェント (@tool)
 
-- **AWS 公式ドキュメントツール**: MCP Server 経由でサービス別ドキュメント取得
-- **試験ガイドツール**: 出題範囲・重要トピック情報取得
-- **キャッシュ戦略**: 24 時間キャッシュによる効率的な情報取得
+- **LLM**: Claude 3 Haiku (高速処理)
+- **MCP 統合**: AWS Documentation MCP Server, AWS Knowledge MCP Server
+- **役割**: AWS 公式情報の取得・整理・コンテキスト提供
+- **起動方式**: uvx コマンドによる標準化された MCP サーバー起動
 
-#### エージェントプロンプト戦略
+#### 問題生成エージェント (@tool)
 
+- **LLM**: Claude Sonnet 4 (高品質生成・費用対効果)
+- **役割**: ビジネスシナリオベース問題文・選択肢・解説生成
+- **専門性**: Professional レベル試験問題の構造化生成
+- **ハイブリッド推論**: 品質重視時は拡張思考モード活用
+
+#### 品質管理エージェント (@tool)
+
+- **LLM**: Claude 3.7 Sonnet (高精度検証)
+- **役割**: 技術的正確性・難易度・類似度の総合品質検証
+- **フォールバック**: 複数モデル（Opus 4, Sonnet 4, 3.7 Sonnet, 3 Haiku）による分間クォータ対応
+
+#### エージェント間連携
+
+```python
+@tool
+async def aws_info_agent(query: str):
+    """AWS情報取得エージェント"""
+    # MCP Client による情報取得
+    # ストリーミング対応処理状況通知
+    return structured_aws_info
+
+@tool
+async def question_gen_agent(context: str, topic: str):
+    """問題生成エージェント"""
+    # コンテキストベース問題生成
+    # リアルタイム生成状況配信
+    return structured_question
+
+@tool
+async def quality_agent(question: dict):
+    """品質管理エージェント"""
+    # 多角的品質検証
+    # 品質スコア・改善提案
+    return quality_result
 ```
-システムロール: AWS Solutions Architect Professional レベル問題生成専門AI
-処理手順:
-1. 指定サービス/トピックの最新情報取得
-2. ビジネスシナリオベース複合問題作成
-3. Professional レベル適合4択選択肢生成
-4. 技術的根拠に基づく詳細解説作成
-```
 
-実装詳細については [Python コーディング規約](../../../steering/python-coding-standards.md#aws-lambda-固有の規約) を参照してください。
+#### ストリーミング対応
 
-**取得対象:**
-
-- **AWS 公式ドキュメント**: サービス別ユーザーガイド、API リファレンス、ベストプラクティス
-- **試験ガイド**: 出題範囲、重要トピック、推奨知識レベル
-- **キャッシュ戦略**: 24 時間キャッシュ、差分更新対応
+- **リアルタイム監視**: 各エージェントの処理状況をストリーミング配信
+- **プログレス通知**: Teams 連携での処理状況可視化
+- **エラーハンドリング**: 分間クォータ対応・自動リトライ
 
 ### 2. 問題生成サービス設計
 
