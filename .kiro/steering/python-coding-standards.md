@@ -27,6 +27,12 @@ AWS Exam Coach プロジェクトにおける Python コーディング規約で
 - プロジェクト全体で統一されたスタイルを維持
 - チーム開発における認知負荷を軽減
 
+### 4. 型安全性の徹底
+
+- **本番コードとテストコードで同等の型チェック基準を適用**
+- IDE 上でのエラー表示ゼロを目指す（チーム開発の精神衛生上重要）
+- Mypy の厳格な設定を全ファイルに適用
+
 ## コードフォーマット・リンター
 
 ### Ruff の採用
@@ -113,25 +119,49 @@ from app.shared import constants as shared_constants
 
 ## 型ヒント・Pydantic
 
+### 型注釈の必須化
+
+**重要**: 本プロジェクトでは、本番コードとテストコード両方で厳格な型チェックを適用します。
+
+```python
+# ❌ 悪い例: 型注釈なし
+def test_config():
+    config = Config()
+    assert config.APP_NAME == "aws-exam-agent"
+
+# ✅ 良い例: 適切な型注釈
+def test_config(self) -> None:
+    config = Config()
+    assert config.APP_NAME == "aws-exam-agent"
+
+# ✅ 良い例: 引数の型注釈も含む
+def test_environment_override(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APP_NAME", "test-app")
+    config = Config()
+    assert config.APP_NAME == "test-app"
+```
+
 ### 基本的な型ヒント
 
 ```python
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 from uuid import UUID
 from datetime import datetime
 
-# 関数の型ヒント
-async def generate_question(
-    topic: str,
-    difficulty: str,
-    question_type: QuestionType
-) -> Dict[str, Any]:
+# Python 3.12+ の新しい型注釈を使用
+# ❌ 古い書き方
+from typing import Dict, List, Optional, Union
+def generate_question(topic: Optional[str]) -> Dict[str, Any]:
+    pass
+
+# ✅ 新しい書き方
+def generate_question(topic: str | None) -> dict[str, Any]:
     """問題を生成する"""
     pass
 
 # 変数の型ヒント
-questions: List[Dict[str, Any]] = []
-user_id: Optional[UUID] = None
+questions: list[dict[str, Any]] = []
+user_id: UUID | None = None
 ```
 
 ### Pydantic モデル

@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "ms-ceintl.vscode-language-pack-ja",
+    "vscode-icons-team.vscode-icons",
+    "amazonwebservices.aws-toolkit-vscode",
+    "yzhang.markdown-all-in-one",
+    "shd101wyy.markdown-preview-enhanced",
+    "esbenp.prettier-vscode",
+    "editorconfig.editorconfig",
+    "ms-python.python",
+    "ms-python.mypy-type-checker",
+    "charliermarsh.ruff",
+    "redhat.vscode-yaml"
+  ]
+}

@@ -1,12 +1,112 @@
 # Environment variables
 .env
+.env.local
+.env.*.local
+# .env.example はコミットする（テンプレートとして）
 
-# Node modules
-node_modules/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+.env/
+
+# uv (uv.lock はコミットする)
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff
+.ruff_cache/
+
+# IDEs
+.vscode/settings.json.local
+.vscode/.ropeproject
+.idea/
+*.swp
+*.swo
+*~
+
+# AWS
+.aws/
+*.pem
 
 # Logs
 *.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
 
 # OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+
+# Node modules (for any frontend components)
+node_modules/
+
+# AgentCore specific
+.agentcore/
+# agentcore-config.yaml はチーム共有のためコミットする
+
+# Infrastructure
+infrastructure/.aws-sam/
+# infrastructure/samconfig.toml はチーム共有のためコミットする
+
+# Local development
+.local/
+*.local
+# ただし、チーム共有設定ファイルの .local バリアントは除外
+# CI/CD は必
+ずコミットする
+# .github/ ディレクトリ全体をコミット対象とする
+
+# Docker 設定もコミット対象
+# Dockerfile, docker-compose.yml, .dockerignore
+
+# スクリプトファイルもコミット対象  
+# scripts/ ディレクトリ全体をコミット対象とする

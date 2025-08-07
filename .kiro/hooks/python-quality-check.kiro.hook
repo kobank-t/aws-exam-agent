@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Python Quality Check",
+  "description": "Pythonファイル保存時の包括的品質チェック（Ruff自動修正、Mypy型チェック、関連テスト実行）",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "*.py"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Pythonファイルが編集されました。共通の品質チェックスクリプトを実行してください。\n\n対象ファイル: ${filePath}\n\n## 実行コマンド\n\n```bash\n./scripts/python-quality-check.sh ${filePath}\n```\n\n## スクリプトの実行内容\n\n1. **Ruff自動修正とフォーマット**: コードスタイル修正\n2. **Mypy型チェック**: 型エラー検出\n3. **関連テスト実行**: ファイル対応関係に基づく自動テスト実行\n\n## 実行指針\n\n- スクリプトを実行して結果を報告\n- エラーが発生してもファイル保存は成功として扱う\n- 実行時間は6-10秒を目標\n- 最後に簡潔なサマリーを提供\n\nCI/CDと同じロジックで品質チェックを実行してください。"
+  }
+}

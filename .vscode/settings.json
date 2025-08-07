@@ -1,3 +1,57 @@
 {
-  "kiroAgent.configureMCP": "Enabled"
+  "window.title": "${activeEditorMedium}${separator}${rootName}",
+  "workbench.iconTheme": "vscode-icons",
+  "workbench.tree.renderIndentGuides": "always",
+
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.guides.bracketPairs": true,
+  "prettier.useEditorConfig": true,
+
+  "kiroAgent.agentAutonomy": "Autopilot",
+  "kiroAgent.agentModelSelection": "CLAUDE_SONNET_4_20250514_V1_0",
+  "kiroAgent.trustedCommands": [
+    "uv --version",
+    "git status",
+    "wc *",
+    "uv run python --version",
+    "uv run pytest *",
+    "uv run ruff check *",
+    "uv run ruff format *",
+    "uv run mypy --show-error-codes",
+    "./scripts/python-quality-check.sh *"
+  ],
+
+  "python.defaultInterpreterPath": ".venv/bin/python",
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit",
+      "source.fixAll": "explicit"
+    },
+    "editor.rulers": [88],
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests"],
+  "python.testing.unittestEnabled": false,
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    ".pytest_cache": true,
+    ".coverage": true,
+    "htmlcov": true,
+    ".mypy_cache": true,
+    ".ruff_cache": true
+  },
+
+  "redhat.telemetry.enabled": true,
+  "yaml.schemas": {
+    "https://raw.githubusercontent.com/aws/serverless-application-model/main/samtranslator/schema/schema.json": [
+      "template.yaml",
+      "template.yml",
+      "**/template.yaml",
+      "**/template.yml"
+    ]
+  }
 }
