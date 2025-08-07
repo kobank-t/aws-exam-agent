@@ -377,11 +377,11 @@ Python ファイル編集時にエージェントが自動実行する包括的�
 
 #### ファイル対応関係
 
-- `app/shared/config.py` → `tests/unit/test_shared/test_config.py`
-- `app/shared/exceptions.py` → `tests/unit/test_shared/test_exceptions.py`
-- `app/shared/constants.py` → `tests/unit/test_shared/test_constants.py`
-- `app/agentcore/docker/agent_main.py` → `tests/unit/test_agentcore/test_agent_main.py`
-- `tests/unit/test_*.py` → そのテストファイル自体
+- `app/shared/config.py` → `tests/unit/shared/test_config.py`
+- `app/shared/exceptions.py` → `tests/unit/shared/test_exceptions.py`
+- `app/shared/constants.py` → `tests/unit/shared/test_constants.py`
+- `app/agentcore/agent_main.py` → `tests/unit/agentcore/test_agent_main.py`
+- `tests/unit/*/test_*.py` → そのテストファイル自体
 
 #### フック設定の確認・変更
 
@@ -411,7 +411,7 @@ cat .kiro/hooks/python-quality-check.kiro.hook
 uv run ruff check --fix app/shared/config.py
 uv run ruff format app/shared/config.py
 uv run mypy app/shared/config.py --show-error-codes
-uv run pytest tests/unit/test_shared/test_config.py -v
+uv run pytest tests/unit/shared/test_config.py -v
 ```
 
 #### トラブルシューティング

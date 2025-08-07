@@ -26,7 +26,7 @@
       "name": "AgentCore: Local Test",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/app/agentcore/docker/agent_main.py",
+      "program": "${workspaceFolder}/app/agentcore/agent_main.py",
       "console": "integratedTerminal",
       "env": {
         "PYTHONPATH": "${workspaceFolder}",

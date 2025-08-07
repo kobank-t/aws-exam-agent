@@ -85,55 +85,46 @@ graph LR
 aws-exam-agent/
 ├── app/                          # 全ソースコード集約
 │   ├── agentcore/               # AgentCore Runtime用（メイン）
-│   │   ├── docker/              # AgentCore デプロイ用
-│   │   │   ├── agent_main.py    # メインエージェント（監督者）
-│   │   │   ├── requirements.txt # エージェント依存関係
-│   │   │   └── agents/          # 専門エージェント
-│   │   │       ├── __init__.py
-│   │   │       ├── aws_info_agent.py      # AWS情報取得エージェント
-│   │   │       ├── question_gen_agent.py  # 問題生成エージェント
-│   │   │       └── quality_agent.py       # 品質管理エージェント
+│   │   ├── agent_main.py        # メインエージェント（監督者）
+│   │   ├── requirements.txt     # エージェント依存関係
 │   │   └── mcp/                 # MCP統合
-│   │       ├── __init__.py
-│   │       ├── mcp_client.py    # MCP Client ラッパー
-│   │       └── servers/         # MCP Server 設定
-│   │           ├── aws_docs.py
-│   │           └── aws_knowledge.py
+│   │       └── __init__.py
 │   ├── lambda/                  # 補助Lambda関数（最小限）
-│   │   ├── __init__.py
-│   │   ├── teams_webhook.py     # Teams連携用
-│   │   └── scheduler.py         # スケジュール実行用
+│   │   └── __init__.py
 │   ├── models/                  # データモデル
-│   │   ├── __init__.py
-│   │   ├── question.py
-│   │   ├── delivery.py
-│   │   └── user_response.py
+│   │   └── __init__.py
 │   ├── services/                # ビジネスロジック
-│   │   ├── __init__.py
-│   │   ├── teams_service.py
-│   │   ├── cache_service.py
-│   │   └── analytics_service.py
+│   │   └── __init__.py
 │   └── shared/                  # 共通モジュール
 │       ├── __init__.py
+│       ├── config.py
 │       ├── constants.py
-│       ├── exceptions.py
-│       └── config.py
+│       └── exceptions.py
 ├── tests/                       # テストコード
 │   ├── unit/
+│   │   ├── agentcore/          # test_プレフィックス削除済み
+│   │   │   └── test_agent_main.py
+│   │   └── shared/             # test_プレフィックス削除済み
+│   │       ├── test_config.py
+│   │       ├── test_constants.py
+│   │       └── test_exceptions.py
 │   ├── integration/
+│   │   └── __init__.py
 │   └── e2e/
-├── infrastructure/              # インフラ定義（最小限）
-│   ├── template.yaml           # 補助リソース用SAM
-│   └── agentcore-config.yaml   # AgentCore設定
-├── scripts/                    # デプロイ・運用スクリプト
-│   ├── deploy-agentcore.sh     # AgentCore デプロイ
-│   ├── setup-mcp.sh           # MCP環境セットアップ
-│   └── test-agents.sh         # エージェントテスト
-├── .github/                    # CI/CD
+├── infrastructure/              # インフラ定義（将来実装）
+├── scripts/                     # デプロイ・運用スクリプト
+│   ├── python-quality-check.sh
+│   ├── setup-dev.sh
+│   └── test-agents.sh
+├── .kiro/                       # Kiro IDE設定・仕様書
+│   ├── specs/aws-exam-agent/    # 設計書・仕様書
+│   ├── steering/                # 開発ルール・規約
+│   ├── hooks/                   # エージェントフック
+│   └── settings/                # MCP設定等
+├── .github/                     # CI/CD
 │   └── workflows/
-│       ├── test.yml
-│       └── deploy-agentcore.yml
-├── pyproject.toml             # Python プロジェクト設定
+│       └── quality-check.yml
+├── pyproject.toml              # Python プロジェクト設定
 ├── README.md
 └── WORK_LOG.md
 ```
@@ -141,7 +132,18 @@ aws-exam-agent/
 ### 構成の利点
 
 - **AgentCore 中心**: メイン処理を AgentCore Runtime で実行
-- **マルチエージェント対応**: Agent-as-Tools パターンの専門エージェント分離
+- **シンプルな構造**: docker ディレクトリ削除によるフラットな構成
+- **テスト構造統一**: test\_プレフィックス削除による一貫性
 - **MCP 統合**: 標準化されたコンテキスト提供の明確な分離
 - **デプロイ簡素化**: agentcore CLI による簡単デプロイ
 - **監視統合**: AgentCore オブザーバビリティの活用
+
+### 構造管理の改善
+
+**問題**: ディレクトリ構造が複数ファイル（02-architecture.md, README.md, tasks.md 等）に散在し、保守性が低下
+
+**解決策**:
+
+- **単一情報源の原則**: 構造情報は 02-architecture.md に集約
+- **参照による統一**: 他ファイルは 02-architecture.md を参照
+- **自動同期**: 構造変更時の一括更新スクリプト導入を検討

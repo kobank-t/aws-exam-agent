@@ -35,7 +35,7 @@ uv run pytest tests/integration/ -v --tb=short
 echo ""
 echo "🤖 AgentCore ローカルテストの実行..."
 echo "メインエージェントのテスト実行中..."
-uv run python app/agentcore/docker/agent_main.py
+uv run python app/agentcore/agent_main.py
 
 # コード品質チェック
 echo ""

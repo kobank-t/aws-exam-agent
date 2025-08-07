@@ -32,11 +32,11 @@ if [[ -n "$TARGET_FILE" ]]; then
     RELATED_TEST=""
     if [[ "$TARGET_FILE" == app/shared/* ]]; then
         MODULE_NAME=$(basename "$TARGET_FILE" .py)
-        RELATED_TEST="tests/unit/test_shared/test_${MODULE_NAME}.py"
+        RELATED_TEST="tests/unit/shared/test_${MODULE_NAME}.py"
     elif [[ "$TARGET_FILE" == app/agentcore/* ]]; then
         REL_PATH=${TARGET_FILE#app/agentcore/}
         MODULE_NAME=$(basename "$REL_PATH" .py)
-        RELATED_TEST="tests/unit/test_agentcore/test_${MODULE_NAME}.py"
+        RELATED_TEST="tests/unit/agentcore/test_${MODULE_NAME}.py"
     elif [[ "$TARGET_FILE" == tests/* ]]; then
         RELATED_TEST="$TARGET_FILE"
     fi

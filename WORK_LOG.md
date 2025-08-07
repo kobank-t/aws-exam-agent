@@ -35,8 +35,8 @@
 
 **Phase 1: 環境セットアップ（3 タスク）**
 
-1. Python 開発環境（uv、pyproject.toml、開発ツール）
-2. AWS 開発環境（CLI、SAM CLI、bedrock-agentcore-starter-toolkit）
+1. ✅ Python 開発環境（uv、pyproject.toml、開発ツール）
+2. 🔄 AWS 開発環境（CLI、SAM CLI、bedrock-agentcore-starter-toolkit）- 進行中
 3. TypeScript/E2E テスト環境（Playwright）
 
 **Phase 2: データ基盤（2 タスク）** 4. データモデルと DynamoDB 基盤 5. キャッシュシステム（DynamoDB TTL + Lambda メモリ）
@@ -170,45 +170,75 @@
 
 - **完了フェーズ**: Spec 作成ワークフロー（要件定義・設計・タスクリスト）、タスク 1（Python 開発環境セットアップ）✅ 完了
 - **現在フェーズ**: 実装フェーズ進行中
-- **現在の作業**: セッション継続性保存作業（作業記録の整理・更新）
-- **タスク状況**: tasks.md でタスク 1 が [x] 完了、タスク 2 以降は [ ] 未開始状態
-- **次回開始タスク**: タスク 2「AgentCore 開発環境のセットアップ」から開始
-- **中断理由**: セッション継続性保存（ユーザーリクエストによる作業記録整理）
+- **進行中タスク**: タスク 2「AgentCore 開発環境のセットアップ」（サブタスク 2.1-2.5 完了、2.6-2.7 未開始）
+- **タスク状況**: tasks.md でタスク 1 が [x] 完了、タスク 2 は [ ] 未完了（サブタスク 2.1-2.5 完了）
+- **次回開始タスク**: タスク 2 サブタスク 2.6「AgentCore 設定クラスの実装・テスト作成」から継続
+- **最新完了**: サブタスク 2.5「基本的なエージェント実装（agent_main.py の作成）」完了（2025 年 8 月 8 日）
 
-### タスク 1 完了確認
+### タスク 1-2 完了確認
 
 #### ✅ 解決済みの問題
 
 1. **Pydantic 設定エラー**: `Config` クラスに `GITHUB_PERSONAL_ACCESS_TOKEN` 追加済み
 2. **Ruff 設定エラー**: `skip-string-normalization` 廃止設定を削除済み
-3. **テスト構造の統一**: `tests/unit/test_shared/` 構造に統一済み
-4. **受け入れ基準**: 4 つの完了基準コマンド全て通過確認済み
+3. **テスト構造の統一**: `tests/unit/shared/` 構造に統一済み（test\_プレフィックス削除）
+4. **ディレクトリ構造統一**: `app/agentcore/agent_main.py` 構造に統一（docker 削除）
+5. **受け入れ基準**: タスク 1 の 4 つの完了基準コマンド全て通過確認済み
+
+#### ✅ サブタスク 2.5 完了内容（2025 年 8 月 8 日）
+
+1. **監督者エージェント（SupervisorAgent）実装**:
+
+   - Agent-as-Tools パターンによる専門エージェント統合
+   - 3 つの専門エージェント（AWS 情報取得、問題生成、品質管理）
+   - マルチエージェント処理フロー（Phase 1-3）
+
+2. **AgentCore Runtime 統合**:
+
+   - BedrockAgentCoreApp との統合
+   - エントリーポイント（invoke）の実装
+   - 詳細なログ出力とエラーハンドリング
+
+3. **テスト実装**:
+
+   - 15 個のテスト全て通過
+   - 100%カバレッジ達成
+   - マルチエージェントフローのテスト
+
+4. **動作確認**:
+   - `uv run python app/agentcore/agent_main.py` で正常起動確認
+   - AgentCore Runtime サーバー起動（http://127.0.0.1:8080）
 
 #### 📊 品質メトリクス達成状況
 
 - **受け入れテスト通過率**: 100% ✅
 - **リンター・フォーマッター**: `uv run ruff check app/ tests/` エラー 0 件 ✅
 - **型チェック**: `uv run mypy app/ tests/` エラー 0 件 ✅
-- **テスト実行**: `uv run pytest tests/unit/test_shared/` 全通過 ✅
+- **テスト実行**: `uv run pytest tests/unit/agentcore/` 15 個全通過 ✅
+- **カバレッジ**: agent_main.py 100%カバレッジ達成 ✅
 
 ### 次回セッション開始時のアクション
 
 1. **作業記録確認**: この WORK_LOG.md で前回作業内容を確認
-2. **タスク 2 開始**: 「AgentCore 開発環境のセットアップ」の実装開始
+2. **タスク 2 継続**: 「AgentCore 開発環境のセットアップ」のサブタスク 2.6 から継続
    - `.kiro/specs/aws-exam-agent/tasks.md` のタスク 2 詳細確認
-   - AWS CLI、bedrock-agentcore-starter-toolkit のセットアップ
-   - MCP Server 環境構築（uvx、uv インストール）
-   - AgentCore 実行環境の構築・動作確認
-   - 受け入れ基準: AWS CLI 動作確認、AgentCore CLI 動作確認、MCP Server 動作確認、設定ファイル生成、AgentCore 設定テスト通過
+   - サブタスク 2.6: AgentCore 設定クラスの実装・テスト作成
+   - サブタスク 2.7: AgentCore configure による設定ファイル生成確認
+   - 受け入れ基準: `uv run python app/agentcore/agent_main.py` で SupervisorAgent 実行（exit code 0 + 期待ログ出力）
 3. **受け入れテスト駆動**: タスク 2 の完了基準 100%通過まで次タスク進行禁止
 4. **品質保証**: IDE 上でのエラー表示ゼロを維持
-5. **開発環境基盤**: Python 環境（タスク 1）完了済みのため、AWS/AgentCore 環境に集中
+5. **開発環境基盤**: Python 環境（タスク 1）、AWS CLI・bedrock-agentcore-starter-toolkit・strands_agents・agent_main.py（サブタスク 2.1-2.5）完了済み
 
 ### 重要な技術的コンテキスト
 
 #### 開発環境
 
 - **Python**: 3.12 + uv（仮想環境・依存関係管理）✅ 完了
+- **AWS CLI**: 設定・プロファイル確認済み ✅ 完了（サブタスク 2.1）
+- **bedrock-agentcore-starter-toolkit**: インストール・設定済み ✅ 完了（サブタスク 2.2）
+- **strands_agents**: 正しいインポート方法確認・実行済み ✅ 完了（サブタスク 2.3）
+- **pyproject.toml**: AgentCore 関連依存関係追加済み（MCP 関連含む）✅ 完了（サブタスク 2.4）
+- **agent_main.py**: 監督者エージェント実装済み（Agent-as-Tools パターン）✅ 完了（サブタスク 2.5）
 - **MCP Server**: 7 つ動作確認済み（Git, AWS Documentation, AWS Knowledge, AWS Diagram, AWS Pricing, Context7, Playwright）
 - **GitHub**: Personal Access Token 設定済み（期限: 2025 年 10 月）
 - **開発ツール**: Ruff（リンター・フォーマッター）、pytest（テスト）、moto（AWS モック）✅ 設定完了
@@ -239,14 +269,15 @@ aws-exam-agent/
 
 #### 次回セッションで読むべき重要情報
 
-- **タスク 2 詳細**: `.kiro/specs/aws-exam-agent/tasks.md` の「2. AgentCore 開発環境のセットアップ」
-- **プロジェクト構成**: `.kiro/specs/aws-exam-agent/design/02-architecture.md` の「プロジェクト構成（AgentCore 中心設計）」
+- **タスク 2 詳細**: `.kiro/specs/aws-exam-agent/tasks.md` の「2. AgentCore 開発環境のセットアップ」サブタスク 2.5-2.7
+- **agent_main.py 実装**: `.kiro/specs/aws-exam-agent/design/03-ai-engine.md` の SupervisorAgent 設計
+- **strands_agents 使用方法**: `.kiro/specs/aws-exam-agent/design/02-architecture.md` の「Agent-as-Tools パターン」
 - **Python コーディング規約**: `.kiro/steering/python-coding-standards.md`
-- **デプロイ設計**: `.kiro/specs/aws-exam-agent/design/06-deployment.md` の AgentCore デプロイ戦略
+- **AgentCore 設定**: `.kiro/specs/aws-exam-agent/design/06-deployment.md` の AgentCore デプロイ戦略
 
 ---
 
 ---
 
 **作業者**: kobank-t  
-**最終更新**: 2025 年 8 月 6 日（情報重複排除・作業記録構造改善完了）
+**最終更新**: 2025 年 8 月 8 日（サブタスク 2.5 完了・監督者エージェント実装完了）

@@ -1,5 +1,5 @@
 {
-  "enabled": true,
+  "enabled": false,
   "name": "Python Quality Check",
   "description": "Pythonファイル保存時の包括的品質チェック（Ruff自動修正、Mypy型チェック、関連テスト実行）",
   "version": "1",

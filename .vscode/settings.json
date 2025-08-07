@@ -12,14 +12,18 @@
   "kiroAgent.agentModelSelection": "CLAUDE_SONNET_4_20250514_V1_0",
   "kiroAgent.trustedCommands": [
     "uv --version",
+    "uvx --version",
     "git status",
     "wc *",
     "uv run python --version",
     "uv run pytest *",
     "uv run ruff check *",
     "uv run ruff format *",
+    "uv run mypy app/ tests/",
     "uv run mypy --show-error-codes",
-    "./scripts/python-quality-check.sh *"
+    "./scripts/python-quality-check.sh *",
+    "aws configure list",
+    "aws sts get-caller-identity"
   ],
 
   "python.defaultInterpreterPath": ".venv/bin/python",

@@ -32,7 +32,7 @@
   **完了基準**:
 
   - `uv run python --version` で Python 3.12 確認
-  - `uv run pytest tests/unit/test_shared/ -v` で共通モジュールテスト通過
+  - `uv run pytest tests/unit/shared/ -v` で共通モジュールテスト通過
   - `uv run ruff check app/ tests/` でリンターエラー 0 件
   - `uv run mypy app/ tests/` で型チェックエラー 0 件
   - IDE 上でエラー表示ゼロ（精神衛生上必須）
@@ -53,25 +53,23 @@
 
   **完了基準**:
 
-  - `aws sts get-caller-identity` で AWS 認証確認
-  - `agentcore --version` で AgentCore CLI 動作確認
-  - `uvx awslabs.aws-documentation-mcp-server --help` で MCP Server 動作確認
-  - `agentcore configure` で設定ファイル生成成功
-  - `uv run python app/agentcore/docker/agent_main.py` で strands_agents 動作確認
-  - `uv run pytest tests/unit/test_agentcore_config/ -v` で AgentCore 設定テスト通過
-  - pyproject.toml に strands_agents、bedrock-agentcore 依存関係追加完了
+  - `aws sts get-caller-identity` で AWS 認証確認（JSON レスポンス取得）
+  - `agentcore configure` で設定ファイル生成（agentcore.yaml ファイル存在確認）
+  - `uv run python -c "from strands_agents import Agent; print('strands_agents imported successfully')"` で strands_agents インポート確認（出力文字列一致）
+  - `uv run python app/agentcore/agent_main.py` で SupervisorAgent 実行（exit code 0 + 期待ログ出力）
+  - `uv run pytest tests/unit/agentcore/test_agent_main.py -v` で AgentCore エージェントテスト通過（全テスト PASSED）
+  - `uv run ruff check app/ tests/` でリンターエラー 0 件
+  - `uv run mypy app/ tests/` で型チェックエラー 0 件
 
   **サブタスク**:
 
-  - [ ] 2.1 AWS CLI 設定とプロファイル確認
-  - [ ] 2.2 bedrock-agentcore-starter-toolkit インストールと設定
-  - [ ] 2.3 strands_agents の正しいインストール方法確認・実行
-  - [ ] 2.4 pyproject.toml に AgentCore 関連依存関係追加
-  - [ ] 2.5 MCP Server 環境構築（uvx、uv インストール）
-  - [ ] 2.6 AWS Documentation MCP Server 動作確認
-  - [ ] 2.7 AWS Knowledge MCP Server 動作確認
-  - [ ] 2.8 agent_main.py の動作確認（strands_agents インポート成功）
-  - [ ] 2.9 AgentCore 設定クラスの実装・テスト作成
+  - [x] 2.1 AWS CLI 設定とプロファイル確認
+  - [x] 2.2 bedrock-agentcore-starter-toolkit インストールと設定
+  - [x] 2.3 strands_agents の正しいインポート方法確認・実行
+  - [x] 2.4 pyproject.toml に AgentCore 関連依存関係追加（MCP 関連含む）
+  - [x] 2.5 基本的なエージェント実装（agent_main.py の作成）
+  - [ ] 2.6 AgentCore 設定クラスの実装・テスト作成
+  - [ ] 2.7 AgentCore configure による設定ファイル生成確認
 
   _Requirements: AgentCore 基盤、MCP 統合_
 
@@ -79,10 +77,12 @@
 
   **完了基準**:
 
-  - `uv run pytest tests/unit/ -v` で全単体テスト通過
-  - `uv run pytest tests/integration/ -v` で統合テスト通過
-  - moto を使用した AWS モックテストの動作確認
-  - `uv run python app/agentcore/docker/agent_main.py --test` で AgentCore ローカル実行成功
+  - `uv run pytest tests/unit/ -v` で全単体テスト通過（全テスト PASSED、エラー 0 件）
+  - `uv run pytest tests/integration/ -v` で統合テスト通過（全テスト PASSED、エラー 0 件）
+  - `uv run pytest tests/unit/aws_mock/ -v` で moto AWS モックテスト通過（全テスト PASSED）
+  - `uv run python app/agentcore/agent_main.py` で SupervisorAgent 実行（exit code 0）
+  - `uv run ruff check app/ tests/` でリンターエラー 0 件
+  - `uv run mypy app/ tests/` で型チェックエラー 0 件
 
   **サブタスク**:
 
@@ -99,8 +99,8 @@
 
   **完了基準**:
 
-  - `uv run pytest tests/unit/test_models/ -v` でデータモデルテスト通過
-  - `uv run pytest tests/unit/test_repositories/ -v` でリポジトリテスト通過
+  - `uv run pytest tests/unit/models/ -v` でデータモデルテスト通過
+  - `uv run pytest tests/unit/repositories/ -v` でリポジトリテスト通過
   - `uv run pytest tests/integration/test_dynamodb/ -v` で DynamoDB 統合テスト通過
   - moto 使用の DynamoDB モックテストで全 CRUD 操作確認
 
@@ -118,7 +118,7 @@
 
   **完了基準**:
 
-  - `uv run pytest tests/unit/test_cache/ -v` でキャッシュクラステスト通過
+  - `uv run pytest tests/unit/cache/ -v` でキャッシュクラステスト通過
   - `uv run pytest tests/integration/test_cache_system/ -v` で 2 層キャッシュ統合テスト通過
   - moto 使用の DynamoDB TTL テーブル動作確認
   - メモリキャッシュの期限切れ・LRU 動作確認
@@ -138,16 +138,18 @@
 
   **完了基準**:
 
-  - `uvx awslabs.aws-documentation-mcp-server --help` で MCP Server 動作確認
-  - `uv run pytest tests/unit/test_mcp/ -v` で MCP 統合テスト通過
-  - `uv run pytest tests/unit/test_agents/test_aws_info_agent.py -v` でエージェントテスト通過
-  - 実際の MCP Server 接続・データ取得の動作確認
+  - `uv run pytest tests/unit/mcp/ -v` で MCP 統合テスト通過（全テスト PASSED）
+  - `uv run pytest tests/unit/agents/test_aws_info_agent.py -v` でエージェントテスト通過（全テスト PASSED）
+  - `uv run pytest tests/integration/test_mcp_connection/ -v` で MCP Server 連携テスト通過（全テスト PASSED）
+  - `uv run python -c "from app.agents.aws_info_agent import AWSInfoAgent; agent = AWSInfoAgent(); print('MCP connection successful')"` で MCP 接続確認（出力文字列一致）
+  - `uv run ruff check app/ tests/` でリンターエラー 0 件
+  - `uv run mypy app/ tests/` で型チェックエラー 0 件
 
   **サブタスク**:
 
-  - [ ] 6.1 MCP Client ライブラリの統合（Strands Agents 対応）
-  - [ ] 6.2 AWS Documentation MCP Server との連携実装（uvx 起動方式）
-  - [ ] 6.3 AWS Knowledge MCP Server との連携実装（uvx 起動方式）
+  - [ ] 6.1 strands-agents MCPClient の統合実装
+  - [ ] 6.2 AWS Documentation MCP Server との連携実装（StdioServerParameters 方式）
+  - [ ] 6.3 AWS Knowledge MCP Server との連携実装（StdioServerParameters 方式）
   - [ ] 6.4 AWS 情報取得エージェント（@tool）の実装
   - [ ] 6.5 MCP 統合・エージェントの単体テスト作成
   - [ ] 6.6 ストリーミング対応による処理状況通知機能
@@ -158,10 +160,12 @@
 
   **完了基準**:
 
-  - `uv run pytest tests/unit/test_agents/test_question_gen_agent.py -v` でエージェントテスト通過
-  - `uv run pytest tests/unit/test_bedrock/ -v` で Bedrock 統合テスト通過
-  - moto 使用の Bedrock API モックテストで問題生成確認
-  - 実際の Claude API での問題生成動作確認（手動テスト）
+  - `uv run pytest tests/unit/agents/test_question_gen_agent.py -v` でエージェントテスト通過（全テスト PASSED）
+  - `uv run pytest tests/unit/bedrock/ -v` で Bedrock 統合テスト通過（全テスト PASSED）
+  - `uv run pytest tests/integration/test_bedrock_mock/ -v` で moto Bedrock モックテスト通過（全テスト PASSED）
+  - `uv run python -c "from app.agents.question_gen_agent import QuestionGenerationAgent; agent = QuestionGenerationAgent(); print('Bedrock connection successful')"` で Bedrock 接続確認（出力文字列一致）
+  - `uv run ruff check app/ tests/` でリンターエラー 0 件
+  - `uv run mypy app/ tests/` で型チェックエラー 0 件
 
   **サブタスク**:
 
@@ -177,10 +181,12 @@
 
   **完了基準**:
 
-  - `uv run pytest tests/unit/test_agents/ -v` で全エージェントテスト通過
-  - `uv run pytest tests/integration/test_multi_agent/ -v` でマルチエージェント統合テスト通過
-  - `uv run python app/agentcore/docker/agent_main.py` でローカル実行成功
-  - 品質評価・類似度チェック・再生成機能の動作確認
+  - `uv run pytest tests/unit/agents/ -v` で全エージェントテスト通過（全テスト PASSED）
+  - `uv run pytest tests/integration/test_multi_agent/ -v` でマルチエージェント統合テスト通過（全テスト PASSED）
+  - `uv run python app/agentcore/agent_main.py` で SupervisorAgent 実行（exit code 0 + 期待ログ出力）
+  - `uv run pytest tests/integration/test_quality_validation/ -v` で品質管理機能テスト通過（全テスト PASSED）
+  - `uv run ruff check app/ tests/` でリンターエラー 0 件
+  - `uv run mypy app/ tests/` で型チェックエラー 0 件
 
   **サブタスク**:
 
@@ -200,10 +206,12 @@
 
   **完了基準**:
 
-  - `uv run python app/agentcore/docker/agent_main.py` でローカル実行成功
-  - `agentcore configure` で設定ファイル生成成功
-  - `agentcore launch` で AWS 環境デプロイ成功（手動確認）
-  - AgentCore エンドポイントでの問題生成 API 動作確認
+  - `uv run python app/agentcore/agent_main.py` で SupervisorAgent 実行（exit code 0 + 期待ログ出力）
+  - `agentcore configure` で設定ファイル生成（agentcore.yaml ファイル存在確認）
+  - `agentcore launch` で AWS 環境デプロイ（デプロイ完了ログ出力確認）
+  - `curl -X POST <AgentCore Endpoint>/invoke -d '{"topic":"EC2"}' -H "Content-Type: application/json"` で API 動作確認（HTTP 200 レスポンス）
+  - `uv run ruff check app/ tests/` でリンターエラー 0 件
+  - `uv run mypy app/ tests/` で型チェックエラー 0 件
 
   **サブタスク**:
 
@@ -220,10 +228,12 @@
 
   **完了基準**:
 
-  - `sam build && sam deploy` でインフラデプロイ成功
-  - `curl <API Gateway URL>` で API 動作確認
-  - `uv run pytest tests/unit/test_lambda/ -v` で Lambda 関数テスト通過
-  - EventBridge スケジュール実行の動作確認（手動テスト）
+  - `sam build && sam deploy` でインフラデプロイ（デプロイ完了ログ出力確認）
+  - `curl -X POST <API Gateway URL>/generate -d '{"topic":"EC2"}' -H "Content-Type: application/json"` で API 動作確認（HTTP 200 レスポンス）
+  - `uv run pytest tests/unit/lambda/ -v` で Lambda 関数テスト通過（全テスト PASSED）
+  - `aws events list-rules --name-prefix aws-exam-agent` で EventBridge ルール作成確認（JSON レスポンス取得）
+  - `uv run ruff check app/ tests/` でリンターエラー 0 件
+  - `uv run mypy app/ tests/` で型チェックエラー 0 件
 
   **サブタスク**:
 
@@ -240,10 +250,12 @@
 
   **完了基準**:
 
-  - EventBridge → API Gateway → AgentCore → Teams の全フロー動作確認（手動テスト）
-  - `uv run pytest tests/integration/test_delivery_system/ -v` で統合テスト通過
-  - CloudWatch Logs で配信ログ記録確認
-  - 実際の Teams チャネルでの問題投稿・リアクション確認
+  - `uv run pytest tests/integration/test_delivery_system/ -v` で統合テスト通過（全テスト PASSED）
+  - `uv run pytest tests/e2e/test_full_flow/ -v` で E2E テスト通過（全テスト PASSED）
+  - `aws logs describe-log-groups --log-group-name-prefix /aws/lambda/aws-exam-agent` で CloudWatch Logs 確認（JSON レスポンス取得）
+  - `curl -X POST <Power Automate Webhook URL> -d '{"question":"test"}' -H "Content-Type: application/json"` で Teams 投稿確認（HTTP 200 レスポンス）
+  - `uv run ruff check app/ tests/` でリンターエラー 0 件
+  - `uv run mypy app/ tests/` で型チェックエラー 0 件
 
   **サブタスク**:
 
@@ -260,11 +272,11 @@
 
   **完了基準**:
 
-  - `agentcore configure` で設定ファイル生成成功
-  - `agentcore launch` で AWS 環境デプロイ成功
-  - `aws iam list-roles | grep agentcore` で IAM ロール作成確認
-  - `aws ecr describe-repositories` で ECR リポジトリ作成確認
-  - AgentCore エンドポイントでの API 動作確認
+  - `agentcore configure` で設定ファイル生成（agentcore.yaml ファイル存在確認）
+  - `agentcore launch` で AWS 環境デプロイ（デプロイ完了ログ出力確認）
+  - `aws iam list-roles --query 'Roles[?contains(RoleName, \`agentcore\`)].RoleName' --output text` で IAM ロール作成確認（ロール名出力）
+  - `aws ecr describe-repositories --query 'repositories[?contains(repositoryName, \`agentcore\`)].repositoryName' --output text` で ECR リポジトリ作成確認（リポジトリ名出力）
+  - `curl -X POST <AgentCore Endpoint>/invoke -d '{"topic":"EC2"}' -H "Content-Type: application/json"` で API 動作確認（HTTP 200 レスポンス）
 
   **サブタスク**:
 
@@ -325,7 +337,7 @@
 
   **完了基準**:
 
-  - `uv run pytest tests/unit/test_analytics/ -v` で統計分析テスト通過
+  - `uv run pytest tests/unit/analytics/ -v` で統計分析テスト通過
   - `uv run pytest tests/integration/test_reaction_collection/ -v` で統合テスト通過
   - 実際の Teams リアクションデータでの集計動作確認
   - 統計 API エンドポイントでのデータ取得確認
@@ -493,7 +505,7 @@ dev-dependencies = [
 ]
 ```
 
-#### app/agentcore/docker/requirements.txt
+#### app/agentcore/requirements.txt
 
 ```txt
 strands-agents
@@ -508,7 +520,7 @@ uv
 uv run python -c "from strands_agents import Agent, tool; print('Import successful')"
 
 # 2. agent_main.py 基本動作確認
-uv run python app/agentcore/docker/agent_main.py
+uv run python app/agentcore/agent_main.py
 
 # 3. 期待される出力例
 # INFO:__main__:Initializing Supervisor Agent

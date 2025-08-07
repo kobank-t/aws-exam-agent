@@ -1,1 +1,0 @@
-# AgentCore Docker Package
