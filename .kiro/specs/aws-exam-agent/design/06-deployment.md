@@ -1,5 +1,30 @@
 # デプロイメント設計
 
+## Infrastructure as Code (CloudFormation/SAM) 中心アプローチ
+
+### 段階的インフラ構築戦略
+
+**基本方針**: 各タスクで必要になったタイミングで段階的に CloudFormation（SAM）テンプレートを拡張
+
+#### Phase 1: AgentCore Runtime 事前リソース（タスク 2）
+
+- IAM 実行ロール
+- ECR リポジトリ
+- 最小限の SAM テンプレート
+
+#### Phase 2: データ基盤（タスク 4-5）
+
+- DynamoDB テーブル
+- キャッシュ用 TTL テーブル
+- SAM テンプレート拡張
+
+#### Phase 3: API Gateway + Lambda（タスク 10-13）
+
+- API Gateway REST API
+- Lambda 関数
+- EventBridge スケジュール
+- 統合 SAM テンプレート
+
 ## Bedrock AgentCore デプロイ設計
 
 ### starter-toolkit を活用したデプロイ戦略

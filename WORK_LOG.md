@@ -185,7 +185,9 @@
 4. **ディレクトリ構造統一**: `app/agentcore/agent_main.py` 構造に統一（docker 削除）
 5. **受け入れ基準**: タスク 1 の 4 つの完了基準コマンド全て通過確認済み
 
-#### ✅ サブタスク 2.5 完了内容（2025 年 8 月 8 日）
+#### ✅ サブタスク 2.5-2.6 完了内容（2025 年 8 月 8 日）
+
+**サブタスク 2.5: 監督者エージェント実装**
 
 1. **監督者エージェント（SupervisorAgent）実装**:
 
@@ -194,20 +196,24 @@
    - マルチエージェント処理フロー（Phase 1-3）
 
 2. **AgentCore Runtime 統合**:
-
    - BedrockAgentCoreApp との統合
    - エントリーポイント（invoke）の実装
    - 詳細なログ出力とエラーハンドリング
 
-3. **テスト実装**:
+**サブタスク 2.6: AgentCore 設定クラス実装・テスト**
 
-   - 15 個のテスト全て通過
-   - 100%カバレッジ達成
-   - マルチエージェントフローのテスト
+1. **AgentCore 設定クラスの大幅拡張**: 25 個の新設定項目追加
 
-4. **動作確認**:
-   - `uv run python app/agentcore/agent_main.py` で正常起動確認
-   - AgentCore Runtime サーバー起動（http://127.0.0.1:8080）
+   - Runtime 設定（メモリ、ストレージ、タイムアウト）
+   - LLM モデル設定（プライマリ・フォールバック）
+   - MCP Server 設定、ストリーミング設定、エラーハンドリング設定
+
+2. **包括的テストスイート**: 18 個のテスト作成・実行（全通過）
+
+   - AgentCore 設定テスト + ヘルパー関数テスト
+   - 環境変数オーバーライド、設定妥当性検証
+
+3. **重要な修正**: `from strands import Agent`（正しいインポート方法）をタスクリストに明記
 
 #### 📊 品質メトリクス達成状況
 
@@ -220,14 +226,17 @@
 ### 次回セッション開始時のアクション
 
 1. **作業記録確認**: この WORK_LOG.md で前回作業内容を確認
-2. **タスク 2 継続**: 「AgentCore 開発環境のセットアップ」のサブタスク 2.6 から継続
-   - `.kiro/specs/aws-exam-agent/tasks.md` のタスク 2 詳細確認
-   - サブタスク 2.6: AgentCore 設定クラスの実装・テスト作成
-   - サブタスク 2.7: AgentCore configure による設定ファイル生成確認
-   - 受け入れ基準: `uv run python app/agentcore/agent_main.py` で SupervisorAgent 実行（exit code 0 + 期待ログ出力）
-3. **受け入れテスト駆動**: タスク 2 の完了基準 100%通過まで次タスク進行禁止
-4. **品質保証**: IDE 上でのエラー表示ゼロを維持
-5. **開発環境基盤**: Python 環境（タスク 1）、AWS CLI・bedrock-agentcore-starter-toolkit・strands_agents・agent_main.py（サブタスク 2.1-2.5）完了済み
+2. **タスク 3 開始**: 「テスト環境のセットアップ」に進む
+   - **現在の状況**: タスク 2（AgentCore 開発環境セットアップ）完了済み ✅
+   - **次回開始**: タスク 3「テスト環境のセットアップ」
+   - **実行予定**: pytest 環境構築、moto（AWS モック）設定、統合テスト作成
+   - **完了基準**: 全単体・統合テスト通過、品質メトリクス 100%達成
+3. **重要な学び**:
+   - `agentcore configure`の正式な実行手順の理解
+   - CloudFormation（SAM）と AgentCore 設定の 2 段階プロセス
+   - リージョン設定の重要性（Bedrock AgentCore 対応リージョン確認）
+4. **設計更新完了**: CloudFormation（SAM）段階的アプローチを設計書に反映済み
+5. **ルール統合完了**: 段階的開発の 3 原則を task-management-standards.md に統合済み
 
 ### 重要な技術的コンテキスト
 
@@ -269,15 +278,15 @@ aws-exam-agent/
 
 #### 次回セッションで読むべき重要情報
 
-- **タスク 2 詳細**: `.kiro/specs/aws-exam-agent/tasks.md` の「2. AgentCore 開発環境のセットアップ」サブタスク 2.5-2.7
-- **agent_main.py 実装**: `.kiro/specs/aws-exam-agent/design/03-ai-engine.md` の SupervisorAgent 設計
-- **strands_agents 使用方法**: `.kiro/specs/aws-exam-agent/design/02-architecture.md` の「Agent-as-Tools パターン」
-- **Python コーディング規約**: `.kiro/steering/python-coding-standards.md`
-- **AgentCore 設定**: `.kiro/specs/aws-exam-agent/design/06-deployment.md` の AgentCore デプロイ戦略
+- **タスク 2 詳細**: `.kiro/specs/aws-exam-agent/tasks.md` の「2. AgentCore 開発環境のセットアップ」サブタスク 2.7-2.8
+- **CloudFormation 設計**: `.kiro/specs/aws-exam-agent/design/06-deployment.md` の段階的 SAM アプローチ
+- **デプロイスクリプト**: `scripts/deploy-agentcore-resources.sh` の実行手順
+- **SAM テンプレート**: `infrastructure/agentcore-resources.yaml` の内容確認
+- **段階的開発ルール**: `.kiro/steering/task-management-standards.md` の 3 原則
 
 ---
 
 ---
 
 **作業者**: kobank-t  
-**最終更新**: 2025 年 8 月 8 日（サブタスク 2.5 完了・監督者エージェント実装完了）
+**最終更新**: 2025 年 8 月 8 日（タスク 2 完了・AgentCore 開発環境セットアップ完了・次回はタスク 3 テスト環境セットアップから開始）

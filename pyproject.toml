@@ -54,6 +54,12 @@ dev-dependencies = [
     # 開発ユーティリティ
     "ipython>=8.0.0",
     "black>=23.0.0",
+    
+    # YAML品質管理
+    "yamllint>=1.32.0",
+    
+    # CloudFormation品質管理
+    "cfn-lint>=0.83.0",
 ]
 
 [build-system]

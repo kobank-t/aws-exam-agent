@@ -64,7 +64,7 @@ graph LR
 
 - **MCP (Model Context Protocol)**: 標準化されたコンテキスト提供
 - **AWS Documentation MCP Server**: AWS 公式ドキュメント取得 (uvx awslabs.aws-documentation-mcp-server)
-- **AWS Knowledge MCP Server**: 試験関連情報取得 (uvx awslabs.aws-knowledge-mcp-server)
+- **AWS Knowledge MCP Server**: AWS 包括的知識ベース（ドキュメント・ブログ・What's New・Well-Architected 等）
 - **AWS Pricing MCP Server**: 設計段階でのコスト試算・技術選択支援
 - **Power Automate**: Teams 配信用 HTTP API
 

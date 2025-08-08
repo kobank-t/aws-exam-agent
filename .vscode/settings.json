@@ -19,9 +19,10 @@
     "uv run pytest *",
     "uv run ruff check *",
     "uv run ruff format *",
-    "uv run mypy app/ tests/",
-    "uv run mypy --show-error-codes",
+    "uv run mypy app/ tests/ *",
     "./scripts/python-quality-check.sh *",
+    "uv run yamllint infrastructure/ *",
+    "uv run cfn-lint infrastructure/ *",
     "aws configure list",
     "aws sts get-caller-identity"
   ],
@@ -55,7 +56,33 @@
       "template.yaml",
       "template.yml",
       "**/template.yaml",
-      "**/template.yml"
+      "**/template.yml",
+      "infrastructure/*.yaml",
+      "infrastructure/*.yml"
     ]
+  },
+  "yaml.customTags": [
+    "!Ref",
+    "!GetAtt",
+    "!Sub",
+    "!Join",
+    "!Select",
+    "!Split",
+    "!Base64",
+    "!GetAZs",
+    "!ImportValue",
+    "!FindInMap",
+    "!Condition",
+    "!Equals",
+    "!Not",
+    "!And",
+    "!Or",
+    "!If"
+  ],
+
+  "[yaml]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.rulers": [160]
   }
 }

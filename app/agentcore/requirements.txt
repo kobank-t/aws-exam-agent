@@ -1,26 +1,26 @@
-# AgentCore Runtime 用依存関係
-# これらの依存関係は AgentCore デプロイ時に Docker イメージに含まれます
+# AgentCore Runtime 依存関係
+# bedrock-agentcore-starter-toolkit によって自動管理される依存関係
 
-# AI エージェント基盤
+# 基本依存関係
 strands-agents>=1.0.0
 bedrock-agentcore>=1.0.0
-
-# Python パッケージ管理（MCP Server 起動用）
-uv>=0.1.0
-
-# AWS SDK
 boto3>=1.34.0
-botocore>=1.34.0
-
-# データモデル・バリデーション
 pydantic>=2.0.0
 pydantic-settings>=2.0.0
 
-# HTTP クライアント
-httpx>=0.25.0
+# 開発・テスト依存関係（必要に応じて）
+pytest>=7.0.0
+moto>=4.0.0
 
 # ログ・監視
-aws-lambda-powertools>=2.0.0
+structlog>=23.0.0
 
-# ユーティリティ
-python-dateutil>=2.8.0
+# 型チェック
+mypy>=1.0.0
+types-boto3>=1.0.0
+
+# MCP関連（必要に応じて）
+# mcp-client>=1.0.0
+
+# その他のユーティリティ
+python-dotenv>=1.0.0

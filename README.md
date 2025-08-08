@@ -99,7 +99,7 @@ aws-exam-agent/
 ### MCP (Model Context Protocol) 統合
 
 - **AWS Documentation MCP Server**: AWS 公式ドキュメント取得
-- **AWS Knowledge MCP Server**: 試験関連情報取得
+- **AWS Knowledge MCP Server**: AWS 包括的知識ベース（ドキュメント・ブログ・What's New・Well-Architected 等）
 - **標準化されたコンテキスト提供**: uvx による統一的なサーバー起動
 
 ## 📋 開発ワークフロー

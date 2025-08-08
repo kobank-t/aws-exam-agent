@@ -15,9 +15,17 @@ from typing import Any
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from strands import Agent, tool
 
-# ログ設定
+from app.shared.config import (
+    get_agentcore_agent_config,
+    get_agentcore_error_handling_config,
+    get_agentcore_log_config,
+    get_agentcore_mcp_config,
+)
+
+# ログ設定（AgentCore設定を使用）
+log_config = get_agentcore_log_config()
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=getattr(logging, log_config["log_level"]), format=log_config["log_format"]
 )
 logger = logging.getLogger(__name__)
 
@@ -136,12 +144,17 @@ def quality_management_agent(question: dict[str, Any]) -> dict[str, Any]:
     return validation_result
 
 
+# AgentCore設定の取得
+agent_config = get_agentcore_agent_config()
+mcp_config = get_agentcore_mcp_config()
+error_config = get_agentcore_error_handling_config()
+
 # 監督者エージェント（SupervisorAgent）の初期化
 # Agent-as-Tools パターンで専門エージェントを統合
 agent = Agent(
     tools=[aws_info_agent, question_generation_agent, quality_management_agent],
-    name="SupervisorAgent",
-    description="AWS Exam Agent の監督者エージェント。専門エージェントを統合して問題生成・配信を行います。",
+    name=agent_config["agent_name"],
+    description=agent_config["description"],
 )
 
 

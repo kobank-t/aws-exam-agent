@@ -14,6 +14,7 @@
 - **技術的負債ゼロ**: 受け入れテスト未通過での次タスク進行禁止
 - **ストリーミング対応**: リアルタイム処理状況監視
 - **品質管理統一**: 全タスクで `uv run ruff check app/ tests/` + `uv run mypy app/ tests/` + IDE エラー表示ゼロを必須とする
+- **インフラ品質管理**: CloudFormation テンプレート作成タスクで `uv run yamllint` + `uv run cfn-lint` + `./scripts/infrastructure-quality-check.sh` 通過を必須とする
 
 ## 現在の状況
 
@@ -49,13 +50,16 @@
 
   _Requirements: 全体の基盤_
 
-- [ ] 2. AgentCore 開発環境のセットアップ
+- [x] 2. AgentCore 開発環境のセットアップ
 
   **完了基準**:
 
   - `aws sts get-caller-identity` で AWS 認証確認（JSON レスポンス取得）
-  - `agentcore configure` で設定ファイル生成（agentcore.yaml ファイル存在確認）
-  - `uv run python -c "from strands_agents import Agent; print('strands_agents imported successfully')"` で strands_agents インポート確認（出力文字列一致）
+  - `sam deploy` で AgentCore 事前リソースデプロイ成功（CloudFormation スタック作成確認）
+  - `uv run yamllint infrastructure/agentcore-resources.yaml` で YAML 品質チェック通過（エラー 0 件）
+  - `uv run cfn-lint infrastructure/agentcore-resources.yaml` で CloudFormation 構文チェック通過（エラー 0 件）
+  - `agentcore configure list` で設定ファイル認識確認（エージェント設定表示）
+  - `uv run python -c "from strands import Agent; print('strands imported successfully')"` で strands インポート確認（出力文字列一致）
   - `uv run python app/agentcore/agent_main.py` で SupervisorAgent 実行（exit code 0 + 期待ログ出力）
   - `uv run pytest tests/unit/agentcore/test_agent_main.py -v` で AgentCore エージェントテスト通過（全テスト PASSED）
   - `uv run ruff check app/ tests/` でリンターエラー 0 件
@@ -65,11 +69,12 @@
 
   - [x] 2.1 AWS CLI 設定とプロファイル確認
   - [x] 2.2 bedrock-agentcore-starter-toolkit インストールと設定
-  - [x] 2.3 strands_agents の正しいインポート方法確認・実行
+  - [x] 2.3 strands の正しいインポート方法確認・実行（from strands import Agent）
   - [x] 2.4 pyproject.toml に AgentCore 関連依存関係追加（MCP 関連含む）
   - [x] 2.5 基本的なエージェント実装（agent_main.py の作成）
-  - [ ] 2.6 AgentCore 設定クラスの実装・テスト作成
-  - [ ] 2.7 AgentCore configure による設定ファイル生成確認
+  - [x] 2.6 AgentCore 設定クラスの実装・テスト作成
+  - [x] 2.7 AgentCore 事前リソースの作成（IAM ロール・ECR リポジトリ）
+  - [x] 2.8 AgentCore configure による設定ファイル生成確認
 
   _Requirements: AgentCore 基盤、MCP 統合_
 
@@ -107,6 +112,8 @@
   **サブタスク**:
 
   - [ ] 4.1 DynamoDB テーブル設計の実装（SAM テンプレート）
+    - `uv run yamllint infrastructure/dynamodb-tables.yaml` で YAML 品質チェック通過（エラー 0 件）
+    - `uv run cfn-lint infrastructure/dynamodb-tables.yaml` で CloudFormation 構文チェック通過（エラー 0 件）
   - [ ] 4.2 Pydantic データモデル（Question、Delivery、UserResponse）の実装
   - [ ] 4.3 DynamoDB クライアントとリポジトリパターンの実装
   - [ ] 4.4 データモデル・リポジトリの単体テスト作成
@@ -238,6 +245,8 @@
   **サブタスク**:
 
   - [ ] 10.1 SAM テンプレートで API Gateway REST API 設定
+    - `uv run yamllint infrastructure/api-gateway.yaml` で YAML 品質チェック通過（エラー 0 件）
+    - `uv run cfn-lint infrastructure/api-gateway.yaml` で CloudFormation 構文チェック通過（エラー 0 件）
   - [ ] 10.2 Lambda 関数による AgentCore Runtime 呼び出し実装
   - [ ] 10.3 Power Automate Webhook 呼び出し機能の実装
   - [ ] 10.4 Teams 投稿データフォーマット機能の実装
@@ -294,6 +303,7 @@
   **完了基準**:
 
   - `sam validate` で SAM テンプレート構文確認
+  - `./scripts/infrastructure-quality-check.sh` で全インフラテンプレート品質チェック通過（エラー 0 件）
   - `sam build && sam deploy` でインフラデプロイ成功
   - `./scripts/deploy-hybrid.sh` でハイブリッドデプロイ成功
   - GitHub Actions ワークフローで CI/CD 実行成功
@@ -302,9 +312,17 @@
   **サブタスク**:
 
   - [ ] 13.1 API Gateway REST API 用 SAM テンプレート作成
+    - `uv run yamllint infrastructure/main-template.yaml` で YAML 品質チェック通過（エラー 0 件）
+    - `uv run cfn-lint infrastructure/main-template.yaml` で CloudFormation 構文チェック通過（エラー 0 件）
   - [ ] 13.2 Lambda 関数と API Gateway の定義
+    - `uv run yamllint infrastructure/lambda-functions.yaml` で YAML 品質チェック通過（エラー 0 件）
+    - `uv run cfn-lint infrastructure/lambda-functions.yaml` で CloudFormation 構文チェック通過（エラー 0 件）
   - [ ] 13.3 DynamoDB テーブル定義の実装
+    - `uv run yamllint infrastructure/dynamodb-tables.yaml` で YAML 品質チェック通過（エラー 0 件）
+    - `uv run cfn-lint infrastructure/dynamodb-tables.yaml` で CloudFormation 構文チェック通過（エラー 0 件）
   - [ ] 13.4 EventBridge スケジュール設定の実装
+    - `uv run yamllint infrastructure/eventbridge-schedules.yaml` で YAML 品質チェック通過（エラー 0 件）
+    - `uv run cfn-lint infrastructure/eventbridge-schedules.yaml` で CloudFormation 構文チェック通過（エラー 0 件）
   - [ ] 13.5 IAM ロールと権限設定（AgentCore 呼び出し権限含む）
   - [ ] 13.6 デプロイスクリプト（deploy-hybrid.sh）の作成
   - [ ] 13.7 GitHub Actions ワークフロー（ハイブリッド対応）の実装
@@ -420,7 +438,7 @@ pip install bedrock-agentcore-starter-toolkit
 agentcore --version
 ```
 
-#### 3. strands_agents の正しいインストール
+#### 3. strands の正しいインストール
 
 ```bash
 # 方法1: PyPI からのインストール（推奨）
@@ -432,8 +450,12 @@ uv add git+https://github.com/strands-ai/strands-agents.git
 # 方法3: bedrock-agentcore-starter-toolkit に含まれる場合
 # agentcore configure 実行時に自動インストールされる可能性を確認
 
-# インストール確認
-uv run python -c "from strands_agents import Agent; print('strands_agents installed successfully')"
+# インストール確認（正しいインポート方法）
+uv run python -c "from strands import Agent; print('strands imported successfully')"
+
+# 注意: 正しいインポートは "from strands import Agent" です
+# 間違い: "from strands_agents import Agent"
+# 正解: "from strands import Agent"
 ```
 
 #### 4. pyproject.toml 依存関係更新
@@ -516,8 +538,8 @@ uv
 #### agent_main.py 動作確認手順
 
 ```bash
-# 1. strands_agents インポート確認
-uv run python -c "from strands_agents import Agent, tool; print('Import successful')"
+# 1. strands インポート確認（正しいインポート方法）
+uv run python -c "from strands import Agent, tool; print('Import successful')"
 
 # 2. agent_main.py 基本動作確認
 uv run python app/agentcore/agent_main.py
@@ -529,7 +551,7 @@ uv run python app/agentcore/agent_main.py
 # INFO:__main__:Execution result: {'status': 'success', ...}
 
 # 4. エラーが発生した場合の対処
-# - ImportError: strands_agents が見つからない → インストール方法を再確認
+# - ImportError: strands が見つからない → インストール方法を再確認
 # - ModuleNotFoundError: bedrock_agentcore → bedrock-agentcore-starter-toolkit の再インストール
 # - その他のエラー → 依存関係の不足を確認
 ```
@@ -546,6 +568,12 @@ uv run python app/agentcore/agent_main.py
 - [ ] VS Code 設定の品質保証（廃止設定なし、新形式対応）
 - [ ] テストコードも本番コードと同等の型チェック基準適用
 - [ ] 外部ライブラリの型チェック無視設定が適切に設定済み
+
+**CloudFormation テンプレート作成タスクの追加チェック項目**:
+
+- [ ] `uv run yamllint infrastructure/*.yaml` で YAML 品質チェック通過（エラー 0 件）
+- [ ] `uv run cfn-lint infrastructure/*.yaml` で CloudFormation 構文チェック通過（エラー 0 件）
+- [ ] `./scripts/infrastructure-quality-check.sh` で統合品質チェック通過（エラー 0 件）
 
 **品質劣化の防止策**:
 
