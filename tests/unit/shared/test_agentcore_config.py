@@ -69,9 +69,6 @@ class TestAgentCoreConfig:
         assert config.AGENTCORE_LOG_LEVEL == "INFO"
         assert "%(asctime)s" in config.AGENTCORE_LOG_FORMAT
 
-        # GitHub 設定（環境変数が設定されている場合があるため、型のみ確認）
-        assert isinstance(config.GITHUB_PERSONAL_ACCESS_TOKEN, str | type(None))
-
     @patch.dict(
         os.environ,
         {
@@ -206,13 +203,6 @@ class TestAgentCoreConfig:
 
         assert config.AGENTCORE_LOG_LEVEL == "DEBUG"
         assert config.AGENTCORE_LOG_FORMAT == "%(levelname)s - %(message)s"
-
-    @patch.dict(os.environ, {"GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_test_token_12345"})
-    def test_github_settings(self) -> None:
-        """GitHub設定の確認"""
-        config = AgentCoreConfig()
-
-        assert config.GITHUB_PERSONAL_ACCESS_TOKEN == "ghp_test_token_12345"
 
     def test_config_validation(self) -> None:
         """設定値の妥当性確認"""

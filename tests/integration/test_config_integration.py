@@ -23,7 +23,6 @@ class TestConfigIntegration:
         # 必須設定項目の確認
         assert hasattr(config, "ENVIRONMENT")
         assert hasattr(config, "MCP_AWS_DOCS_SERVER_ENABLED")
-        assert hasattr(config, "GITHUB_PERSONAL_ACCESS_TOKEN")
 
         # AgentCore設定の確認
         from app.shared.config import agentcore_config
@@ -34,7 +33,6 @@ class TestConfigIntegration:
         assert isinstance(config.ENVIRONMENT, str)
         assert isinstance(config.MCP_AWS_DOCS_SERVER_ENABLED, bool)
         assert isinstance(agentcore_config.AGENTCORE_STREAMING_ENABLED, bool)
-        assert isinstance(config.GITHUB_PERSONAL_ACCESS_TOKEN, str | type(None))
 
     def test_environment_specific_config_integration(self) -> None:
         """環境固有設定統合テスト"""
@@ -71,11 +69,6 @@ class TestConfigIntegration:
     def test_config_validation_integration(self) -> None:
         """Config バリデーション統合テスト"""
         config = Config()
-
-        # GitHub Personal Access Token の形式確認
-        token = config.GITHUB_PERSONAL_ACCESS_TOKEN
-        assert isinstance(token, str)
-        assert len(token) > 0
 
         # 環境変数の設定確認
         assert config.ENVIRONMENT == os.getenv("ENVIRONMENT", "development")
@@ -119,7 +112,6 @@ class TestConfigIntegration:
 
         # 文字列の型確認
         assert isinstance(config.ENVIRONMENT, str)
-        assert isinstance(config.GITHUB_PERSONAL_ACCESS_TOKEN, str)
 
     async def test_config_runtime_modification_integration(self) -> None:
         """Config 実行時変更統合テスト"""
@@ -163,24 +155,12 @@ class TestConfigIntegration:
 
     def test_config_error_handling_integration(self) -> None:
         """Config エラーハンドリング統合テスト"""
-        # 必須設定が不足している場合のテスト
-        original_token = os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN")
+        # 設定の初期化確認
+        config = Config()
 
-        try:
-            # GitHub Personal Access Tokenを一時的に削除
-            if "GITHUB_PERSONAL_ACCESS_TOKEN" in os.environ:
-                del os.environ["GITHUB_PERSONAL_ACCESS_TOKEN"]
-
-            # Configの初期化（エラーハンドリングの確認）
-            config = Config()
-
-            # デフォルト値またはエラーハンドリングの確認
-            assert hasattr(config, "GITHUB_PERSONAL_ACCESS_TOKEN")
-
-        finally:
-            # 環境変数を復元
-            if original_token:
-                os.environ["GITHUB_PERSONAL_ACCESS_TOKEN"] = original_token
+        # 基本設定項目の存在確認
+        assert hasattr(config, "ENVIRONMENT")
+        assert hasattr(config, "MCP_AWS_DOCS_SERVER_ENABLED")
 
     def test_config_logging_integration(self) -> None:
         """Config ログ統合テスト"""

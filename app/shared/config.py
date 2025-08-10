@@ -37,9 +37,6 @@ class Config(BaseSettings):
     TEAMS_WEBHOOK_URL: str | None = None
     TEAMS_CHANNEL_ID: str | None = None
 
-    # GitHub 設定
-    GITHUB_PERSONAL_ACCESS_TOKEN: str | None = None
-
     # MCP 設定
     MCP_AWS_DOCS_SERVER_ENABLED: bool = True
     MCP_AWS_KNOWLEDGE_SERVER_ENABLED: bool = True
@@ -104,9 +101,6 @@ class AgentCoreConfig(BaseSettings):
     AGENTCORE_LOG_LEVEL: str = "INFO"
     AGENTCORE_LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
-    # GitHub 設定
-    GITHUB_PERSONAL_ACCESS_TOKEN: str | None = None
-
     model_config = {"env_file": ".env", "case_sensitive": True}
 
 
@@ -120,9 +114,6 @@ class LambdaConfig(BaseSettings):
     # API Gateway 設定
     API_GATEWAY_STAGE: str = "prod"
     API_KEY_REQUIRED: bool = True
-
-    # GitHub 設定
-    GITHUB_PERSONAL_ACCESS_TOKEN: str | None = None
 
     model_config = {"env_file": ".env", "case_sensitive": True}
 

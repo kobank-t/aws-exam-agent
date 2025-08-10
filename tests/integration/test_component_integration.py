@@ -174,10 +174,6 @@ class TestComponentIntegration:
         assert hasattr(agentcore_config, "AGENTCORE_STREAMING_ENABLED")
         assert agentcore_config.AGENTCORE_STREAMING_ENABLED is True
 
-        # GitHub設定の確認
-        assert hasattr(config, "GITHUB_PERSONAL_ACCESS_TOKEN")
-        assert isinstance(config.GITHUB_PERSONAL_ACCESS_TOKEN, str)
-
     async def test_error_propagation_integration(self) -> None:
         """エラー伝播統合テスト"""
         # MCP接続エラー時のフォールバック動作確認
