@@ -21,11 +21,20 @@ class TestErrorIntegration:
 
     async def test_mcp_connection_failure_integration(self) -> None:
         """MCP接続失敗時の統合エラーハンドリングテスト"""
-        # MCP接続失敗をシミュレート
-        with patch(
-            "app.agentcore.mcp.client.MCPClient.connect_all_servers"
-        ) as mock_connect:
-            mock_connect.return_value = False
+        # MCP Server呼び出し時にエラーを発生させる
+        with (
+            patch(
+                "app.agentcore.mcp.client.MCPClient.get_aws_documentation"
+            ) as mock_docs,
+            patch(
+                "app.agentcore.mcp.client.MCPClient.get_aws_knowledge"
+            ) as mock_knowledge,
+        ):
+            # エラーレスポンスを返すように設定
+            mock_docs.return_value = {"error": "Documentation server connection failed"}
+            mock_knowledge.return_value = {
+                "error": "Knowledge server connection failed"
+            }
 
             # AWS情報取得エージェントの実行
             result = await aws_info_agent(service="EC2", topic="instances")
@@ -34,18 +43,20 @@ class TestErrorIntegration:
             assert "service" in result
             assert result["service"] == "EC2"
 
-            # フォールバック動作の確認
-            if "mcp_integration" in result:
-                mcp_integration = result["mcp_integration"]
-                assert isinstance(mcp_integration, dict)
+            # エラー状態の確認
+            assert "mcp_integration" in result
+            mcp_integration = result["mcp_integration"]
+            assert isinstance(mcp_integration, dict)
 
-                # エラー状態の確認
-                error_found = any(
-                    status == "error"
-                    for status in mcp_integration.values()
-                    if isinstance(status, str)
-                )
-                assert error_found or "description" in result
+            # 両方のサーバーでエラーが発生していることを確認
+            assert mcp_integration["aws_docs_server"] == "error"
+            assert mcp_integration["aws_knowledge_server"] == "error"
+
+            # documentationとknowledgeにエラー情報が含まれていることを確認
+            assert "documentation" in result
+            assert "error" in result["documentation"]
+            assert "knowledge" in result
+            assert "error" in result["knowledge"]
 
     async def test_supervisor_agent_error_propagation(self) -> None:
         """SupervisorAgent エラー伝播統合テスト"""

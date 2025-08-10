@@ -92,7 +92,7 @@ class TestConcurrentIntegration:
                 pytest.fail(f"Concurrent supervisor flow {i} failed: {result}")
 
             assert isinstance(result, dict)
-            assert "status" in result
+            assert "service" in result
             success_count += 1
 
         assert success_count == len(results)
@@ -126,15 +126,30 @@ class TestConcurrentIntegration:
 
     async def test_concurrent_error_handling(self) -> None:
         """並行処理エラーハンドリング統合テスト"""
-        # 一部のリクエストでエラーを発生させる
-        with patch("app.agentcore.agent_main.aws_info_agent") as mock_agent:
-            # 成功、エラー、成功、エラー、成功のパターン
-            mock_agent.side_effect = [
-                {"service": "EC2", "status": "success"},
-                Exception("Simulated error 1"),
-                {"service": "Lambda", "status": "success"},
-                Exception("Simulated error 2"),
-                {"service": "RDS", "status": "success"},
+        # MCP接続エラーをシミュレートして、フォールバック動作を確認
+        with (
+            patch(
+                "app.agentcore.mcp.client.MCPClient.get_aws_documentation"
+            ) as mock_docs,
+            patch(
+                "app.agentcore.mcp.client.MCPClient.get_aws_knowledge"
+            ) as mock_knowledge,
+        ):
+            # 一部のリクエストでエラーを発生させる
+            mock_docs.side_effect = [
+                {"documentation": "EC2 docs"},
+                {"error": "Connection failed"},
+                {"documentation": "Lambda docs"},
+                {"error": "Connection failed"},
+                {"documentation": "RDS docs"},
+            ]
+
+            mock_knowledge.side_effect = [
+                {"knowledge": "EC2 knowledge"},
+                {"error": "Connection failed"},
+                {"knowledge": "Lambda knowledge"},
+                {"error": "Connection failed"},
+                {"knowledge": "RDS knowledge"},
             ]
 
             tasks = [
@@ -158,10 +173,22 @@ class TestConcurrentIntegration:
                 else:
                     success_count += 1
                     assert isinstance(result, dict)
+                    assert "service" in result
 
-            # 成功とエラーの両方が発生していることを確認
-            assert success_count > 0
-            assert error_count > 0
+                    # MCP統合状態を確認
+                    if "mcp_integration" in result:
+                        mcp_integration = result["mcp_integration"]
+                        # エラーが発生した場合、一部のサーバーでエラー状態になる
+                        if any(
+                            status == "error"
+                            for status in mcp_integration.values()
+                            if isinstance(status, str)
+                        ):
+                            error_count += 1
+
+            # 全てのリクエストは成功するが、一部でMCPエラーが発生
+            assert success_count == 5
+            assert error_count > 0  # MCPエラーが発生していることを確認
 
     async def test_concurrent_performance_baseline(self) -> None:
         """並行処理パフォーマンスベースライン統合テスト"""
