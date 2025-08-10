@@ -78,23 +78,24 @@
 
   _Requirements: AgentCore 基盤、MCP 統合_
 
-- [ ] 3. テスト環境のセットアップ
+- [x] 3. テスト環境のセットアップ
 
   **完了基準**:
 
   - `uv run pytest tests/unit/ -v` で全単体テスト通過（全テスト PASSED、エラー 0 件）
   - `uv run pytest tests/integration/ -v` で統合テスト通過（全テスト PASSED、エラー 0 件）
-  - `uv run pytest tests/unit/aws_mock/ -v` で moto AWS モックテスト通過（全テスト PASSED）
+  - `uv run pytest -m unit` で単体テストのみ実行（マーカー分離確認）
+  - `uv run pytest -m integration` で統合テストのみ実行（マーカー分離確認）
   - `uv run python app/agentcore/agent_main.py` で SupervisorAgent 実行（exit code 0）
   - `uv run ruff check app/ tests/` でリンターエラー 0 件
   - `uv run mypy app/ tests/` で型チェックエラー 0 件
 
   **サブタスク**:
 
-  - [ ] 3.1 pytest 環境の構築（conftest.py, pytest.ini 設定）
-  - [ ] 3.2 moto（AWS モック）の設定・テスト作成
-  - [ ] 3.3 AgentCore ローカルテスト環境の構築
-  - [ ] 3.4 基本的な統合テストの作成・実行
+  - [x] 3.1 pytest 環境の最適化（統合テスト用フィクスチャ・マーカー分離設定）
+  - [x] 3.2 テスト戦略の最適化（不適切な aws_mock テスト削除、適切なタスクでの統合テスト実装計画）
+  - [x] 3.3 AgentCore ローカルテスト環境の構築（Strands Agents + MCP 統合）
+  - [x] 3.4 基本的な統合テストの作成・実行（コンポーネント連携テスト）
 
   _Requirements: テスト基盤_
 
@@ -106,8 +107,8 @@
 
   - `uv run pytest tests/unit/models/ -v` でデータモデルテスト通過
   - `uv run pytest tests/unit/repositories/ -v` でリポジトリテスト通過
-  - `uv run pytest tests/integration/test_dynamodb/ -v` で DynamoDB 統合テスト通過
-  - moto 使用の DynamoDB モックテストで全 CRUD 操作確認
+  - `uv run pytest tests/integration/test_data_access.py -v` で DynamoDB 統合テスト通過（moto 使用）
+  - DynamoDB 単一テーブル設計での全 CRUD 操作確認
 
   **サブタスク**:
 
@@ -117,7 +118,7 @@
   - [ ] 4.2 Pydantic データモデル（Question、Delivery、UserResponse）の実装
   - [ ] 4.3 DynamoDB クライアントとリポジトリパターンの実装
   - [ ] 4.4 データモデル・リポジトリの単体テスト作成
-  - [ ] 4.5 DynamoDB 統合テスト作成（moto 使用）
+  - [ ] 4.5 DynamoDB 統合テスト作成（tests/integration/test_data_access.py、moto 使用）
 
   _Requirements: 3.6, 5.6, 6.3_
 
@@ -168,8 +169,8 @@
   **完了基準**:
 
   - `uv run pytest tests/unit/agents/test_question_gen_agent.py -v` でエージェントテスト通過（全テスト PASSED）
-  - `uv run pytest tests/unit/bedrock/ -v` で Bedrock 統合テスト通過（全テスト PASSED）
-  - `uv run pytest tests/integration/test_bedrock_mock/ -v` で moto Bedrock モックテスト通過（全テスト PASSED）
+  - `uv run pytest tests/unit/services/test_bedrock_client.py -v` で Bedrock サービステスト通過（全テスト PASSED）
+  - `uv run pytest tests/integration/test_ai_services.py -v` で Bedrock 統合テスト通過（moto 使用、全テスト PASSED）
   - `uv run python -c "from app.agents.question_gen_agent import QuestionGenerationAgent; agent = QuestionGenerationAgent(); print('Bedrock connection successful')"` で Bedrock 接続確認（出力文字列一致）
   - `uv run ruff check app/ tests/` でリンターエラー 0 件
   - `uv run mypy app/ tests/` で型チェックエラー 0 件
@@ -179,8 +180,9 @@
   - [ ] 7.1 Bedrock Claude モデルとの統合実装
   - [ ] 7.2 問題生成プロンプトエンジニアリング
   - [ ] 7.3 問題生成エージェント（@tool）の実装
-  - [ ] 7.4 Bedrock 統合・エージェントの単体テスト作成
-  - [ ] 7.5 ストリーミング生成対応の実装
+  - [ ] 7.4 Bedrock サービス・エージェントの単体テスト作成
+  - [ ] 7.5 Bedrock 統合テスト作成（tests/integration/test_ai_services.py、moto 使用）
+  - [ ] 7.6 ストリーミング生成対応の実装
 
   _Requirements: 3.2, 3.3, 3.4, 3.5_
 
@@ -238,6 +240,7 @@
   - `sam build && sam deploy` でインフラデプロイ（デプロイ完了ログ出力確認）
   - `curl -X POST <API Gateway URL>/generate -d '{"topic":"EC2"}' -H "Content-Type: application/json"` で API 動作確認（HTTP 200 レスポンス）
   - `uv run pytest tests/unit/lambda/ -v` で Lambda 関数テスト通過（全テスト PASSED）
+  - `uv run pytest tests/integration/test_compute_services.py -v` で Lambda 統合テスト通過（moto 使用、全テスト PASSED）
   - `aws events list-rules --name-prefix aws-exam-agent` で EventBridge ルール作成確認（JSON レスポンス取得）
   - `uv run ruff check app/ tests/` でリンターエラー 0 件
   - `uv run mypy app/ tests/` で型チェックエラー 0 件
@@ -252,6 +255,7 @@
   - [ ] 10.4 Teams 投稿データフォーマット機能の実装
   - [ ] 10.5 EventBridge スケジュール連携の実装
   - [ ] 10.6 Lambda 関数の単体テスト作成
+  - [ ] 10.7 Lambda 統合テスト作成（tests/integration/test_compute_services.py、moto 使用）
 
   _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 6.1, 6.2, 6.3, 6.4_
 

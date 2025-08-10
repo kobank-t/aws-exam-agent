@@ -7,6 +7,7 @@ import pytest
 from app.shared.config import AgentCoreConfig, Config, LambdaConfig
 
 
+@pytest.mark.unit
 class TestConfig:
     """設定クラスのテスト"""
 
@@ -66,6 +67,7 @@ class TestConfig:
         assert config.MCP_SERVER_TIMEOUT == 30
 
 
+@pytest.mark.unit
 class TestAgentCoreConfig:
     """AgentCore 設定のテスト"""
 
@@ -80,6 +82,7 @@ class TestAgentCoreConfig:
         assert config.AGENTCORE_VPC_CONFIG is None
 
 
+@pytest.mark.unit
 class TestLambdaConfig:
     """Lambda 設定のテスト"""
 

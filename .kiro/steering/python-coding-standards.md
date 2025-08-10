@@ -29,9 +29,10 @@ AWS Exam Coach プロジェクトにおける Python コーディング規約で
 
 ### 4. 型安全性の徹底
 
-- **本番コードとテストコードで同等の型チェック基準を適用**
+- **詳細は `type-safety-standards.md` を参照**
+- 本番コードとテストコードで同等の型チェック基準を適用
 - IDE 上でのエラー表示ゼロを目指す（チーム開発の精神衛生上重要）
-- Mypy の厳格な設定を全ファイルに適用
+- `# type: ignore` の使用は原則禁止
 
 ## コードフォーマット・リンター
 
@@ -121,24 +122,23 @@ from app.shared import constants as shared_constants
 
 ### 型注釈の必須化
 
-**重要**: 本プロジェクトでは、本番コードとテストコード両方で厳格な型チェックを適用します。
+**重要**: 型安全性の詳細なガイドラインは `type-safety-standards.md` を参照してください。
 
 ```python
-# ❌ 悪い例: 型注釈なし
-def test_config():
-    config = Config()
-    assert config.APP_NAME == "aws-exam-agent"
+# ✅ 基本的な型注釈
+def process_data(data: dict[str, Any]) -> dict[str, Any]:
+    """データを処理する"""
+    return data
 
-# ✅ 良い例: 適切な型注釈
+# ✅ テスト関数の型注釈
 def test_config(self) -> None:
     config = Config()
     assert config.APP_NAME == "aws-exam-agent"
 
-# ✅ 良い例: 引数の型注釈も含む
-def test_environment_override(self, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("APP_NAME", "test-app")
-    config = Config()
-    assert config.APP_NAME == "test-app"
+# ✅ 非同期関数の型注釈
+async def fetch_data(url: str) -> dict[str, Any]:
+    """データを非同期で取得する"""
+    pass
 ```
 
 ### 基本的な型ヒント

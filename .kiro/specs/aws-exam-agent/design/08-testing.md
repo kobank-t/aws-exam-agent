@@ -30,8 +30,14 @@ graph TD
 
 **対象**: 外部依存のないビジネスロジック
 
+**テスト対象の選定原則**:
+
+- 本プロジェクトのビジネスロジックのみをテスト対象とする
+- 外部ライブラリ（boto3、moto 等）自体の動作確認は対象外
+- データモデル、計算ロジック、バリデーション等の純粋な関数をテスト
+
 ```python
-# ✅ 優先度: 高 - データモデル検証
+# ✅ 適切な単体テスト - データモデル検証
 def test_question_model_validation():
     question = Question(
         service="EC2",
@@ -41,50 +47,67 @@ def test_question_model_validation():
     )
     assert question.is_valid()
 
-# ✅ 優先度: 高 - 類似度判定ロジック
+# ✅ 適切な単体テスト - 類似度判定ロジック
 def test_similarity_calculation():
     calculator = SimilarityCalculator()
     similarity = calculator.calculate("VPCとは", "VPCの概要")
     assert 0.0 <= similarity <= 1.0
 
-# ✅ 優先度: 中 - 問題品質チェック
+# ✅ 適切な単体テスト - 問題品質チェック
 def test_question_quality_check():
     checker = QualityChecker()
     result = checker.validate_question_format(question)
     assert result.is_valid
 ```
 
-### 2. API Integration Tests（重要エンドポイントのみ）
+### 2. Integration Tests（統合テスト）
 
-**対象**: 最も重要な API エンドポイント（moto のみ使用）
+**対象**: 複数コンポーネントの連携、外部サービスとの統合
+
+**統合テストの設計原則**:
+
+- `tests/integration/` ディレクトリに配置
+- 機能単位でファイルを分割（AWS リソース単位ではない）
+- `@pytest.mark.integration` マーカーを必須とする
+- moto を使用して AWS 環境をモック化
+
+**ファイル構成**:
+
+- `test_data_access.py`: DynamoDB 統合テスト
+- `test_ai_services.py`: Bedrock 統合テスト
+- `test_compute_services.py`: Lambda 統合テスト
 
 ```python
-# ✅ 優先度: 高 - 問題生成API（motoで完結）
-@mock_dynamodb
-@pytest.mark.asyncio
-async def test_generate_question_api():
-    # moto内でDynamoDBテーブル作成（LocalStack不要）
+# ✅ 適切な統合テスト - tests/integration/test_data_access.py
+@pytest.mark.integration
+@mock_aws
+async def test_question_repository_integration():
+    """DynamoDB統合テスト - 実際のリポジトリクラスをテスト"""
+    # moto内でDynamoDBテーブル作成
     dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-    table = dynamodb.create_table(
-        TableName='questions',
-        KeySchema=[{'AttributeName': 'pk', 'KeyType': 'HASH'}],
-        AttributeDefinitions=[{'AttributeName': 'pk', 'AttributeType': 'S'}],
-        BillingMode='PAY_PER_REQUEST'
-    )
+    table = dynamodb.create_table(...)
 
-    # API呼び出し
-    response = await client.post("/api/generate", json={
-        "service": "EC2",
-        "topic": "VPC"
-    })
+    # 本プロジェクトのリポジトリクラスをテスト
+    repository = QuestionRepository()
+    question = Question(service="EC2", topic="VPC")
 
-    assert response.status_code == 202
-    assert "job_id" in response.json()
+    # 実際のビジネスロジックをテスト
+    saved_question = await repository.save(question)
+    retrieved_question = await repository.get(saved_question.id)
 
-# ✅ 優先度: 中 - 問題取得API（motoで完結）
-@mock_dynamodb
-async def test_get_question_api():
-    # moto内でのテストデータ作成・取得テスト
+    assert retrieved_question.service == "EC2"
+
+# ✅ 適切な統合テスト - tests/integration/test_ai_services.py
+@pytest.mark.integration
+@mock_aws
+async def test_bedrock_question_generation():
+    """Bedrock統合テスト - 実際の問題生成サービスをテスト"""
+    service = QuestionGenerationService()
+
+    # patch.objectでBedrockレスポンスをモック化
+    with patch.object(service.bedrock_client, 'invoke_model', return_value=mock_response):
+        question = await service.generate_question("EC2", "intermediate")
+        assert question.question_text is not None
 ```
 
 **テスト実装の詳細**: [Python コーディング規約](../../../steering/python-coding-standards.md#テスト) を参照してください。
@@ -238,20 +261,48 @@ test("AI支援による問題配信フロー検証", async ({ page, request }) =
 
 **判断基準**: 開発効率 vs リスク軽減のバランス
 
-```python
-# ✅ 実装する - 高頻度で使用される重要ロジック
-def test_question_generation_core_logic():
-    # 問題生成の基本ロジック
+**🎯 重要な原則（2025 年 8 月 8 日の学び）**:
+「何をテストするか」より「何をテストしないか」の判断が重要です。
 
-# ✅ 実装する - データ破損リスクが高い
-@mock_dynamodb
-def test_question_save_and_retrieve():
-    # データ永続化の基本動作
+```python
+# ✅ 実装する - 本プロジェクトのビジネスロジック
+def test_question_generation_core_logic():
+    """実際の問題生成アルゴリズムをテスト"""
+    generator = QuestionGenerator()
+    question = generator.generate("EC2", "VPC", "intermediate")
+    assert question.is_valid()
+
+# ✅ 実装する - 実際のリポジトリクラス
+@pytest.mark.integration
+@mock_aws
+def test_question_repository_crud():
+    """本プロジェクトのデータアクセス層をテスト"""
+    repository = QuestionRepository()
+    # 実際のCRUD操作をテスト
+
+# ❌ 実装しない - 外部ライブラリ自体のテスト
+def test_boto3_dynamodb_basic_operations():
+    """これはAWS SDKのテストであり、本プロジェクトの価値に寄与しない"""
+    # moto自体の動作確認は不要
 
 # ❌ Phase 1では実装しない - 複雑で頻度が低い
 def test_concurrent_question_generation():
     # 同時アクセス時の動作（後回し）
 ```
+
+### テスト価値の判断基準
+
+**実装すべきテスト**:
+
+- ✅ 本プロジェクトのコードをテストする
+- ✅ ビジネスロジックの正確性を検証する
+- ✅ データ整合性を保証する
+
+**実装すべきでないテスト**:
+
+- ❌ 外部ライブラリ（boto3、moto 等）自体をテストする
+- ❌ AWS SDK の基本動作を確認する
+- ❌ フレームワーク自体の動作を検証する
 
 ### Phase 1 で対象外とする項目
 
@@ -337,9 +388,23 @@ def test_concurrent_question_generation():
 **効率的な学習に集中:**
 
 - **pytest 基礎**: 単体テスト・モック・フィクスチャの実践
-- **moto 活用**: AWS サービスのローカルテスト技術
+- **moto 活用**: AWS サービスのローカルテスト技術（適切な使い方の理解）
 - **API テスト**: FastAPI アプリケーションのテスト手法
 - **テスト駆動開発**: 最小限のテストから始める実践的アプローチ
+
+### moto 活用の適切な方針
+
+**適切な使用方法**:
+
+- 本プロジェクトの AWS 統合コードのテスト環境として使用
+- リポジトリクラス、サービスクラスの統合テストで活用
+- 実際のビジネスロジックの動作確認に集中
+
+**避けるべき使用方法**:
+
+- moto 自体の動作確認
+- AWS SDK の基本接続テスト
+- 外部ライブラリの機能検証
 
 ### Phase 2 での学習拡張
 
@@ -365,3 +430,177 @@ def test_user_reported_issue():
 ```
 
 この段階的アプローチにより、**理論的な完璧さより実用的な価値創出**を重視した学習が可能になります。
+
+## テスト設計原則
+
+### テスト対象の選定基準
+
+**基本原則**: 本プロジェクトの品質向上に直接寄与するテストのみを実装する
+
+**実装すべきテスト**:
+
+- ✅ 本プロジェクトのビジネスロジック
+- ✅ データモデルの妥当性検証
+- ✅ コンポーネント間の連携機能
+- ✅ 外部サービス統合の正確性
+
+**実装すべきでないテスト**:
+
+- ❌ 外部ライブラリ（boto3、moto 等）自体の動作確認
+- ❌ AWS SDK の基本機能テスト
+- ❌ フレームワーク自体の動作検証
+
+```python
+# ✅ 適切なテスト例 - 本プロジェクトのビジネスロジック
+def test_question_repository_save():
+    """リポジトリクラスの永続化機能をテスト"""
+    repository = QuestionRepository()
+    question = Question(service="EC2", topic="VPC")
+    result = repository.save(question)
+    assert result.success
+    assert result.id is not None
+
+# ❌ 不適切なテスト例 - 外部ライブラリの動作確認
+def test_boto3_client_creation():
+    """AWS SDKの基本動作 - 本プロジェクトの価値に寄与しない"""
+    client = boto3.client("dynamodb")
+    assert client is not None
+```
+
+### テスト分類と配置
+
+**ディレクトリ構成**:
+
+```
+tests/
+├── unit/           # 外部依存のない純粋なロジック
+├── integration/    # 複数コンポーネント・外部サービス連携
+└── e2e/           # エンドユーザー視点での全体フロー
+```
+
+**マーカー設定**:
+
+- `@pytest.mark.unit`: 単体テスト
+- `@pytest.mark.integration`: 統合テスト
+- `@pytest.mark.e2e`: E2E テスト
+
+### 段階的テスト実装戦略
+
+**Phase 1（MVP）**:
+
+- 最小限のテストで早期リリース
+- 高頻度使用・高リスク機能を優先
+- 手動確認で補完
+
+**Phase 2（フィードバック反映）**:
+
+- ユーザーフィードバックに基づく自動テスト追加
+- 頻発問題の自動検証
+- CI/CD パイプライン強化
+
+### テスト実装のベストプラクティス
+
+**実装前の確認事項**:
+
+1. テストが本プロジェクトの品質向上に寄与するか
+2. テストの性質に応じた適切な配置とマーカー設定
+3. 段階的アプローチによる実用的価値の優先
+
+**継続的改善**:
+
+- フィードバックに基づく自動テスト追加
+- 頻発問題の自動検証
+- 実際の問題に対応したテスト設計
+
+## 型安全性向上の実践記録
+
+### `# type: ignore` 完全削除プロジェクト（2025 年 8 月 10 日）
+
+**背景**: プロジェクト全体で 5 箇所の `# type: ignore` が使用されており、型安全性と保守性に悪影響
+
+**実施内容**:
+
+#### 1. 問題箇所の特定
+
+```bash
+# 検索コマンド
+grep -r "# type: ignore" app/ tests/
+```
+
+**発見箇所**:
+
+- `app/agentcore/agent_main.py`: 2 箇所
+- `app/agentcore/mcp/client.py`: 2 箇所
+- `tests/integration/test_component_integration.py`: 1 箇所
+
+#### 2. 適切な解決策の実装
+
+**A. 型ガードと cast の使用**
+
+```python
+# 修正前（不健全）
+documentation = documentation_result  # type: ignore[assignment]
+
+# 修正後（型安全）
+if isinstance(results[0], Exception):
+    documentation = {"error": str(results[0])}
+else:
+    # asyncio.gatherの結果は正常時にdict[str, Any]を返すことが保証されている
+    documentation = cast(dict[str, Any], results[0])
+```
+
+**B. テストコードの論理修正**
+
+```python
+# 修正前（到達不可能）
+if connection_result and mcp_client.is_connected:
+    doc_result = await mcp_client.get_aws_documentation("EC2", "overview")  # type: ignore[unreachable]
+
+# 修正後（適切な条件）
+doc_result = await mcp_client.get_aws_documentation("EC2", "overview")
+```
+
+**C. 非同期テストの適切な実装**
+
+```python
+# 修正前（同期モック）
+mock_aws_info.return_value = {"service": "S3"}
+
+# 修正後（非同期モック）
+import asyncio
+mock_aws_info.return_value = asyncio.Future()
+mock_aws_info.return_value.set_result({"service": "S3"})
+```
+
+#### 3. 検証結果
+
+**品質メトリクス**:
+
+- **Mypy 型チェック**: ✅ エラー 0 件（`uv run mypy app/ tests/`）
+- **Ruff リンターチェック**: ✅ エラー 0 件（`uv run ruff check app/ tests/`）
+- **テスト通過率**: ✅ 100%（統合テスト 10/10、単体テスト 15/15）
+- **`# type: ignore` 使用**: ✅ 0 件（完全削除）
+
+**学習効果**:
+
+- **適切な型ガード**: `isinstance` による安全な型絞り込み手法
+- **cast 関数の活用**: 型推論困難時の明示的キャスト手法
+- **非同期モック**: `asyncio.Future` を使った適切なテスト実装
+- **コメントによる説明**: 型キャストの理由を明記する重要性
+
+#### 4. 今後の指針
+
+**`# type: ignore` 使用前のチェックリスト**:
+
+1. 適切な型ガード（`isinstance`）で解決できないか
+2. `cast`関数による明示的キャストで解決できないか
+3. 型注釈の追加で解決できないか
+4. コメントで理由を明記できるか
+
+**禁止事項**:
+
+- 根拠不明な `# type: ignore` の使用
+- テストコードでの型チェック緩和
+- 「とりあえず動く」ための型チェック無視
+
+この実践により、**健全で保守性の高いコードベース**を実現し、長期的な開発効率向上を達成しました。

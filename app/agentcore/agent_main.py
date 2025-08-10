@@ -9,12 +9,14 @@ Agent-as-Tools パターンにより、専門エージェントを統合して
 AWS試験問題の生成・配信を行います。
 """
 
+import asyncio
 import logging
-from typing import Any
+from typing import Any, cast
 
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from strands import Agent, tool
 
+from app.agentcore.mcp.client import get_mcp_client
 from app.shared.config import (
     get_agentcore_agent_config,
     get_agentcore_error_handling_config,
@@ -34,32 +36,91 @@ app = BedrockAgentCoreApp()
 
 
 @tool
-def aws_info_agent(service: str = "EC2") -> dict[str, Any]:
+async def aws_info_agent(service: str = "EC2", topic: str = "") -> dict[str, Any]:
     """
     AWS情報取得エージェント（@tool）
 
     MCP Server を通じて AWS 公式ドキュメントから最新情報を取得します。
-    現在はモック実装、後でMCP統合に置き換えます。
+    AWS Documentation MCP Server と AWS Knowledge MCP Server を統合使用します。
 
     Args:
         service: AWSサービス名
+        topic: 特定のトピック（オプション）
 
     Returns:
         サービス情報の辞書
     """
-    logger.info(f"[AWS Info Agent] Getting AWS info for service: {service}")
+    logger.info(
+        f"[AWS Info Agent] Getting AWS info for service: {service}, topic: {topic}"
+    )
 
-    # 基本的な情報取得ロジック（後でMCP統合に置き換え）
-    info = {
-        "service": service,
-        "description": f"AWS {service} is a cloud service",
-        "use_cases": [f"Use case 1 for {service}", f"Use case 2 for {service}"],
-        "pricing_model": "Pay-as-you-use",
-        "latest_features": [f"Feature 1 for {service}", f"Feature 2 for {service}"],
-    }
+    try:
+        # MCP Client を取得
+        mcp_client = await get_mcp_client()
 
-    logger.info(f"[AWS Info Agent] AWS info retrieved for {service}")
-    return info
+        # AWS Documentation と AWS Knowledge の両方から情報を取得
+        documentation_task = mcp_client.get_aws_documentation(service, topic)
+        knowledge_task = mcp_client.get_aws_knowledge(f"{service} {topic}".strip())
+
+        # 並行して情報を取得
+        results = await asyncio.gather(
+            documentation_task, knowledge_task, return_exceptions=True
+        )
+
+        # エラーハンドリング
+        documentation: dict[str, Any]
+        if isinstance(results[0], Exception):
+            logger.error(f"Documentation retrieval failed: {results[0]}")
+            documentation = {"error": str(results[0])}
+        else:
+            # asyncio.gatherの結果は正常時にdict[str, Any]を返すことが保証されている
+            documentation = cast(dict[str, Any], results[0])
+
+        knowledge: dict[str, Any]
+        if isinstance(results[1], Exception):
+            logger.error(f"Knowledge retrieval failed: {results[1]}")
+            knowledge = {"error": str(results[1])}
+        else:
+            # asyncio.gatherの結果は正常時にdict[str, Any]を返すことが保証されている
+            knowledge = cast(dict[str, Any], results[1])
+
+        # 統合された情報を構築
+        integrated_info = {
+            "service": service,
+            "topic": topic,
+            "documentation": documentation,
+            "knowledge": knowledge,
+            "mcp_integration": {
+                "aws_docs_server": "connected"
+                if not documentation.get("error")
+                else "error",
+                "aws_knowledge_server": "connected"
+                if not knowledge.get("error")
+                else "error",
+            },
+            "timestamp": "2025-08-09T20:19:34Z",
+        }
+
+        logger.info(
+            f"[AWS Info Agent] AWS info retrieved for {service} via MCP integration"
+        )
+        return integrated_info
+
+    except Exception as e:
+        logger.error(f"[AWS Info Agent] Error in MCP integration: {e}")
+        # フォールバック: 基本的な情報を返す
+        fallback_info = {
+            "service": service,
+            "topic": topic,
+            "description": f"AWS {service} is a cloud service",
+            "use_cases": [f"Use case 1 for {service}", f"Use case 2 for {service}"],
+            "pricing_model": "Pay-as-you-use",
+            "latest_features": [f"Feature 1 for {service}", f"Feature 2 for {service}"],
+            "mcp_integration": {"status": "fallback", "error": str(e)},
+        }
+
+        logger.info(f"[AWS Info Agent] Using fallback info for {service}")
+        return fallback_info
 
 
 @tool
@@ -159,7 +220,7 @@ agent = Agent(
 
 
 @app.entrypoint
-def invoke(payload: dict[str, Any]) -> dict[str, Any]:
+async def invoke(payload: dict[str, Any]) -> dict[str, Any]:
     """
     AgentCore Runtime エントリーポイント
 
@@ -188,7 +249,7 @@ def invoke(payload: dict[str, Any]) -> dict[str, Any]:
     try:
         # Agent-as-Tools パターンによるマルチエージェント処理
         logger.info("=== Phase 1: AWS Information Retrieval ===")
-        aws_info = aws_info_agent(service=topic)
+        aws_info = await aws_info_agent(service=topic)
 
         logger.info("=== Phase 2: Question Generation ===")
         question = question_generation_agent(

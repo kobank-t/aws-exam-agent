@@ -14,13 +14,11 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 try:
-    from moto import mock_dynamodb
+    import moto  # noqa: F401
+
+    mock_dynamodb_available = True
 except ImportError:
-    try:
-        # moto v5では mock_dynamodb の場所が変更された
-        from moto.mock_dynamodb import mock_dynamodb
-    except ImportError:
-        mock_dynamodb = None
+    mock_dynamodb_available = False
 
 # プロジェクトルートをパスに追加
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -96,29 +94,10 @@ def mock_bedrock_client() -> AsyncMock:
     return client
 
 
-@pytest.fixture
-def mock_dynamodb_table() -> Any:
-    """DynamoDB テーブルのモック"""
-    if mock_dynamodb is None:
-        pytest.skip("moto mock_dynamodb not available")
-
-    with mock_dynamodb():
-        import boto3
-
-        dynamodb = boto3.resource("dynamodb", region_name="ap-northeast-1")
-        table = dynamodb.create_table(
-            TableName="test-questions",
-            KeySchema=[
-                {"AttributeName": "PK", "KeyType": "HASH"},
-                {"AttributeName": "SK", "KeyType": "RANGE"},
-            ],
-            AttributeDefinitions=[
-                {"AttributeName": "PK", "AttributeType": "S"},
-                {"AttributeName": "SK", "AttributeType": "S"},
-            ],
-            BillingMode="PAY_PER_REQUEST",
-        )
-        yield table
+# DynamoDB フィクスチャは削除済み
+# 実際のリポジトリクラスのテストは、タスク 4 で実装予定：
+# - app/repositories/question_repository.py 用のフィクスチャ
+# - 単一テーブル設計に対応したテストデータ
 
 
 @pytest.fixture
@@ -128,6 +107,65 @@ def mock_teams_webhook() -> AsyncMock:
     webhook.post.return_value.status_code = 200
     webhook.post.return_value.json.return_value = {"status": "success"}
     return webhook
+
+
+@pytest.fixture
+def mock_mcp_server() -> AsyncMock:
+    """MCP Server のモック（統合テスト用）"""
+    server = AsyncMock()
+    server.connect.return_value = True
+    server.list_tools.return_value = [
+        {"name": "aws_docs_search", "description": "Search AWS documentation"},
+        {"name": "aws_knowledge_query", "description": "Query AWS knowledge base"},
+    ]
+    server.call_tool.return_value = {
+        "content": [{"type": "text", "text": "Mock AWS documentation content"}]
+    }
+    return server
+
+
+@pytest.fixture
+def mock_strands_agent() -> AsyncMock:
+    """Strands Agent のモック（統合テスト用）"""
+    agent = AsyncMock()
+    agent.name = "test-agent"
+    agent.description = "Test agent for integration testing"
+    agent.invoke.return_value = {
+        "status": "success",
+        "result": "Mock agent execution result",
+        "metadata": {"execution_time": 1.5},
+    }
+    return agent
+
+
+@pytest.fixture
+def integration_test_data() -> dict[str, Any]:
+    """統合テスト用の複合データ"""
+    return {
+        "request": {
+            "topic": "EC2",
+            "difficulty": "intermediate",
+            "question_count": 1,
+        },
+        "expected_response": {
+            "questions": [
+                {
+                    "id": "q_integration_001",
+                    "topic": "EC2",
+                    "question_text": "Integration test question",
+                    "options": [
+                        "A. Option 1",
+                        "B. Option 2",
+                        "C. Option 3",
+                        "D. Option 4",
+                    ],
+                    "correct_answer": "B",
+                    "explanation": "Integration test explanation",
+                }
+            ],
+            "metadata": {"generation_time": 2.5, "quality_score": 0.85},
+        },
+    }
 
 
 @pytest.fixture(autouse=True)
@@ -140,3 +178,13 @@ def setup_test_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DYNAMODB_TABLE_NAME", "test-questions")
     monkeypatch.setenv("AWS_REGION", "ap-northeast-1")
     monkeypatch.setenv("BEDROCK_REGION", "us-east-1")
+
+    # MCP Server 設定（統合テスト用）
+    monkeypatch.setenv("MCP_AWS_DOCS_ENABLED", "true")
+    monkeypatch.setenv("MCP_AWS_KNOWLEDGE_ENABLED", "true")
+    monkeypatch.setenv("MCP_SERVER_TIMEOUT", "30")
+
+    # AgentCore 設定（統合テスト用）
+    monkeypatch.setenv("AGENTCORE_RUNTIME_MEMORY", "512")
+    monkeypatch.setenv("AGENTCORE_RUNTIME_TIMEOUT", "300")
+    monkeypatch.setenv("AGENTCORE_STREAMING_ENABLED", "true")
