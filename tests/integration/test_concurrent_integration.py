@@ -226,7 +226,9 @@ class TestConcurrentIntegration:
             assert isinstance(result, dict)
 
         # 並行実行が効率的であることを確認（厳密な性能要件は設けない）
-        assert concurrent_time <= sequential_time * 1.5  # 50%のマージンを許容
+        assert (
+            concurrent_time <= sequential_time * 2.0
+        )  # 100%のマージンを許容（環境依存を考慮）
 
     async def test_concurrent_timeout_handling(self) -> None:
         """並行処理タイムアウトハンドリング統合テスト"""

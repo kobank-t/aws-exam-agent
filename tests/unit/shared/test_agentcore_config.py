@@ -241,7 +241,7 @@ class TestAgentCoreConfig:
         config = AgentCoreConfig()
 
         # model_configの設定確認
-        assert config.model_config["env_file"] == ".env"
+        # 設定管理をconfig.pyに一元化したため、case_sensitiveのみ設定
         assert config.model_config["case_sensitive"] is True
 
     def test_config_immutability(self) -> None:

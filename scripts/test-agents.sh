@@ -5,11 +5,8 @@ set -e
 
 echo "🤖 AWS Exam Agent テストを開始します..."
 
-# 環境変数の確認
-if [ ! -f ".env" ]; then
-    echo "❌ .env ファイルが見つかりません。setup-dev.sh を実行してください。"
-    exit 1
-fi
+# 設定確認（config.pyに一元化済み）
+echo "📋 設定管理: app/shared/config.py に一元化"
 
 # 仮想環境の確認
 if [ ! -d ".venv" ]; then

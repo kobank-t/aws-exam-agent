@@ -16,19 +16,19 @@ class Config(BaseSettings):
     APP_NAME: str = "aws-exam-agent"
     APP_VERSION: str = "0.1.0"
     ENVIRONMENT: str = "development"
-    DEBUG: bool = False
-    LOG_LEVEL: str = "INFO"
+    DEBUG: bool = True
+    LOG_LEVEL: str = "DEBUG"
 
     # AWS 設定
-    AWS_REGION: str = "us-east-1"  # Virginia - Bedrock AgentCore対応リージョン
-    AWS_PROFILE: str | None = None
+    AWS_REGION: str = "ap-northeast-1"  # 東京リージョン（学習用）
+    AWS_PROFILE: str | None = "default"
 
     # DynamoDB 設定
-    DYNAMODB_TABLE_NAME: str = "aws-exam-agent-questions"
-    DYNAMODB_REGION: str = "us-east-1"  # AgentCoreと統一
+    DYNAMODB_TABLE_NAME: str = "aws-exam-agent-questions-dev"
+    DYNAMODB_REGION: str = "ap-northeast-1"  # 東京リージョン
 
     # Bedrock 設定
-    BEDROCK_REGION: str = "us-east-1"  # AgentCoreと統一
+    BEDROCK_REGION: str = "us-east-1"  # Bedrock AgentCore対応リージョン
     BEDROCK_MODEL_ID: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
     BEDROCK_MAX_TOKENS: int = 4000
     BEDROCK_TEMPERATURE: float = 0.7
@@ -51,7 +51,7 @@ class Config(BaseSettings):
     QUALITY_THRESHOLD: float = 0.8
     SIMILARITY_THRESHOLD: float = 0.7
 
-    model_config = {"env_file": ".env", "case_sensitive": True}
+    model_config = {"case_sensitive": True}
 
 
 class AgentCoreConfig(BaseSettings):
@@ -101,7 +101,7 @@ class AgentCoreConfig(BaseSettings):
     AGENTCORE_LOG_LEVEL: str = "INFO"
     AGENTCORE_LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
-    model_config = {"env_file": ".env", "case_sensitive": True}
+    model_config = {"case_sensitive": True}
 
 
 class LambdaConfig(BaseSettings):
@@ -115,7 +115,7 @@ class LambdaConfig(BaseSettings):
     API_GATEWAY_STAGE: str = "prod"
     API_KEY_REQUIRED: bool = True
 
-    model_config = {"env_file": ".env", "case_sensitive": True}
+    model_config = {"case_sensitive": True}
 
 
 # グローバル設定インスタンス

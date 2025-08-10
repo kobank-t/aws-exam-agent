@@ -43,42 +43,11 @@ else
     echo "⚠️  AWS CLI がインストールされていません"
 fi
 
-# 環境変数ファイルの作成
-if [ ! -f ".env" ]; then
-    echo "📝 .env ファイルを作成します..."
-    cat > .env << EOF
-# AWS Exam Agent 環境設定
-
-# 基本設定
-ENVIRONMENT=development
-DEBUG=true
-LOG_LEVEL=DEBUG
-
-# AWS 設定
-AWS_REGION=ap-northeast-1
-AWS_PROFILE=default
-
-# DynamoDB 設定
-DYNAMODB_TABLE_NAME=aws-exam-agent-questions-dev
-DYNAMODB_REGION=ap-northeast-1
-
-# Bedrock 設定
-BEDROCK_REGION=us-east-1
-BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
-
-# Teams 設定（実際の値に置き換えてください）
-# TEAMS_WEBHOOK_URL=https://your-teams-webhook-url
-# TEAMS_CHANNEL_ID=your-channel-id
-
-# MCP 設定
-MCP_AWS_DOCS_SERVER_ENABLED=true
-MCP_AWS_KNOWLEDGE_SERVER_ENABLED=true
-MCP_SERVER_TIMEOUT=30
-EOF
-    echo "✅ .env ファイルを作成しました。必要に応じて設定を更新してください。"
-else
-    echo "✅ .env ファイルが既に存在します"
-fi
+# 設定管理の説明
+echo "📝 設定管理について:"
+echo "  設定は app/shared/config.py に一元化されています"
+echo "  学習用に適した値がデフォルトで設定済みです"
+echo "  必要に応じて config.py を直接編集してください"
 
 # テストの実行
 echo "🧪 基本テストの実行..."
@@ -88,7 +57,7 @@ echo ""
 echo "🎉 開発環境セットアップが完了しました！"
 echo ""
 echo "次のステップ:"
-echo "1. .env ファイルの設定を確認・更新"
+echo "1. app/shared/config.py の設定を確認（必要に応じて編集）"
 echo "2. AWS 認証情報の設定確認"
 echo "3. VS Code で開発を開始"
 echo ""
