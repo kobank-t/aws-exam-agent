@@ -47,7 +47,7 @@ class TestConfig:
         config = Config()
 
         assert config.BEDROCK_REGION == "us-east-1"
-        assert config.BEDROCK_MODEL_ID == "anthropic.claude-3-5-sonnet-20241022-v2:0"
+        assert config.BEDROCK_MODEL_ID == "anthropic.claude-3-haiku-20240307-v1:0"
         assert config.BEDROCK_MAX_TOKENS == 4000
         assert config.BEDROCK_TEMPERATURE == 0.7
 

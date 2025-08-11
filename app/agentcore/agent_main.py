@@ -124,50 +124,93 @@ async def aws_info_agent(service: str = "EC2", topic: str = "") -> dict[str, Any
 
 
 @tool
-def question_generation_agent(
+async def question_generation_agent(
     topic: str = "EC2",
-    difficulty: str = "intermediate",
+    difficulty: str = "professional",
     aws_info: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
     問題生成エージェント（@tool）
 
     AWS情報を基にProfessionalレベルの試験問題を生成します。
-    現在はモック実装、後でBedrock統合に置き換えます。
+    Bedrock Claude モデルを使用して高品質な問題を生成します。
 
     Args:
         topic: 問題のトピック（例: "EC2", "S3", "Lambda"）
-        difficulty: 難易度（"beginner", "intermediate", "advanced"）
+        difficulty: 難易度（"professional" 推奨）
         aws_info: AWS情報取得エージェントからの情報
 
     Returns:
         生成された問題の辞書
     """
     logger.info(
-        f"[Question Gen Agent] Generating question for topic: {topic}, difficulty: {difficulty}"
+        f"[Question Gen Agent] Generating {difficulty} question for topic: {topic}"
     )
 
-    # AWS情報を活用した問題生成（基本実装）
-    question = {
-        "id": f"q_{topic.lower()}_{difficulty}_001",
-        "topic": topic,
-        "difficulty": difficulty,
-        "question": f"What is the primary use case for AWS {topic}?",
-        "options": {
-            "A": f"Primary function of {topic}",
-            "B": f"Secondary function of {topic}",
-            "C": f"Alternative function of {topic}",
-            "D": "Unrelated function",
-        },
-        "correct_answer": "A",
-        "explanation": f"AWS {topic} is primarily used for its main functionality.",
-        "source_info": aws_info if aws_info else {"note": "Using default info"},
-    }
+    try:
+        # Bedrock Client を動的インポート（循環インポート回避）
+        from app.services.bedrock_client import get_bedrock_client
 
-    logger.info(
-        f"[Question Gen Agent] Question generated successfully: {question['id']}"
-    )
-    return question
+        bedrock_client = await get_bedrock_client()
+
+        # AWS情報が提供されていない場合のフォールバック
+        if aws_info is None:
+            logger.warning("No AWS info provided, using minimal fallback")
+            aws_info = {
+                "service": topic,
+                "documentation": {"sections": [f"{topic} Overview"]},
+                "knowledge": {"professional_insights": [f"Basic {topic} concepts"]},
+            }
+
+        # Bedrock Claude を使用して問題生成
+        question = await bedrock_client.generate_question(
+            aws_info=aws_info, topic=topic, difficulty=difficulty
+        )
+
+        # 生成された問題にメタデータを追加
+        question["agent_info"] = {
+            "generated_by": "question_generation_agent",
+            "bedrock_integration": True,
+            "aws_info_used": bool(aws_info),
+        }
+
+        logger.info(
+            f"[Question Gen Agent] Professional question generated successfully: {question['id']}"
+        )
+        return question
+
+    except Exception as e:
+        logger.error(f"[Question Gen Agent] Error in Bedrock integration: {e}")
+
+        # エラーを隠蔽せず、明確に返す
+        error_question = {
+            "id": f"q_{topic.lower()}_{difficulty}_error_{hash(str(e)) % 1000:03d}",
+            "topic": topic,
+            "difficulty": difficulty,
+            "error": True,
+            "error_type": "question_generation_error",
+            "error_message": str(e),
+            "question": f"❌ 問題生成エラー ({topic}): {str(e)}",
+            "options": {
+                "A": "Bedrockアクセス権限の設定を確認する",
+                "B": "AWS認証情報を確認する",
+                "C": "ネットワーク接続を確認する",
+                "D": "Bedrockサービスの利用可能性を確認する",
+            },
+            "correct_answer": "A",
+            "explanation": f"問題生成中にエラーが発生しました。最も可能性が高いのはBedrockへのアクセス権限の問題です。詳細エラー: {str(e)}",
+            "aws_services": ["Bedrock", topic],
+            "key_concepts": ["エラーハンドリング", "API アクセス権限"],
+            "generated_by": "error_handler",
+            "bedrock_integration": False,
+            "error_info": str(e),
+            "source_info": aws_info if aws_info else {"note": "Error mode"},
+        }
+
+        logger.info(
+            f"[Question Gen Agent] Error question generated: {error_question['id']}"
+        )
+        return error_question
 
 
 @tool
@@ -176,6 +219,7 @@ def quality_management_agent(question: dict[str, Any]) -> dict[str, Any]:
     品質管理エージェント（@tool）
 
     生成された問題の技術的正確性と適切な難易度を検証します。
+    Professional レベルの品質基準に基づいて詳細な検証を行います。
 
     Args:
         question: 検証対象の問題
@@ -183,26 +227,218 @@ def quality_management_agent(question: dict[str, Any]) -> dict[str, Any]:
     Returns:
         品質検証結果
     """
-    logger.info(f"[Quality Agent] Validating question: {question.get('id', 'unknown')}")
-
-    # 基本的な品質検証ロジック
-    validation_result = {
-        "question_id": question.get("id", "unknown"),
-        "is_valid": True,
-        "quality_score": 85,
-        "validation_checks": {
-            "technical_accuracy": True,
-            "difficulty_appropriate": True,
-            "format_correct": True,
-            "explanation_clear": True,
-        },
-        "suggestions": [],
-    }
-
     logger.info(
-        f"[Quality Agent] Question validation completed: score={validation_result['quality_score']}"
+        f"[Quality Agent] Validating Professional-level question: {question.get('id', 'unknown')}"
     )
-    return validation_result
+
+    try:
+        # 詳細な品質検証の実行
+        validation_checks = {}
+        quality_score = 0
+        suggestions = []
+
+        # 1. 技術的正確性の検証
+        technical_accuracy = _validate_technical_accuracy(question)
+        validation_checks["technical_accuracy"] = technical_accuracy["is_valid"]
+        quality_score += technical_accuracy["score"]
+        suggestions.extend(technical_accuracy["suggestions"])
+
+        # 2. Professional レベル難易度の検証
+        difficulty_check = _validate_professional_difficulty(question)
+        validation_checks["difficulty_appropriate"] = difficulty_check["is_valid"]
+        quality_score += difficulty_check["score"]
+        suggestions.extend(difficulty_check["suggestions"])
+
+        # 3. フォーマット正確性の検証
+        format_check = _validate_question_format(question)
+        validation_checks["format_correct"] = format_check["is_valid"]
+        quality_score += format_check["score"]
+        suggestions.extend(format_check["suggestions"])
+
+        # 4. 解説の明確性検証
+        explanation_check = _validate_explanation_quality(question)
+        validation_checks["explanation_clear"] = explanation_check["is_valid"]
+        quality_score += explanation_check["score"]
+        suggestions.extend(explanation_check["suggestions"])
+
+        # 5. ビジネスシナリオの妥当性検証
+        scenario_check = _validate_business_scenario(question)
+        validation_checks["business_scenario_realistic"] = scenario_check["is_valid"]
+        quality_score += scenario_check["score"]
+        suggestions.extend(scenario_check["suggestions"])
+
+        # 総合品質スコアの計算（最大100点）
+        total_quality_score = min(quality_score // 5, 100)
+
+        # 品質基準の判定（Professional レベルは80点以上）
+        is_valid = total_quality_score >= 80 and all(validation_checks.values())
+
+        validation_result = {
+            "question_id": question.get("id", "unknown"),
+            "is_valid": is_valid,
+            "quality_score": total_quality_score,
+            "validation_checks": validation_checks,
+            "suggestions": suggestions,
+            "quality_breakdown": {
+                "technical_accuracy": technical_accuracy["score"],
+                "difficulty_level": difficulty_check["score"],
+                "format_quality": format_check["score"],
+                "explanation_quality": explanation_check["score"],
+                "scenario_realism": scenario_check["score"],
+            },
+            "professional_standards": {
+                "minimum_score_required": 80,
+                "meets_professional_level": is_valid,
+                "certification_alignment": "AWS Certified Solutions Architect - Professional",
+            },
+        }
+
+        logger.info(
+            f"[Quality Agent] Professional validation completed: score={total_quality_score}, valid={is_valid}"
+        )
+        return validation_result
+
+    except Exception as e:
+        logger.error(f"[Quality Agent] Error during validation: {e}")
+        # エラー時のフォールバック
+        return {
+            "question_id": question.get("id", "unknown"),
+            "is_valid": False,
+            "quality_score": 0,
+            "validation_checks": {"error": True},
+            "suggestions": [f"Validation error: {str(e)}"],
+            "error_info": str(e),
+        }
+
+
+def _validate_technical_accuracy(question: dict[str, Any]) -> dict[str, Any]:
+    """技術的正確性を検証"""
+    score = 20
+    suggestions = []
+
+    # AWS サービス名の確認
+    aws_services = question.get("aws_services", [])
+    if not aws_services:
+        score -= 5
+        suggestions.append("AWS services should be explicitly listed")
+
+    # 技術用語の適切性確認
+    question_text = question.get("question", "").lower()
+    if "professional" in question_text or "enterprise" in question_text:
+        score += 5  # Professional レベルのコンテキスト
+
+    return {"is_valid": score >= 15, "score": score, "suggestions": suggestions}
+
+
+def _validate_professional_difficulty(question: dict[str, Any]) -> dict[str, Any]:
+    """Professional レベルの難易度を検証"""
+    score = 20
+    suggestions = []
+
+    difficulty = question.get("difficulty", "").lower()
+    if difficulty != "professional":
+        score -= 10
+        suggestions.append("Question should be marked as 'professional' difficulty")
+
+    # 複雑性の確認
+    key_concepts = question.get("key_concepts", [])
+    if len(key_concepts) < 3:
+        score -= 5
+        suggestions.append("Professional questions should cover multiple key concepts")
+
+    # 複数サービス統合の確認
+    aws_services = question.get("aws_services", [])
+    if len(aws_services) < 2:
+        score -= 5
+        suggestions.append(
+            "Professional questions should involve multiple AWS services"
+        )
+
+    return {"is_valid": score >= 15, "score": score, "suggestions": suggestions}
+
+
+def _validate_question_format(question: dict[str, Any]) -> dict[str, Any]:
+    """問題フォーマットの正確性を検証"""
+    score = 20
+    suggestions = []
+
+    # 必須フィールドの確認
+    required_fields = ["question", "options", "correct_answer", "explanation"]
+    for field in required_fields:
+        if field not in question:
+            score -= 5
+            suggestions.append(f"Missing required field: {field}")
+
+    # 選択肢の確認
+    options = question.get("options", {})
+    if len(options) != 4 or set(options.keys()) != {"A", "B", "C", "D"}:
+        score -= 5
+        suggestions.append("Should have exactly 4 options (A, B, C, D)")
+
+    # 正解の確認
+    correct_answer = question.get("correct_answer", "")
+    if correct_answer not in ["A", "B", "C", "D"]:
+        score -= 5
+        suggestions.append("Correct answer must be A, B, C, or D")
+
+    return {"is_valid": score >= 15, "score": score, "suggestions": suggestions}
+
+
+def _validate_explanation_quality(question: dict[str, Any]) -> dict[str, Any]:
+    """解説の品質を検証"""
+    score = 20
+    suggestions = []
+
+    explanation = question.get("explanation", "")
+    if len(explanation) < 100:
+        score -= 10
+        suggestions.append(
+            "Explanation should be more detailed (minimum 100 characters)"
+        )
+
+    # 正解理由と不正解理由の確認
+    if "option" not in explanation.lower() and "choice" not in explanation.lower():
+        score -= 5
+        suggestions.append(
+            "Explanation should reference why other options are incorrect"
+        )
+
+    return {"is_valid": score >= 15, "score": score, "suggestions": suggestions}
+
+
+def _validate_business_scenario(question: dict[str, Any]) -> dict[str, Any]:
+    """ビジネスシナリオの妥当性を検証"""
+    score = 20
+    suggestions = []
+
+    question_text = question.get("question", "").lower()
+
+    # ビジネスコンテキストの確認
+    business_keywords = [
+        "company",
+        "enterprise",
+        "organization",
+        "business",
+        "migrate",
+        "implement",
+    ]
+    if not any(keyword in question_text for keyword in business_keywords):
+        score -= 10
+        suggestions.append("Question should include realistic business scenario")
+
+    # 実用的な要件の確認
+    practical_keywords = [
+        "cost",
+        "performance",
+        "security",
+        "availability",
+        "scalability",
+    ]
+    if not any(keyword in question_text for keyword in practical_keywords):
+        score -= 5
+        suggestions.append("Question should address practical business requirements")
+
+    return {"is_valid": score >= 15, "score": score, "suggestions": suggestions}
 
 
 # AgentCore設定の取得
@@ -251,13 +487,35 @@ async def invoke(payload: dict[str, Any]) -> dict[str, Any]:
         logger.info("=== Phase 1: AWS Information Retrieval ===")
         aws_info = await aws_info_agent(service=topic)
 
-        logger.info("=== Phase 2: Question Generation ===")
-        question = question_generation_agent(
+        logger.info("=== Phase 2: Professional Question Generation ===")
+        question = await question_generation_agent(
             topic=topic, difficulty=difficulty, aws_info=aws_info
         )
 
-        logger.info("=== Phase 3: Quality Management ===")
+        logger.info("=== Phase 3: Quality Management & Validation ===")
         quality_result = quality_management_agent(question=question)
+
+        # 品質基準未達の場合は再生成を試行
+        if not quality_result.get("is_valid", False):
+            logger.warning(
+                f"Question quality below standards (score: {quality_result.get('quality_score', 0)}), attempting regeneration..."
+            )
+
+            # 1回だけ再生成を試行
+            logger.info("=== Phase 2b: Question Regeneration ===")
+            question = await question_generation_agent(
+                topic=topic, difficulty=difficulty, aws_info=aws_info
+            )
+
+            logger.info("=== Phase 3b: Re-validation ===")
+            quality_result = quality_management_agent(question=question)
+
+            if quality_result.get("is_valid", False):
+                logger.info("Regenerated question meets quality standards")
+            else:
+                logger.warning(
+                    "Regenerated question still below standards, proceeding with current version"
+                )
 
         # 最終結果の構築
         result = {
@@ -306,5 +564,30 @@ async def invoke(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 if __name__ == "__main__":
-    # AgentCore Runtime として実行
-    app.run()
+    import sys
+
+    # コマンドライン引数の処理
+    if len(sys.argv) > 1 and sys.argv[1] == "--test":
+        # テスト実行モード
+        async def test_run() -> None:
+            topic = sys.argv[2] if len(sys.argv) > 2 else "EC2"
+            payload = {"topic": topic, "difficulty": "professional"}
+            result = await invoke(payload)
+            print("\n=== Test Result ===")
+            print(f"Status: {result['status']}")
+            print(f"Topic: {result['topic']}")
+            print(f"Question ID: {result['question']['id']}")
+            print(f"Quality Score: {result['quality_validation']['quality_score']}")
+            print(f"Is Valid: {result['quality_validation']['is_valid']}")
+            print(f"\nQuestion: {result['question']['question']}")
+            print("\nOptions:")
+            for key, value in result["question"]["options"].items():
+                print(f"  {key}: {value}")
+            print(f"\nCorrect Answer: {result['question']['correct_answer']}")
+            print(f"\nExplanation: {result['question']['explanation']}")
+
+        # 非同期実行
+        asyncio.run(test_run())
+    else:
+        # AgentCore Runtime として実行
+        app.run()

@@ -29,7 +29,7 @@ class Config(BaseSettings):
 
     # Bedrock 設定
     BEDROCK_REGION: str = "us-east-1"  # Bedrock AgentCore対応リージョン
-    BEDROCK_MODEL_ID: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+    BEDROCK_MODEL_ID: str = "anthropic.claude-3-haiku-20240307-v1:0"  # 利用可能なモデル
     BEDROCK_MAX_TOKENS: int = 4000
     BEDROCK_TEMPERATURE: float = 0.7
 
@@ -41,6 +41,9 @@ class Config(BaseSettings):
     MCP_AWS_DOCS_SERVER_ENABLED: bool = True
     MCP_AWS_KNOWLEDGE_SERVER_ENABLED: bool = True
     MCP_SERVER_TIMEOUT: int = 30
+
+    # テスト・開発設定
+    USE_MOCK_BEDROCK: bool = False  # テスト時はTrue、本番時はFalse
 
     # キャッシュ設定
     CACHE_TTL_SECONDS: int = 3600
@@ -203,4 +206,21 @@ def get_agentcore_log_config() -> dict[str, Any]:
     return {
         "log_level": agentcore_config.AGENTCORE_LOG_LEVEL,
         "log_format": agentcore_config.AGENTCORE_LOG_FORMAT,
+    }
+
+
+def get_aws_config() -> dict[str, Any]:
+    """
+    AWS 設定辞書を取得
+
+    Returns:
+        AWS設定の辞書
+    """
+    return {
+        "region": config.AWS_REGION,
+        "profile": config.AWS_PROFILE,
+        "bedrock_region": config.BEDROCK_REGION,
+        "bedrock_model_id": config.BEDROCK_MODEL_ID,
+        "bedrock_max_tokens": config.BEDROCK_MAX_TOKENS,
+        "bedrock_temperature": config.BEDROCK_TEMPERATURE,
     }

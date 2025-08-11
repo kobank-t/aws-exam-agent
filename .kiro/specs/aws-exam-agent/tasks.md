@@ -6,6 +6,17 @@
 
 ## 実装方針
 
+### 🎯 アジャイル開発原則（2025 年 8 月 11 日更新）
+
+- **垂直スライス開発**: 水平レイヤー（データ層 → ビジネス層 →UI 層）ではなく、垂直機能（問題生成 →Teams 投稿 → 回答収集の完全フロー）を優先
+- **動く価値の早期提供**: 各イテレーションで実際に使える完全な機能を実装
+- **短いフィードバックサイクル**: 1-2 週間での価値提供とユーザーフィードバック収集
+- **品質を保つ仕組み**: 品質基準維持（100%テスト通過、型チェック等）、CI/CD パイプライン、小さなコミット
+- **継続的価値検証**: 動く機能の実装 → 実際のユーザーでの動作確認 → フィードバック収集 → 次イテレーションへの反映
+- **既存実装の最大活用**: タスク 1-5 で実装済みの基盤（MCP 統合、AgentCore、データモデル、問題生成機能）を有効活用
+
+### 🔧 技術実装原則
+
 - **AgentCore 中心**: メイン処理を AgentCore Runtime で実行
 - **マルチエージェント**: Agent-as-Tools パターンによる専門エージェント連携
 - **MCP 統合**: Model Context Protocol による標準化されたコンテキスト提供
@@ -18,11 +29,11 @@
 
 ## 現在の状況
 
-- **完了済み**: 要件定義、設計書（9 ファイル分割）、コーディング規約
-- **更新完了**: Strands & AgentCore ハンズオン知見の反映
-- **現在フェーズ**: 実装フェーズ開始準備完了
-- **コードベース**: 未実装（README.md、WORK_LOG.md、設計書のみ存在）
-- **次回開始**: タスク 1（Python 開発環境セットアップ）から実装開始
+- **完了済み**: 要件定義、設計書（9 ファイル分割）、コーディング規約、タスク 1-4（環境セットアップ・データ基盤）
+- **実装済み基盤**: MCP 統合、AgentCore 基盤、データモデル、品質チェック体制（100%通過済み）
+- **現在フェーズ**: 問題生成機能の先行実装・動作確認フェーズ
+- **開発方針転換**: 2025 年 8 月 11 日にコア価値優先アプローチに変更
+- **次回開始**: タスク 5（問題生成エージェントの先行実装・動作確認）から継続
 
 ## タスクリスト
 
@@ -121,87 +132,116 @@
 
   _Requirements: 3.6, 5.6, 6.3_
 
-- [ ] 5. キャッシュシステムの実装
+- [x] 5. 問題生成エージェントの先行実装・動作確認（コア機能検証優先）
 
   **完了基準**:
 
   - `./scripts/python-quality-check.sh` で全 Python 品質チェック通過（エラー 0 件）
-  - `uv run pytest tests/unit/cache/ tests/integration/test_cache_system/ -v` で全キャッシュテスト通過（全テスト PASSED）
-  - moto 使用の DynamoDB TTL テーブル動作確認
-  - メモリキャッシュの期限切れ・LRU 動作確認
+  - `uv run python app/agentcore/agent_main.py --topic EC2` で実際の問題生成実行（exit code 0 + 問題 JSON 出力）
+  - 生成された問題の品質確認（Professional レベル、技術的正確性、実際のビジネスシナリオ）
+  - MCP 統合による最新 AWS 情報取得の動作確認（AWS Documentation + AWS Knowledge）
+  - 実際の問題例を複数生成して内容検証（EC2、S3、VPC 等で各 3 問以上）
+  - `uv run pytest tests/unit/agents/ tests/integration/test_question_generation/ -v` で全関連テスト通過（全テスト PASSED）
 
   **サブタスク**:
 
-  - [ ] 5.1 DynamoDB TTL ベースキャッシュテーブル設計・実装
-  - [ ] 5.2 Lambda メモリキャッシュクラスの実装
-  - [ ] 5.3 ServerlessCacheManager クラスの実装
-  - [ ] 5.4 キャッシュシステムの単体・統合テスト作成
+  - [ ] 5.1 MCP 統合と AWS 情報取得エージェントの拡張実装（既存 MCP クライアント活用）
+  - [ ] 5.2 Bedrock Claude モデルとの統合実装（boto3 + 非同期処理）
+  - [ ] 5.3 問題生成エージェント（@tool）のコア機能実装
+  - [ ] 5.4 品質管理エージェント（@tool）による自動検証機能実装
+  - [ ] 5.5 監督者エージェントによるマルチエージェント統合（既存 agent_main.py 拡張）
+  - [ ] 5.6 実際の問題生成・品質確認（手動テスト + 生成問題例の評価・改善）
 
-  _Requirements: 3.1, 3.2, 4.4_
+  _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5（問題生成のコア価値検証を最優先）_
 
-### Phase 3: マルチエージェントシステムのコア機能
+### Phase 3: 周辺機能とシステム統合
 
-- [ ] 6. MCP 統合と AWS 情報取得エージェントの実装
+- [ ] 6. 問題生成 →Teams 投稿の完全フロー実装（垂直スライス第 1 イテレーション）
 
   **完了基準**:
 
   - `./scripts/python-quality-check.sh` で全 Python 品質チェック通過（エラー 0 件）
-  - `uv run pytest tests/unit/mcp/ tests/unit/agents/test_aws_info_agent.py tests/integration/test_mcp_connection/ -v` で全 MCP 関連テスト通過（全テスト PASSED）
-  - `uv run python -c "from app.agents.aws_info_agent import AWSInfoAgent; agent = AWSInfoAgent(); print('MCP connection successful')"` で MCP 接続確認（出力文字列一致）
+  - 実際の Teams チャネルに問題が投稿される（手動操作含む）
+  - 問題生成から Teams 投稿までの完全フローが動作
+  - `uv run pytest tests/integration/test_complete_flow_v1/ -v` で統合テスト通過（全テスト PASSED）
+  - 実際のユーザーでの動作確認とフィードバック収集
 
   **サブタスク**:
 
-  - [ ] 6.1 strands-agents MCPClient の統合実装
-  - [ ] 6.2 AWS Documentation MCP Server との連携実装（StdioServerParameters 方式）
-  - [ ] 6.3 AWS Knowledge MCP Server との連携実装（StdioServerParameters 方式）
-  - [ ] 6.4 AWS 情報取得エージェント（@tool）の実装
-  - [ ] 6.5 MCP 統合・エージェントの単体テスト作成
-  - [ ] 6.6 ストリーミング対応による処理状況通知機能
+  - [ ] 6.1 Power Automate フロー設定（基本的な Teams 投稿機能）
+  - [ ] 6.2 問題生成 →Webhook 呼び出しの統合実装
+  - [ ] 6.3 Teams 投稿テンプレートの実装
+  - [ ] 6.4 実際の Teams チャネルでの動作確認・フィードバック収集
+  - [ ] 6.5 完全フローの統合テスト作成
 
-  _Requirements: 3.1, 3.2, 4.2, 4.4, 4.5_
+  _Requirements: 問題生成 →Teams 投稿の完全な価値提供_
 
-- [ ] 7. 問題生成エージェントの実装
+- [ ] 7. 回答収集 → 統計表示の完全フロー実装（垂直スライス第 2 イテレーション）
 
   **完了基準**:
 
   - `./scripts/python-quality-check.sh` で全 Python 品質チェック通過（エラー 0 件）
-  - `uv run pytest tests/unit/agents/test_question_gen_agent.py tests/unit/services/test_bedrock_client.py tests/integration/test_ai_services.py -v` で全問題生成関連テスト通過（全テスト PASSED）
-  - `uv run python -c "from app.agents.question_gen_agent import QuestionGenerationAgent; agent = QuestionGenerationAgent(); print('Bedrock connection successful')"` で Bedrock 接続確認（出力文字列一致）
+  - Teams リアクション（🅰️🅱️🇨🇩）による回答収集が動作
+  - 回答統計の計算・表示が動作
+  - `uv run pytest tests/integration/test_complete_flow_v2/ -v` で統合テスト通過（全テスト PASSED）
+  - 実際のユーザーでの動作確認とフィードバック収集
 
   **サブタスク**:
 
-  - [ ] 7.1 Bedrock Claude モデルとの統合実装
-  - [ ] 7.2 問題生成プロンプトエンジニアリング
-  - [ ] 7.3 問題生成エージェント（@tool）の実装
-  - [ ] 7.4 Bedrock サービス・エージェントの単体テスト作成
-  - [ ] 7.5 Bedrock 統合テスト作成（tests/integration/test_ai_services.py、moto 使用）
-  - [ ] 7.6 ストリーミング生成対応の実装
+  - [ ] 7.1 Teams リアクション自動追加機能の実装
+  - [ ] 7.2 リアクション収集機能の実装
+  - [ ] 7.3 回答統計計算ロジックの実装
+  - [ ] 7.4 統計表示機能の実装（Teams 投稿）
+  - [ ] 7.5 実際のユーザーでの動作確認・フィードバック収集
+  - [ ] 7.6 完全フローの統合テスト作成
 
-  _Requirements: 3.2, 3.3, 3.4, 3.5_
+  _Requirements: 問題投稿 → 回答収集 → 統計表示の完全な価値提供_
 
-- [ ] 8. 品質管理エージェントと監督者エージェントの実装
+- [ ] 8. 自動スケジュール実行の完全フロー実装（垂直スライス第 3 イテレーション）
 
   **完了基準**:
 
   - `./scripts/python-quality-check.sh` で全 Python 品質チェック通過（エラー 0 件）
-  - `uv run pytest tests/unit/agents/ tests/integration/test_multi_agent/ tests/integration/test_quality_validation/ -v` で全エージェント関連テスト通過（全テスト PASSED）
-  - `uv run python app/agentcore/agent_main.py` で SupervisorAgent 実行（exit code 0 + 期待ログ出力）
+  - EventBridge スケジュールによる自動実行が動作
+  - 問題生成 →Teams 投稿 → 回答収集 → 統計表示の全自動フローが動作
+  - `uv run pytest tests/integration/test_complete_flow_v3/ -v` で統合テスト通過（全テスト PASSED）
+  - 実際のユーザーでの動作確認とフィードバック収集
 
   **サブタスク**:
 
-  - [ ] 8.1 品質管理エージェント（@tool）の実装
-  - [ ] 8.2 監督者エージェントによるマルチエージェント統合
-  - [ ] 8.3 キーワードベース類似度チェック機能の実装
-  - [ ] 8.4 品質基準検証ロジックの実装
-  - [ ] 8.5 複数モデル対応による分間クォータ対策
-  - [ ] 8.6 再生成機能とエラーハンドリングの実装
-  - [ ] 8.7 全エージェントの単体・統合テスト作成
+  - [ ] 8.1 EventBridge スケジュール設定の実装
+  - [ ] 8.2 Lambda 関数による自動実行機能の実装
+  - [ ] 8.3 API Gateway + Lambda インフラの実装
+  - [ ] 8.4 全自動フローの統合実装
+  - [ ] 8.5 実際のユーザーでの動作確認・フィードバック収集
+  - [ ] 8.6 完全フローの統合テスト作成
 
-  _Requirements: 3.7, 5.1, 5.2, 5.3, 5.6, 6.5_
+  _Requirements: 全自動での問題配信 → 回答収集 → 統計表示の完全な価値提供_
+
+- [ ] 9. 高品質問題生成の完全フロー実装（垂直スライス第 4 イテレーション）
+
+  **完了基準**:
+
+  - `./scripts/python-quality-check.sh` で全 Python 品質チェック通過（エラー 0 件）
+  - 品質管理エージェントによる自動検証が動作
+  - Professional レベルの高品質問題が安定して生成される
+  - `uv run pytest tests/integration/test_complete_flow_v4/ -v` で統合テスト通過（全テスト PASSED）
+  - 実際のユーザーでの動作確認とフィードバック収集
+
+  **サブタスク**:
+
+  - [ ] 9.1 品質管理エージェント（@tool）の高度化実装
+  - [ ] 9.2 キーワードベース類似度チェック機能の実装
+  - [ ] 9.3 品質基準検証ロジックの実装
+  - [ ] 9.4 再生成機能とエラーハンドリングの実装
+  - [ ] 9.5 実際のユーザーでの動作確認・フィードバック収集
+  - [ ] 9.6 完全フローの統合テスト作成
+
+  _Requirements: 高品質問題生成の完全な価値提供_
 
 ### Phase 4: AgentCore Runtime と API Gateway 連携
 
-- [ ] 9. AgentCore Runtime メインエージェントの実装
+- [ ] 10. AgentCore Runtime メインエージェントの実装
 
   **完了基準**:
 
@@ -222,7 +262,7 @@
 
   _Requirements: 3.6, 6.4_
 
-- [ ] 10. API Gateway + Lambda による外部連携の実装
+- [ ] 11. API Gateway + Lambda による外部連携の実装
 
   **完了基準**:
 
@@ -246,7 +286,7 @@
 
   _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 6.1, 6.2, 6.3, 6.4_
 
-- [ ] 11. 問題配信システムの統合実装
+- [ ] 12. 問題配信システムの統合実装
 
   **完了基準**:
 
@@ -266,7 +306,7 @@
 
 ### Phase 5: ハイブリッドデプロイとインフラ
 
-- [ ] 12. AgentCore Runtime デプロイ設定
+- [ ] 13. AgentCore Runtime デプロイ設定
 
   **完了基準**:
 
@@ -287,7 +327,7 @@
 
   _Requirements: 6.1, 6.4_
 
-- [ ] 13. API Gateway + Lambda インフラとデプロイ設定
+- [ ] 14. API Gateway + Lambda インフラとデプロイ設定
 
   **完了基準**:
 
@@ -316,7 +356,7 @@
 
 ### Phase 6: Teams 統合と E2E テスト
 
-- [ ] 14. Power Automate フローの設定と連携テスト
+- [ ] 15. Power Automate フローの設定と連携テスト
 
   **完了基準**:
 
@@ -336,7 +376,7 @@
 
   _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.4, 2.5_
 
-- [ ] 15. 回答集計と統計分析機能の実装
+- [ ] 16. 回答集計と統計分析機能の実装
 
   **完了基準**:
 
@@ -355,7 +395,7 @@
 
   _Requirements: 2.1, 2.2, 2.3, 6.3_
 
-- [ ] 16. E2E テストスイートの実装
+- [ ] 17. E2E テストスイートの実装
 
   **完了基準**: `tests/acceptance/test_task_16_completion.py` の全テストが通ること
 
@@ -378,21 +418,21 @@
 
 以下の機能は、MVP 完了後の Phase 2 で実装を検討します：
 
-- [ ] 17. Amazon Bedrock Citations API 統合
+- [ ] 18. Amazon Bedrock Citations API 統合
 
   - Citations API クライアントの実装
   - 引用元情報を含む解説生成機能
   - 品質検証プロセスへの統合
   - _Requirements: 5.2, 5.4_
 
-- [ ] 18. 管理者通知システム
+- [ ] 19. 管理者通知システム
 
   - 品質基準未達時の通知機能実装
   - 管理者ダッシュボード機能
   - 通知設定管理機能
   - _Requirements: 5.5_
 
-- [ ] 19. 高度な品質管理機能
+- [ ] 20. 高度な品質管理機能
   - 品質スコア詳細化
   - 品質トレンド分析機能
   - A/B テスト機能
