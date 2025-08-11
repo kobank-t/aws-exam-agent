@@ -19,7 +19,7 @@
     "uv run pytest *",
     "uv run ruff check *",
     "uv run ruff format *",
-    "uv run mypy app/ tests/ *",
+    "uv run mypy *",
     "./scripts/python-quality-check.sh *",
     "uv run yamllint infrastructure/ *",
     "uv run cfn-lint infrastructure/ *",

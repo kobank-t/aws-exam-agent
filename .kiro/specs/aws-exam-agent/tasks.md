@@ -13,8 +13,8 @@
 - **段階的実装**: 小さな単位で機能を実装し、早期に動作確認
 - **技術的負債ゼロ**: 受け入れテスト未通過での次タスク進行禁止
 - **ストリーミング対応**: リアルタイム処理状況監視
-- **品質管理統一**: 全タスクで `uv run ruff check app/ tests/` + `uv run mypy app/ tests/` + IDE エラー表示ゼロを必須とする
-- **インフラ品質管理**: CloudFormation テンプレート作成タスクで `uv run yamllint` + `uv run cfn-lint` + `./scripts/infrastructure-quality-check.sh` 通過を必須とする
+- **品質管理統一**: 全タスクで `./scripts/python-quality-check.sh` による統合品質チェック必須
+- **インフラ品質管理**: CloudFormation テンプレート作成タスクで `./scripts/infrastructure-quality-check.sh` による統合品質チェック必須
 
 ## 現在の状況
 
@@ -101,24 +101,23 @@
 
 ### Phase 2: データ基盤とコア機能
 
-- [ ] 4. データモデルと DynamoDB 基盤の実装
+- [x] 4. データモデルと DynamoDB 基盤の実装
 
   **完了基準**:
 
-  - `uv run pytest tests/unit/models/ -v` でデータモデルテスト通過
-  - `uv run pytest tests/unit/repositories/ -v` でリポジトリテスト通過
-  - `uv run pytest tests/integration/test_data_access.py -v` で DynamoDB 統合テスト通過（moto 使用）
+  - `./scripts/python-quality-check.sh` で全 Python 品質チェック通過（エラー 0 件）
+  - `./scripts/infrastructure-quality-check.sh infrastructure/dynamodb-tables.yaml` でインフラ品質チェック通過（エラー 0 件）
+  - `uv run pytest tests/unit/models/ tests/unit/repositories/ tests/integration/test_data_access.py -v` で全関連テスト通過（全テスト PASSED）
   - DynamoDB 単一テーブル設計での全 CRUD 操作確認
 
   **サブタスク**:
 
-  - [ ] 4.1 DynamoDB テーブル設計の実装（SAM テンプレート）
-    - `uv run yamllint infrastructure/dynamodb-tables.yaml` で YAML 品質チェック通過（エラー 0 件）
-    - `uv run cfn-lint infrastructure/dynamodb-tables.yaml` で CloudFormation 構文チェック通過（エラー 0 件）
-  - [ ] 4.2 Pydantic データモデル（Question、Delivery、UserResponse）の実装
-  - [ ] 4.3 DynamoDB クライアントとリポジトリパターンの実装
-  - [ ] 4.4 データモデル・リポジトリの単体テスト作成
-  - [ ] 4.5 DynamoDB 統合テスト作成（tests/integration/test_data_access.py、moto 使用）
+  - [x] 4.1 DynamoDB テーブル設計の実装（SAM テンプレート）
+    - `./scripts/infrastructure-quality-check.sh infrastructure/dynamodb-tables.yaml` でインフラ品質チェック通過（エラー 0 件）
+  - [x] 4.2 Pydantic データモデル（Question、Delivery、UserResponse）の実装
+  - [x] 4.3 DynamoDB クライアントとリポジトリパターンの実装
+  - [x] 4.4 データモデル・リポジトリの単体テスト作成
+  - [x] 4.5 DynamoDB 統合テスト作成（tests/integration/test_data_access.py、moto 使用）
 
   _Requirements: 3.6, 5.6, 6.3_
 
@@ -126,8 +125,8 @@
 
   **完了基準**:
 
-  - `uv run pytest tests/unit/cache/ -v` でキャッシュクラステスト通過
-  - `uv run pytest tests/integration/test_cache_system/ -v` で 2 層キャッシュ統合テスト通過
+  - `./scripts/python-quality-check.sh` で全 Python 品質チェック通過（エラー 0 件）
+  - `uv run pytest tests/unit/cache/ tests/integration/test_cache_system/ -v` で全キャッシュテスト通過（全テスト PASSED）
   - moto 使用の DynamoDB TTL テーブル動作確認
   - メモリキャッシュの期限切れ・LRU 動作確認
 
@@ -146,12 +145,9 @@
 
   **完了基準**:
 
-  - `uv run pytest tests/unit/mcp/ -v` で MCP 統合テスト通過（全テスト PASSED）
-  - `uv run pytest tests/unit/agents/test_aws_info_agent.py -v` でエージェントテスト通過（全テスト PASSED）
-  - `uv run pytest tests/integration/test_mcp_connection/ -v` で MCP Server 連携テスト通過（全テスト PASSED）
+  - `./scripts/python-quality-check.sh` で全 Python 品質チェック通過（エラー 0 件）
+  - `uv run pytest tests/unit/mcp/ tests/unit/agents/test_aws_info_agent.py tests/integration/test_mcp_connection/ -v` で全 MCP 関連テスト通過（全テスト PASSED）
   - `uv run python -c "from app.agents.aws_info_agent import AWSInfoAgent; agent = AWSInfoAgent(); print('MCP connection successful')"` で MCP 接続確認（出力文字列一致）
-  - `uv run ruff check app/ tests/` でリンターエラー 0 件
-  - `uv run mypy app/ tests/` で型チェックエラー 0 件
 
   **サブタスク**:
 
@@ -168,12 +164,9 @@
 
   **完了基準**:
 
-  - `uv run pytest tests/unit/agents/test_question_gen_agent.py -v` でエージェントテスト通過（全テスト PASSED）
-  - `uv run pytest tests/unit/services/test_bedrock_client.py -v` で Bedrock サービステスト通過（全テスト PASSED）
-  - `uv run pytest tests/integration/test_ai_services.py -v` で Bedrock 統合テスト通過（moto 使用、全テスト PASSED）
+  - `./scripts/python-quality-check.sh` で全 Python 品質チェック通過（エラー 0 件）
+  - `uv run pytest tests/unit/agents/test_question_gen_agent.py tests/unit/services/test_bedrock_client.py tests/integration/test_ai_services.py -v` で全問題生成関連テスト通過（全テスト PASSED）
   - `uv run python -c "from app.agents.question_gen_agent import QuestionGenerationAgent; agent = QuestionGenerationAgent(); print('Bedrock connection successful')"` で Bedrock 接続確認（出力文字列一致）
-  - `uv run ruff check app/ tests/` でリンターエラー 0 件
-  - `uv run mypy app/ tests/` で型チェックエラー 0 件
 
   **サブタスク**:
 
@@ -190,12 +183,9 @@
 
   **完了基準**:
 
-  - `uv run pytest tests/unit/agents/ -v` で全エージェントテスト通過（全テスト PASSED）
-  - `uv run pytest tests/integration/test_multi_agent/ -v` でマルチエージェント統合テスト通過（全テスト PASSED）
+  - `./scripts/python-quality-check.sh` で全 Python 品質チェック通過（エラー 0 件）
+  - `uv run pytest tests/unit/agents/ tests/integration/test_multi_agent/ tests/integration/test_quality_validation/ -v` で全エージェント関連テスト通過（全テスト PASSED）
   - `uv run python app/agentcore/agent_main.py` で SupervisorAgent 実行（exit code 0 + 期待ログ出力）
-  - `uv run pytest tests/integration/test_quality_validation/ -v` で品質管理機能テスト通過（全テスト PASSED）
-  - `uv run ruff check app/ tests/` でリンターエラー 0 件
-  - `uv run mypy app/ tests/` で型チェックエラー 0 件
 
   **サブタスク**:
 
@@ -215,12 +205,11 @@
 
   **完了基準**:
 
+  - `./scripts/python-quality-check.sh` で全 Python 品質チェック通過（エラー 0 件）
   - `uv run python app/agentcore/agent_main.py` で SupervisorAgent 実行（exit code 0 + 期待ログ出力）
   - `agentcore configure` で設定ファイル生成（agentcore.yaml ファイル存在確認）
   - `agentcore launch` で AWS 環境デプロイ（デプロイ完了ログ出力確認）
   - `curl -X POST <AgentCore Endpoint>/invoke -d '{"topic":"EC2"}' -H "Content-Type: application/json"` で API 動作確認（HTTP 200 レスポンス）
-  - `uv run ruff check app/ tests/` でリンターエラー 0 件
-  - `uv run mypy app/ tests/` で型チェックエラー 0 件
 
   **サブタスク**:
 
@@ -237,19 +226,17 @@
 
   **完了基準**:
 
+  - `./scripts/python-quality-check.sh` で全 Python 品質チェック通過（エラー 0 件）
+  - `./scripts/infrastructure-quality-check.sh` で全インフラテンプレート品質チェック通過（エラー 0 件）
   - `sam build && sam deploy` でインフラデプロイ（デプロイ完了ログ出力確認）
   - `curl -X POST <API Gateway URL>/generate -d '{"topic":"EC2"}' -H "Content-Type: application/json"` で API 動作確認（HTTP 200 レスポンス）
-  - `uv run pytest tests/unit/lambda/ -v` で Lambda 関数テスト通過（全テスト PASSED）
-  - `uv run pytest tests/integration/test_compute_services.py -v` で Lambda 統合テスト通過（moto 使用、全テスト PASSED）
+  - `uv run pytest tests/unit/lambda/ tests/integration/test_compute_services.py -v` で全 Lambda 関連テスト通過（全テスト PASSED）
   - `aws events list-rules --name-prefix aws-exam-agent` で EventBridge ルール作成確認（JSON レスポンス取得）
-  - `uv run ruff check app/ tests/` でリンターエラー 0 件
-  - `uv run mypy app/ tests/` で型チェックエラー 0 件
 
   **サブタスク**:
 
   - [ ] 10.1 SAM テンプレートで API Gateway REST API 設定
-    - `uv run yamllint infrastructure/api-gateway.yaml` で YAML 品質チェック通過（エラー 0 件）
-    - `uv run cfn-lint infrastructure/api-gateway.yaml` で CloudFormation 構文チェック通過（エラー 0 件）
+    - `./scripts/infrastructure-quality-check.sh infrastructure/api-gateway.yaml` でインフラ品質チェック通過（エラー 0 件）
   - [ ] 10.2 Lambda 関数による AgentCore Runtime 呼び出し実装
   - [ ] 10.3 Power Automate Webhook 呼び出し機能の実装
   - [ ] 10.4 Teams 投稿データフォーマット機能の実装
@@ -263,12 +250,10 @@
 
   **完了基準**:
 
-  - `uv run pytest tests/integration/test_delivery_system/ -v` で統合テスト通過（全テスト PASSED）
-  - `uv run pytest tests/e2e/test_full_flow/ -v` で E2E テスト通過（全テスト PASSED）
+  - `./scripts/python-quality-check.sh` で全 Python 品質チェック通過（エラー 0 件）
+  - `uv run pytest tests/integration/test_delivery_system/ tests/e2e/test_full_flow/ -v` で全統合・E2E テスト通過（全テスト PASSED）
   - `aws logs describe-log-groups --log-group-name-prefix /aws/lambda/aws-exam-agent` で CloudWatch Logs 確認（JSON レスポンス取得）
   - `curl -X POST <Power Automate Webhook URL> -d '{"question":"test"}' -H "Content-Type: application/json"` で Teams 投稿確認（HTTP 200 レスポンス）
-  - `uv run ruff check app/ tests/` でリンターエラー 0 件
-  - `uv run mypy app/ tests/` で型チェックエラー 0 件
 
   **サブタスク**:
 
@@ -316,17 +301,13 @@
   **サブタスク**:
 
   - [ ] 13.1 API Gateway REST API 用 SAM テンプレート作成
-    - `uv run yamllint infrastructure/main-template.yaml` で YAML 品質チェック通過（エラー 0 件）
-    - `uv run cfn-lint infrastructure/main-template.yaml` で CloudFormation 構文チェック通過（エラー 0 件）
+    - `./scripts/infrastructure-quality-check.sh infrastructure/main-template.yaml` でインフラ品質チェック通過（エラー 0 件）
   - [ ] 13.2 Lambda 関数と API Gateway の定義
-    - `uv run yamllint infrastructure/lambda-functions.yaml` で YAML 品質チェック通過（エラー 0 件）
-    - `uv run cfn-lint infrastructure/lambda-functions.yaml` で CloudFormation 構文チェック通過（エラー 0 件）
+    - `./scripts/infrastructure-quality-check.sh infrastructure/lambda-functions.yaml` でインフラ品質チェック通過（エラー 0 件）
   - [ ] 13.3 DynamoDB テーブル定義の実装
-    - `uv run yamllint infrastructure/dynamodb-tables.yaml` で YAML 品質チェック通過（エラー 0 件）
-    - `uv run cfn-lint infrastructure/dynamodb-tables.yaml` で CloudFormation 構文チェック通過（エラー 0 件）
+    - `./scripts/infrastructure-quality-check.sh infrastructure/dynamodb-tables.yaml` でインフラ品質チェック通過（エラー 0 件）
   - [ ] 13.4 EventBridge スケジュール設定の実装
-    - `uv run yamllint infrastructure/eventbridge-schedules.yaml` で YAML 品質チェック通過（エラー 0 件）
-    - `uv run cfn-lint infrastructure/eventbridge-schedules.yaml` で CloudFormation 構文チェック通過（エラー 0 件）
+    - `./scripts/infrastructure-quality-check.sh infrastructure/eventbridge-schedules.yaml` でインフラ品質チェック通過（エラー 0 件）
   - [ ] 13.5 IAM ロールと権限設定（AgentCore 呼び出し権限含む）
   - [ ] 13.6 デプロイスクリプト（deploy-hybrid.sh）の作成
   - [ ] 13.7 GitHub Actions ワークフロー（ハイブリッド対応）の実装
@@ -359,8 +340,8 @@
 
   **完了基準**:
 
-  - `uv run pytest tests/unit/analytics/ -v` で統計分析テスト通過
-  - `uv run pytest tests/integration/test_reaction_collection/ -v` で統合テスト通過
+  - `./scripts/python-quality-check.sh` で全 Python 品質チェック通過（エラー 0 件）
+  - `uv run pytest tests/unit/analytics/ tests/integration/test_reaction_collection/ -v` で全統計分析テスト通過（全テスト PASSED）
   - 実際の Teams リアクションデータでの集計動作確認
   - 統計 API エンドポイントでのデータ取得確認
 
@@ -566,8 +547,7 @@ uv run python app/agentcore/agent_main.py
 
 **全タスク共通の必須チェック項目**（セッション継続時の漏れ防止）:
 
-- [ ] `uv run ruff check app/ tests/` でエラー 0 件
-- [ ] `uv run mypy app/ tests/` でエラー 0 件
+- [ ] `./scripts/python-quality-check.sh` で全 Python 品質チェック通過（エラー 0 件）
 - [ ] IDE 上でエラー表示ゼロ（精神衛生上必須）
 - [ ] VS Code 設定の品質保証（廃止設定なし、新形式対応）
 - [ ] テストコードも本番コードと同等の型チェック基準適用
@@ -575,9 +555,7 @@ uv run python app/agentcore/agent_main.py
 
 **CloudFormation テンプレート作成タスクの追加チェック項目**:
 
-- [ ] `uv run yamllint infrastructure/*.yaml` で YAML 品質チェック通過（エラー 0 件）
-- [ ] `uv run cfn-lint infrastructure/*.yaml` で CloudFormation 構文チェック通過（エラー 0 件）
-- [ ] `./scripts/infrastructure-quality-check.sh` で統合品質チェック通過（エラー 0 件）
+- [ ] `./scripts/infrastructure-quality-check.sh` で統合インフラ品質チェック通過（エラー 0 件）
 
 **品質劣化の防止策**:
 

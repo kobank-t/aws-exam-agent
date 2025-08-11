@@ -74,3 +74,21 @@ class AWSServiceError(AWSExamAgentError):
     """AWS サービスエラー"""
 
     pass
+
+
+class DataAccessError(AWSExamAgentError):
+    """データアクセスエラー"""
+
+    pass
+
+
+class ItemNotFoundError(AWSExamAgentError):
+    """アイテム未発見エラー"""
+
+    pass
+
+
+class ValidationError(AWSExamAgentError):
+    """バリデーションエラー"""
+
+    pass
