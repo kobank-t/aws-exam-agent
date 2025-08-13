@@ -674,7 +674,7 @@ grep -r "# type: ignore" app/ tests/
 **発見箇所**:
 
 - `app/agentcore/agent_main.py`: 2 箇所
-- `app/agentcore/mcp/client.py`: 2 箇所
+- `app/mcp/client.py`: 2 箇所
 - `tests/integration/test_component_integration.py`: 1 箇所
 
 #### 2. 適切な解決策の実装

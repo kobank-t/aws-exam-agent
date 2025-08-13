@@ -9,15 +9,11 @@
       ],
       "env": {},
       "disabled": false,
-      "autoApprove": [
-        "git_status"
-      ]
+      "autoApprove": ["git_status"]
     },
     "aws-docs": {
       "command": "uvx",
-      "args": [
-        "awslabs.aws-documentation-mcp-server@latest"
-      ],
+      "args": ["awslabs.aws-documentation-mcp-server@latest"],
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR"
       },
@@ -26,22 +22,14 @@
     },
     "aws-knowledge": {
       "command": "npx",
-      "args": [
-        "mcp-remote",
-        "https://knowledge-mcp.global.api.aws"
-      ],
+      "args": ["mcp-remote", "https://knowledge-mcp.global.api.aws"],
       "env": {},
       "disabled": false,
-      "autoApprove": [
-        "aws___search_documentation",
-        "aws___read_documentation"
-      ]
+      "autoApprove": ["aws___search_documentation", "aws___read_documentation"]
     },
     "aws-diagram": {
       "command": "uvx",
-      "args": [
-        "awslabs.aws-diagram-mcp-server@latest"
-      ],
+      "args": ["awslabs.aws-diagram-mcp-server@latest"],
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR"
       },
@@ -50,37 +38,33 @@
     },
     "aws-pricing": {
       "command": "uvx",
-      "args": [
-        "awslabs.aws-pricing-mcp-server@latest"
-      ],
+      "args": ["awslabs.aws-pricing-mcp-server@latest"],
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR"
       },
       "disabled": false,
-      "autoApprove": [
-        "get_pricing"
-      ]
+      "autoApprove": ["get_pricing"]
+    },
+    "strands": {
+      "command": "uvx",
+      "args": ["strands-agents-mcp-server"],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      },
+      "disabled": false
     },
     "context7": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@upstash/context7-mcp"
-      ],
+      "args": ["-y", "@upstash/context7-mcp"],
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR"
       },
       "disabled": false,
-      "autoApprove": [
-        "resolve-library-id",
-        "get-library-docs"
-      ]
+      "autoApprove": ["resolve-library-id", "get-library-docs"]
     },
     "playwright": {
       "command": "npx",
-      "args": [
-        "@playwright/mcp@latest"
-      ],
+      "args": ["@playwright/mcp@latest"],
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR"
       },

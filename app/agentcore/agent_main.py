@@ -16,7 +16,7 @@ from typing import Any, cast
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from strands import Agent, tool
 
-from app.agentcore.mcp.client import get_mcp_client
+from app.mcp.client import get_mcp_client
 from app.shared.config import (
     get_agentcore_agent_config,
     get_agentcore_error_handling_config,

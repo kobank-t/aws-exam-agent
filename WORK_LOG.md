@@ -216,7 +216,7 @@
 
 1. **MCP Client 統合実装**:
 
-   - `app/agentcore/mcp/client.py` 作成（MCPClient クラス）
+   - `app/mcp/client.py` 作成（MCPClient クラス）
    - AWS Documentation MCP Server (`uvx awslabs.aws-documentation-mcp-server`) 統合
    - AWS Knowledge MCP Server (`uvx awslabs.aws-knowledge-mcp-server`) 統合
    - 非同期処理対応（asyncio.gather による並行処理）

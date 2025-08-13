@@ -13,7 +13,7 @@ from unittest.mock import patch
 import pytest
 
 from app.agentcore.agent_main import aws_info_agent
-from app.agentcore.mcp.client import MCPClient, get_mcp_client
+from app.mcp.client import MCPClient, get_mcp_client
 from app.shared.config import Config
 
 
@@ -178,12 +178,8 @@ class TestComponentIntegration:
         """エラー伝播統合テスト"""
         # MCP接続エラー時のフォールバック動作確認
         with (
-            patch(
-                "app.agentcore.mcp.client.MCPClient.get_aws_documentation"
-            ) as mock_docs,
-            patch(
-                "app.agentcore.mcp.client.MCPClient.get_aws_knowledge"
-            ) as mock_knowledge,
+            patch("app.mcp.client.MCPClient.get_aws_documentation") as mock_docs,
+            patch("app.mcp.client.MCPClient.get_aws_knowledge") as mock_knowledge,
         ):
             # MCP Server呼び出し時にエラーを発生させる
             mock_docs.return_value = {"error": "Documentation server connection failed"}

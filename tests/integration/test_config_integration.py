@@ -8,7 +8,7 @@ import os
 
 import pytest
 
-from app.agentcore.mcp.client import MCPClient
+from app.mcp.client import MCPClient
 from app.shared.config import Config
 
 

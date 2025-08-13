@@ -11,7 +11,7 @@ from unittest.mock import patch
 import pytest
 
 from app.agentcore.agent_main import aws_info_agent
-from app.agentcore.mcp.client import MCPClient
+from app.mcp.client import MCPClient
 from app.shared.exceptions import ConfigurationError
 
 
@@ -23,12 +23,8 @@ class TestErrorIntegration:
         """MCP接続失敗時の統合エラーハンドリングテスト"""
         # MCP Server呼び出し時にエラーを発生させる
         with (
-            patch(
-                "app.agentcore.mcp.client.MCPClient.get_aws_documentation"
-            ) as mock_docs,
-            patch(
-                "app.agentcore.mcp.client.MCPClient.get_aws_knowledge"
-            ) as mock_knowledge,
+            patch("app.mcp.client.MCPClient.get_aws_documentation") as mock_docs,
+            patch("app.mcp.client.MCPClient.get_aws_knowledge") as mock_knowledge,
         ):
             # エラーレスポンスを返すように設定
             mock_docs.return_value = {"error": "Documentation server connection failed"}
@@ -75,11 +71,9 @@ class TestErrorIntegration:
         mcp_client = MCPClient()
 
         # 初期接続失敗をシミュレート
-        with patch(
-            "app.agentcore.mcp.client.MCPClient.connect_aws_docs_server"
-        ) as mock_docs:
+        with patch("app.mcp.client.MCPClient.connect_aws_docs_server") as mock_docs:
             with patch(
-                "app.agentcore.mcp.client.MCPClient.connect_aws_knowledge_server"
+                "app.mcp.client.MCPClient.connect_aws_knowledge_server"
             ) as mock_knowledge:
                 mock_docs.return_value = False
                 mock_knowledge.return_value = False
@@ -140,9 +134,7 @@ class TestErrorIntegration:
     async def test_timeout_error_integration(self) -> None:
         """タイムアウトエラー統合テスト"""
         # 長時間実行をシミュレート
-        with patch(
-            "app.agentcore.mcp.client.MCPClient.get_aws_documentation"
-        ) as mock_get_docs:
+        with patch("app.mcp.client.MCPClient.get_aws_documentation") as mock_get_docs:
 
             async def slow_response(*args: Any, **kwargs: Any) -> dict[str, Any]:
                 await asyncio.sleep(0.1)  # 短い遅延でテスト
@@ -171,7 +163,7 @@ class TestErrorIntegration:
 
             # エラーを発生させる
             with patch(
-                "app.agentcore.mcp.client.MCPClient.get_aws_documentation"
+                "app.mcp.client.MCPClient.get_aws_documentation"
             ) as mock_get_docs:
                 mock_get_docs.side_effect = Exception("Simulated error")
 
@@ -205,9 +197,7 @@ class TestErrorIntegration:
     async def test_network_error_simulation_integration(self) -> None:
         """ネットワークエラーシミュレーション統合テスト"""
         # ネットワークエラーをシミュレート
-        with patch(
-            "app.agentcore.mcp.client.MCPClient.connect_aws_docs_server"
-        ) as mock_connect:
+        with patch("app.mcp.client.MCPClient.connect_aws_docs_server") as mock_connect:
             mock_connect.side_effect = ConnectionError("Network error")
 
             mcp_client = MCPClient()
@@ -228,11 +218,9 @@ class TestErrorIntegration:
     async def test_partial_failure_integration(self) -> None:
         """部分的失敗統合テスト"""
         # AWS Docs Serverは成功、AWS Knowledge Serverは失敗
-        with patch(
-            "app.agentcore.mcp.client.MCPClient.connect_aws_docs_server"
-        ) as mock_docs:
+        with patch("app.mcp.client.MCPClient.connect_aws_docs_server") as mock_docs:
             with patch(
-                "app.agentcore.mcp.client.MCPClient.connect_aws_knowledge_server"
+                "app.mcp.client.MCPClient.connect_aws_knowledge_server"
             ) as mock_knowledge:
                 mock_docs.return_value = True
                 mock_knowledge.return_value = False
@@ -258,9 +246,7 @@ class TestErrorIntegration:
     async def test_error_logging_integration(self) -> None:
         """エラーログ統合テスト"""
         # ログ出力のテスト（実装されている場合）
-        with patch(
-            "app.agentcore.mcp.client.MCPClient.connect_all_servers"
-        ) as mock_connect:
+        with patch("app.mcp.client.MCPClient.connect_all_servers") as mock_connect:
             mock_connect.side_effect = Exception("Test error for logging")
 
             mcp_client = MCPClient()

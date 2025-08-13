@@ -9,7 +9,7 @@ from collections.abc import AsyncGenerator
 
 import pytest
 
-from app.agentcore.mcp.client import MCPClient, get_mcp_client
+from app.mcp.client import MCPClient, get_mcp_client
 
 
 @pytest.mark.integration
