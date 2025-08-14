@@ -10,38 +10,24 @@ requires-python = ">=3.12"
 license = {text = "MIT"}
 
 dependencies = [
-    # AWS SDK
-    "boto3>=1.34.0",
-    "botocore>=1.34.0",
-    # データモデル・バリデーション
-    "pydantic[mypy]>=2.0.0",
-    "pydantic-settings>=2.0.0",
-    # HTTP クライアント
-    "httpx>=0.25.0",
-    # ログ・監視
-    "aws-lambda-powertools>=2.0.0",
-    # ユーティリティ
-    "python-dateutil>=2.8.0",
-    # AgentCore & Strands Agents
+    # AgentCore & Strands Agents (コア機能)
     "strands-agents>=1.3.0",
     "bedrock-agentcore>=0.1.1",
     # MCP (Model Context Protocol)
     "mcp>=1.12.0",
-    # MCP Client for streamable-http transport
-    "httpx-sse>=0.4.0",
+    # データモデル・バリデーション (Pydantic for structured output)
+    "pydantic>=2.0.0",
+    # AWS SDK (Bedrock用)
+    "boto3>=1.34.0",
+    "botocore>=1.34.0",
 ]
 
 [tool.uv]
 dev-dependencies = [
-    # テスト
+    # テスト (品質保証のため継続)
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
-    "pytest-mock>=3.10.0",
     "pytest-cov>=4.0.0",
-    "freezegun>=1.5.0",
-    
-    # AWS モック
-    "moto>=4.0.0",
     
     # リンター・フォーマッター
     "ruff>=0.1.0",
@@ -49,17 +35,10 @@ dev-dependencies = [
     # 型チェック
     "mypy>=1.5.0",
     
-    # pre-commit
-    "pre-commit>=3.0.0",
-    
-    # 開発ユーティリティ
-    "ipython>=8.0.0",
-    "black>=23.0.0",
-    
-    # YAML品質管理
+    # YAML品質管理 (AgentCore設定用)
     "yamllint>=1.32.0",
     
-    # CloudFormation品質管理
+    # CloudFormation品質管理 (インフラ用)
     "cfn-lint>=0.83.0",
 ]
 
@@ -111,23 +90,18 @@ addopts = [
     "--cov=app",
     "--cov-report=term-missing",
     "--cov-report=html",
-    "--cov-report=xml",
 ]
 filterwarnings = [
     # botocore内部でdatetime.utcnow()の非推奨警告が発生する問題を抑制
-    # 参考: https://github.com/boto/botocore/issues/3088
-    # Python 3.12でdatetime.utcnow()が非推奨になったが、AWS側の修正待ち
     "ignore::DeprecationWarning:botocore.auth",
     "ignore::pytest.PytestCollectionWarning",
 ]
 markers = [
     "unit: Unit tests",
     "integration: Integration tests",
-    "e2e: End-to-end tests",
     "slow: Slow running tests",
 ]
 asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
 
 [tool.mypy]
 python_version = "3.12"
@@ -136,33 +110,26 @@ warn_unused_configs = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 check_untyped_defs = true
-disallow_untyped_decorators = false
+disallow_untyped_decorators = false  # @toolデコレータ対応
 no_implicit_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
-plugins = ["pydantic.mypy"]
-
-[tool.pydantic-mypy]
-init_forbid_extra = true
-init_typed = true
-warn_required_dynamic_aliases = true
 
 [[tool.mypy.overrides]]
 module = [
-    "moto.*",
-    "aws_lambda_powertools.*",
-    "strands_agents.*",
+    "strands.*",
+    "bedrock_agentcore.*",
+    "mcp.*",
     "boto3.*",
     "botocore.*",
+    # テスト用ライブラリ (型スタブなし)
+    "moto.*",
+    "freezegun.*",
 ]
 ignore_missing_imports = true
-
-
-
-
 
 [tool.coverage.run]
 source = ["app"]

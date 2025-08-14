@@ -10,6 +10,7 @@
     "ms-python.python",
     "ms-python.mypy-type-checker",
     "charliermarsh.ruff",
-    "redhat.vscode-yaml"
+    "redhat.vscode-yaml",
+    "njpwerner.autodocstring"
   ]
 }
