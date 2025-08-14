@@ -11,11 +11,10 @@ import logging
 from typing import Any
 
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
+from mcp import StdioServerParameters, stdio_client
 from pydantic import BaseModel, Field
 from strands import Agent
 from strands.tools.mcp import MCPClient
-
-from mcp import StdioServerParameters, stdio_client
 
 # ログ設定
 logging.basicConfig(
