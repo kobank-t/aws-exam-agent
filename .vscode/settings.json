@@ -24,7 +24,9 @@
     "uv run yamllint infrastructure/ *",
     "uv run cfn-lint infrastructure/ *",
     "aws configure list",
-    "aws sts get-caller-identity"
+    "aws sts get-caller-identity",
+    "./scripts/test-agentcore.sh",
+    "aws logs *"
   ],
 
   "python.defaultInterpreterPath": ".venv/bin/python",

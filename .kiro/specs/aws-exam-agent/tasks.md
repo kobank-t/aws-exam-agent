@@ -104,7 +104,7 @@
 
   _Requirements: シンプル化による保守性向上_
 
-- [ ] 4. AgentCore デプロイ設定
+- [x] 4. AgentCore デプロイ設定
 
   **完了基準**:
 
@@ -117,10 +117,10 @@
   **サブタスク**:
 
   - [x] 4.1 requirements.txt の最小化（agent_main.py で使用する依存関係のみ）
-  - [ ] 4.2 agentcore configure による設定ファイル生成
-  - [ ] 4.3 agentcore launch によるデプロイ実行
-  - [ ] 4.4 AWS 環境での動作確認・テスト
-  - [ ] 4.5 エラー修正・再デプロイ
+  - [x] 4.2 agentcore configure による設定ファイル生成
+  - [x] 4.3 agentcore launch によるデプロイ実行
+  - [x] 4.4 AWS 環境での動作確認・テスト
+  - [x] 4.5 エラー修正・再デプロイ
 
   _Requirements: AgentCore Runtime での問題生成機能_
 
