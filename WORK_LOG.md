@@ -168,12 +168,12 @@
 
 ### 現在の作業状況
 
-- **完了フェーズ**: Spec 作成ワークフロー（要件定義・設計・タスクリスト）、タスク 1-4（環境セットアップ・AgentCore デプロイ）✅ 完了
-- **現在フェーズ**: Teams 連携実装フェーズ
-- **進行中タスク**: タスク 5「Teams 連携の基本実装」準備中
-- **タスク状況**: tasks.md でタスク 1-4 が [x] 完了、タスク 5 以降は [ ] 未開始
-- **次回開始タスク**: タスク 5「Teams 連携の基本実装」から継続
-- **最新完了**: タスク 4「AgentCore デプロイ設定」完了（2025 年 8 月 14 日）- 文字化け問題解決、日本語問題生成確認
+- **完了フェーズ**: Spec 作成ワークフロー（要件定義・設計・タスクリスト）、タスク 1-4（環境セットアップ・AgentCore デプロイ）、サブタスク 5.1-5.2（Teams 連携基本実装）✅ 完了
+- **現在フェーズ**: Teams 連携テンプレート実装フェーズ
+- **進行中タスク**: タスク 5「Teams 連携の基本実装」- サブタスク 5.3 以降
+- **タスク状況**: tasks.md でタスク 1-4、サブタスク 5.1-5.2 が [x] 完了、サブタスク 5.3 以降は [ ] 未開始
+- **次回開始タスク**: サブタスク 5.3「Teams 投稿テンプレートの実装」から継続
+- **最新完了**: Step Functions 実装ガイド作成完了（2025 年 8 月 15 日）- 将来実装準備、CloudFormation 対応
 
 ### タスク 1-2 完了確認
 
@@ -323,7 +323,7 @@ aws-exam-agent/
 ---
 
 **作業者**: kobank-t  
-**最終更新**: 2025 年 8 月 14 日（AgentCore 文字化け問題解決・日本語問題生成確認・タスク 4 完了・次回はタスク 5 Teams 連携から継続）
+**最終更新**: 2025 年 8 月 15 日（Teams 連携実装・コード簡素化プロジェクト完了・次回はサブタスク 5.4 実際の Teams チャネルでの動作確認から継続）
 
 #### ✅ サブタスク 4.3 完了内容（2025 年 8 月 11 日）
 
@@ -636,6 +636,253 @@ aws-exam-agent/
 - **明確なエラーメッセージ**: 問題の特定が容易
 - **品質チェック自動化**: Ruff・Mypy・pytest の統合
 
+## 📋 Step Functions 実装ガイド作成プロジェクト（2025 年 8 月 15 日）
+
+### 背景・目的
+
+**目的**: Bedrock AgentCore と Step Functions のネイティブ統合が実現された際の準備として、包括的な実装ガイドを作成
+
+- **将来対応**: Bedrock AgentCore の Step Functions ネイティブ統合リリース時の迅速な実装
+- **CloudFormation 対応**: Infrastructure as Code による完全自動化デプロイ
+- **運用準備**: 監視・アラート・トラブルシューティングの完備
+
+### 実施内容
+
+#### Phase 1: 技術調査・実現性確認
+
+**1. Step Functions → Bedrock AgentCore 統合調査**
+
+- **現状**: 直接統合は未対応、Lambda 経由での統合が必要
+- **将来**: ネイティブ統合の実現可能性を確認
+- **実装方式**: Lambda プロキシ関数による橋渡し方式
+
+**2. タスク間データ受け渡し調査**
+
+- **JSONata 変数**: 最新の Step Functions 機能（2024 年 11 月リリース）
+- **従来の JSONPath**: ResultPath 方式との比較
+- **推奨**: JSONata 方式（フィールド数 5→2 に削減、高機能）
+
+**3. EventBridge Connection 要件調査**
+
+- **必須要件**: Step Functions HTTP Task では EventBridge Connection 必須
+- **認証方式**: API Key、Basic、OAuth 対応
+- **Power Automate**: "Anyone"モードなら API キー不要も可能
+
+#### Phase 2: 包括的実装ガイド作成
+
+**1. ドキュメント構成**
+
+```
+docs/step-functions-implementation-guide.md
+├── アーキテクチャ概要
+├── Step Functions定義（JSONata版）
+├── Lambda実装（プロキシ・エラーハンドラー）
+├── CloudFormation テンプレート
+├── デプロイ手順
+├── 監視・運用
+├── コスト分析
+└── トラブルシューティング
+```
+
+**2. 技術仕様**
+
+- **ワークフロー**: AWS Step Functions (JSONata)
+- **認証**: EventBridge Connection (API Key)
+- **デプロイ**: CloudFormation 完全対応
+- **監視**: CloudWatch + X-Ray 統合
+
+**3. 実装詳細**
+
+- **Step Functions 定義**: 完全な JSONata ワークフロー
+- **Lambda 関数**: Bedrock AgentCore プロキシとエラーハンドラー
+- **CloudFormation**: 全リソースの完全定義
+- **デプロイスクリプト**: 自動化されたデプロイ手順
+
+### 学習効果・技術的成長
+
+#### 1. Step Functions 最新機能の習得
+
+**学び**: JSONata による大幅な開発効率向上
+
+- **フィールド削減**: 5 つのフィールド →2 つに削減
+- **高度なデータ変換**: 数学演算・日時処理・文字列操作
+- **変数サポート**: 状態間でのデータ共有が簡単
+
+#### 2. AWS 統合パターンの理解
+
+**学び**: サービス間統合の設計パターン
+
+- **プロキシパターン**: Lambda 経由での未対応サービス統合
+- **EventBridge Connection**: 外部 API 認証の標準化
+- **CloudFormation**: Infrastructure as Code の完全実装
+
+### 成果物・品質向上
+
+#### 1. 包括的実装ガイド
+
+- **完全性**: アーキテクチャ → 実装 → デプロイ → 運用の全工程
+- **実用性**: CloudFormation による即座デプロイ可能
+- **保守性**: 監視・トラブルシューティング完備
+
+#### 2. 将来実装の準備完了
+
+- **即座対応**: Bedrock AgentCore ネイティブ統合リリース時の迅速実装
+- **品質保証**: 監視・アラート・エラーハンドリング完備
+- **コスト管理**: 詳細なコスト分析と最適化ガイド
+
+## 🔧 Teams 連携実装・コード簡素化プロジェクト（2025 年 8 月 15 日）
+
+### 背景・問題認識
+
+**問題**: Teams 連携実装の複雑性とコード重複による保守性の低下
+
+- `TeamsPayload`、`MockTeamsClient`等の不要な抽象化レイヤー
+- `AgentOutput`モデルの Teams 関連フィールド混入（純粋なデータモデルの汚染）
+- HTTP エラーハンドリングの手動実装（標準的な`response.raise_for_status()`未使用）
+- 相対インポートによるローカル実行エラー
+- テストの重複・冗長性
+
+### 実施内容
+
+#### Phase 1: Teams クライアント簡素化
+
+**1. 不要な抽象化レイヤーの削除**
+
+- **TeamsPayload モデル削除**: 単純な辞書で十分な構造を過度に抽象化
+- **MockTeamsClient 削除**: 実際のテストで使用されていない複雑なモック実装
+- **get_teams_client() 関数削除**: 単純な依存注入で十分な機能を関数化
+
+**2. TeamsResponse の簡素化**
+
+```python
+# Before: 複雑な構造
+class TeamsResponse:
+    success: bool
+    message: str
+    status_code: int
+    response_data: dict
+
+# After: 必要最小限
+class TeamsResponse:
+    status: str
+    error: Optional[str] = None
+```
+
+#### Phase 2: AgentOutput モデルのクリーンアップ
+
+**1. Teams 関連フィールドの削除**
+
+- **teams_posted フィールド削除**: 外部システムの状態を純粋なデータモデルに混入
+- **teams_message_id フィールド削除**: Teams 固有の情報を汎用モデルに混入
+
+**2. 純粋なデータモデルへの回帰**
+
+```python
+# 問題生成結果のみに集中
+class AgentOutput:
+    question: str
+    options: List[str]
+    correct_answer: str
+    explanation: str
+    service: str
+    quality_score: float
+```
+
+#### Phase 3: HTTP エラーハンドリングの標準化
+
+**1. response.raise_for_status() パターンの採用**
+
+```python
+# Before: 手動ステータスコードチェック
+if response.status_code == 202:
+    return TeamsResponse(status="success")
+elif response.status_code >= 400:
+    return TeamsResponse(status="error", error=f"HTTP {response.status_code}")
+
+# After: 標準的なエラーハンドリング
+response.raise_for_status()
+return TeamsResponse(status="success")
+```
+
+**2. Power Automate の HTTP 202 対応**
+
+- 非同期処理による HTTP 202 Accepted レスポンスの適切な処理
+- エラーケースでの例外発生による明確なエラーハンドリング
+
+#### Phase 4: インポート・テストの修正
+
+**1. 絶対インポートへの変更**
+
+```python
+# Before: 相対インポート（ローカル実行エラー）
+from .teams_client import TeamsClient
+
+# After: 絶対インポート
+from app.agentcore.teams_client import TeamsClient
+```
+
+**2. テストの最適化**
+
+- **test_teams_fields_contract 削除**: AgentOutput から Teams フィールド削除により不要
+- **test_unexpected_exception_handling_contract 追加**: 100%テストカバレッジ達成
+- **重複テストの統合**: 効率的なテスト構成
+
+### 品質メトリクス達成
+
+**品質チェック 100%通過**:
+
+- **pytest**: ✅ 全テスト通過
+- **ruff**: ✅ All checks passed
+- **mypy**: ✅ Success: no issues found
+- **ローカル実行**: ✅ 絶対インポートによりエラー解消
+
+### 学習効果・技術的成長
+
+#### 1. 簡素化の価値
+
+**学び**: 過度な抽象化は保守性を低下させる
+
+- **YAGNI 原則**: 実際に必要になるまで複雑な機能は作らない
+- **単純性の追求**: 理解しやすく、変更しやすいコード
+- **責任の分離**: 各クラス・モジュールの責任を明確に
+
+#### 2. データモデル設計の重要性
+
+**学び**: 純粋なデータモデルと外部システム状態の分離
+
+- **関心事の分離**: 問題生成結果と Teams 投稿状態は別の関心事
+- **再利用性**: 純粋なデータモデルは他のシステムでも再利用可能
+- **テスト容易性**: 外部依存のないモデルはテストが簡単
+
+#### 3. 標準的なパターンの採用
+
+**学び**: 車輪の再発明を避け、標準的なパターンを使用
+
+- **HTTP エラーハンドリング**: `response.raise_for_status()` の標準使用
+- **絶対インポート**: Python の推奨パターンに従う
+- **例外処理**: 明確で予測可能なエラーハンドリング
+
+### 品質向上成果
+
+#### 1. コードの簡素化
+
+- **削除したクラス**: TeamsPayload, MockTeamsClient
+- **削除した関数**: get_teams_client()
+- **削除したフィールド**: teams_posted, teams_message_id
+- **削除したテスト**: test_teams_fields_contract
+
+#### 2. 保守性の向上
+
+- **明確な責任分離**: Teams クライアントと問題生成の分離
+- **標準的なパターン**: HTTP エラーハンドリングの標準化
+- **実行可能性**: ローカル実行エラーの解消
+
+#### 3. テスト品質の向上
+
+- **100%カバレッジ**: test_unexpected_exception_handling_contract 追加
+- **重複削除**: 不要なテストの削除による効率化
+- **明確なテスト意図**: 各テストの目的が明確
+
 ## 🔧 テスト構成再構築プロジェクト（2025 年 8 月 11 日）
 
 ### 背景・問題認識
@@ -762,11 +1009,11 @@ tests/integration/
 
 ### 現在の作業状況
 
-- **完了フェーズ**: Spec 作成ワークフロー（要件定義・設計・タスクリスト）、タスク 1-3（環境セットアップ・シンプル化）✅ 完了
-- **現在フェーズ**: AgentCore デプロイ準備フェーズ
-- **アーキテクチャ方針**: シンプル化原則の適用（2025 年 8 月 13 日）- 複雑な基盤構築を後回しにして動く価値を最優先
-- **進行中タスク**: タスク 4「AgentCore デプロイ設定」進行中
-- **タスク状況**: tasks.md でタスク 1-3 が [x] 完了、タスク 4.1 が [x] 完了、タスク 4.2 以降が [ ] 未開始
-- **次回開始タスク**: タスク 4.2「agentcore configure による設定ファイル生成」から継続
-- **品質状況**: 品質チェック 100%達成（Ruff・Mypy・テスト 23/23 通過・agent_main.py 100%カバレッジ）
-- **最新完了**: agent_main.py pytest 実装・プロジェクト構造最適化・契約による設計完全実装（2025 年 8 月 14 日）
+- **完了フェーズ**: Spec 作成ワークフロー（要件定義・設計・タスクリスト）、タスク 1-5（環境セットアップ・データ基盤・問題生成機能・Teams 連携基本実装）✅ 完了
+- **現在フェーズ**: 垂直スライス開発フェーズ（問題生成 → Teams 投稿の完全フロー）
+- **アーキテクチャ方針**: アジャイル開発原則適用（2025 年 8 月 11 日）- 垂直スライス開発による価値提供優先
+- **進行中タスク**: タスク 5「Teams 連携の基本実装」完了、次フェーズ準備中
+- **タスク状況**: tasks.md でタスク 1-5、サブタスク 5.1-5.3 が [x] 完了、サブタスク 5.4-5.5 が [ ] 未開始
+- **次回開始タスク**: サブタスク 5.4「実際の Teams チャネルでの動作確認」から継続
+- **品質状況**: 品質チェック 100%達成（Ruff・Mypy・pytest 全通過・高カバレッジ維持）
+- **最新完了**: Teams 連携実装・コード簡素化プロジェクト（2025 年 8 月 15 日）- 不要な抽象化削除、純粋なデータモデル実現

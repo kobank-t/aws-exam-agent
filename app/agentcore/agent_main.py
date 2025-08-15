@@ -16,6 +16,8 @@ from pydantic import BaseModel, Field
 from strands import Agent
 from strands.tools.mcp import MCPClient
 
+from app.agentcore.teams_client import TeamsClient
+
 # ログ設定
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -146,7 +148,19 @@ async def invoke(payload: dict[str, Any]) -> dict[str, Any]:
             output_model=AgentOutput,
             prompt=prompt,
         )
-        logger.info(f"result: {result.model_dump_json()}")
+        logger.info(f"問題生成結果: {result.model_dump_json()}")
+
+        # Power Automate Webhook経由でTeams投稿を実行
+        teams_client = TeamsClient()
+        teams_result = await teams_client.send_agent_output_to_teams(
+            result.model_dump_json()
+        )
+
+        # Teams投稿結果をログに記録
+        if teams_result.status == "success":
+            logger.info("Teams投稿成功")
+        else:
+            logger.error(f"Teams投稿失敗: {teams_result.error}")
 
         return result.model_dump()
 

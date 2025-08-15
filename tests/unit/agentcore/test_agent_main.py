@@ -10,7 +10,7 @@ AWS Exam Agent - agent_main.py のテストコード
 
 import logging
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import ValidationError
@@ -213,8 +213,13 @@ class TestInvokeFunction:
         mock.structured_output.return_value = mock_result
         return mock
 
+    @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
-    async def test_valid_payload_contract(self, mock_agent: MagicMock) -> None:
+    async def test_valid_payload_contract(
+        self,
+        mock_agent: MagicMock,
+        mock_teams_client_class: MagicMock,
+    ) -> None:
         """
         事前条件: 有効なペイロード
         事後条件: 正常な問題データが返される
@@ -227,8 +232,18 @@ class TestInvokeFunction:
             "question_count": 1,
         }
 
-        # モックの設定
+        # エージェントモックの設定
         mock_result = MagicMock()
+        mock_result.question = "EC2インスタンスに関する問題"
+        mock_result.options = [
+            "A. t2.micro",
+            "B. m5.large",
+            "C. c5.xlarge",
+            "D. r5.2xlarge",
+        ]
+        mock_result.correct_answer = "B"
+        mock_result.explanation = "m5.largeが最適です。"
+        mock_result.source = ["https://docs.aws.amazon.com/ec2/"]
         mock_result.model_dump.return_value = {
             "question": "EC2インスタンスに関する問題",
             "options": ["A. t2.micro", "B. m5.large", "C. c5.xlarge", "D. r5.2xlarge"],
@@ -237,6 +252,15 @@ class TestInvokeFunction:
             "source": ["https://docs.aws.amazon.com/ec2/"],
         }
         mock_agent.structured_output.return_value = mock_result
+
+        # Teamsクライアントモックの設定
+        mock_teams_client = MagicMock()
+        mock_teams_response = MagicMock()
+        mock_teams_response.status = "success"
+        mock_teams_client.send_agent_output_to_teams = AsyncMock(
+            return_value=mock_teams_response
+        )
+        mock_teams_client_class.return_value = mock_teams_client
 
         # Act
         result = await invoke(valid_payload)
@@ -258,6 +282,68 @@ class TestInvokeFunction:
 
         # エージェントが正しく呼び出されたことを確認
         mock_agent.structured_output.assert_called_once()
+
+        # Teamsクライアントが正しく呼び出されたことを確認
+        mock_teams_client.send_agent_output_to_teams.assert_called_once()
+
+    @patch("app.agentcore.agent_main.TeamsClient")
+    @patch("app.agentcore.agent_main.agent")
+    async def test_teams_posting_failure_contract(
+        self, mock_agent: MagicMock, mock_teams_client_class: MagicMock
+    ) -> None:
+        """
+        事前条件: 有効なペイロード、Teams投稿失敗
+        事後条件: 問題生成は成功、Teams投稿失敗はログに記録
+        不変条件: 問題データは正常に生成される
+        """
+        # Arrange - 事前条件設定
+        valid_payload: dict[str, Any] = {
+            "exam_type": "SAP",
+            "category": ["コンピューティング"],
+            "question_count": 1,
+        }
+
+        # エージェントモックの設定
+        mock_result = MagicMock()
+        mock_result.question = "EC2インスタンスに関する問題"
+        mock_result.options = [
+            "A. t2.micro",
+            "B. m5.large",
+            "C. c5.xlarge",
+            "D. r5.2xlarge",
+        ]
+        mock_result.correct_answer = "B"
+        mock_result.explanation = "m5.largeが最適です。"
+        mock_result.source = ["https://docs.aws.amazon.com/ec2/"]
+        mock_result.model_dump.return_value = {
+            "question": "EC2インスタンスに関する問題",
+            "options": ["A. t2.micro", "B. m5.large", "C. c5.xlarge", "D. r5.2xlarge"],
+            "correct_answer": "B",
+            "explanation": "m5.largeが最適です。",
+            "source": ["https://docs.aws.amazon.com/ec2/"],
+        }
+        mock_agent.structured_output.return_value = mock_result
+
+        # Teamsクライアントモック（失敗）の設定
+        mock_teams_client = MagicMock()
+        mock_teams_response = MagicMock()
+        mock_teams_response.status = "error"
+        mock_teams_response.error = "Webhook URL not configured"
+        mock_teams_client.send_agent_output_to_teams = AsyncMock(
+            return_value=mock_teams_response
+        )
+        mock_teams_client_class.return_value = mock_teams_client
+
+        # Act
+        result = await invoke(valid_payload)
+
+        # Assert - 事後条件検証
+        assert "question" in result
+
+        # 不変条件検証: 問題生成は成功している
+        assert "error" not in result
+        assert isinstance(result["question"], str)
+        assert len(result["question"]) > 0
 
     @patch("app.agentcore.agent_main.agent")
     async def test_invalid_payload_precondition(self, mock_agent: MagicMock) -> None:
@@ -310,8 +396,11 @@ class TestInvokeFunction:
         # 不変条件検証: システムが停止せず、適切にエラーが返される
         assert isinstance(result, dict)
 
+    @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
-    async def test_empty_payload_contract(self, mock_agent: MagicMock) -> None:
+    async def test_empty_payload_contract(
+        self, mock_agent: MagicMock, mock_teams_client_class: MagicMock
+    ) -> None:
         """
         事前条件: 空のペイロード
         事後条件: デフォルト値で処理される
@@ -330,6 +419,15 @@ class TestInvokeFunction:
             "source": ["https://docs.aws.amazon.com/default/"],
         }
         mock_agent.structured_output.return_value = mock_result
+
+        # Teamsクライアントモックの設定
+        mock_teams_client = MagicMock()
+        mock_teams_response = MagicMock()
+        mock_teams_response.status = "success"
+        mock_teams_client.send_agent_output_to_teams = AsyncMock(
+            return_value=mock_teams_response
+        )
+        mock_teams_client_class.return_value = mock_teams_client
 
         # Act
         result = await invoke(empty_payload)
@@ -382,9 +480,10 @@ class TestConstants:
 class TestBusinessLogicContracts:
     """ビジネスロジックの契約検証"""
 
+    @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
     async def test_category_specific_generation_contract(
-        self, mock_agent: MagicMock
+        self, mock_agent: MagicMock, mock_teams_client_class: MagicMock
     ) -> None:
         """
         事前条件: 特定カテゴリが指定される
@@ -412,6 +511,15 @@ class TestBusinessLogicContracts:
         }
         mock_agent.structured_output.return_value = mock_result
 
+        # Teamsクライアントモックの設定
+        mock_teams_client = MagicMock()
+        mock_teams_response = MagicMock()
+        mock_teams_response.status = "success"
+        mock_teams_client.send_agent_output_to_teams = AsyncMock(
+            return_value=mock_teams_response
+        )
+        mock_teams_client_class.return_value = mock_teams_client
+
         # Act
         result = await invoke(payload)
 
@@ -428,8 +536,11 @@ class TestBusinessLogicContracts:
         assert "コンピューティング" in prompt_arg
         assert "ネットワークとコンテンツ配信" in prompt_arg
 
+    @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
-    async def test_multiple_questions_contract(self, mock_agent: MagicMock) -> None:
+    async def test_multiple_questions_contract(
+        self, mock_agent: MagicMock, mock_teams_client_class: MagicMock
+    ) -> None:
         """
         事前条件: 複数問題の生成要求
         事後条件: 指定された数の問題が生成される（現在は1問のみ対応）
@@ -453,6 +564,15 @@ class TestBusinessLogicContracts:
         }
         mock_agent.structured_output.return_value = mock_result
 
+        # Teamsクライアントモックの設定
+        mock_teams_client = MagicMock()
+        mock_teams_response = MagicMock()
+        mock_teams_response.status = "success"
+        mock_teams_client.send_agent_output_to_teams = AsyncMock(
+            return_value=mock_teams_response
+        )
+        mock_teams_client_class.return_value = mock_teams_client
+
         # Act
         result = await invoke(payload)
 
@@ -466,8 +586,11 @@ class TestBusinessLogicContracts:
         prompt_arg = call_args.kwargs.get("prompt", "")
         assert "3問" in prompt_arg
 
+    @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
-    async def test_exam_type_contract(self, mock_agent: MagicMock) -> None:
+    async def test_exam_type_contract(
+        self, mock_agent: MagicMock, mock_teams_client_class: MagicMock
+    ) -> None:
         """
         事前条件: 有効な試験タイプが指定される
         事後条件: 対応する試験レベルで問題が生成される
@@ -490,6 +613,15 @@ class TestBusinessLogicContracts:
             "source": ["https://docs.aws.amazon.com/professional/"],
         }
         mock_agent.structured_output.return_value = mock_result
+
+        # Teamsクライアントモックの設定
+        mock_teams_client = MagicMock()
+        mock_teams_response = MagicMock()
+        mock_teams_response.status = "success"
+        mock_teams_client.send_agent_output_to_teams = AsyncMock(
+            return_value=mock_teams_response
+        )
+        mock_teams_client_class.return_value = mock_teams_client
 
         # Act
         result = await invoke(payload)

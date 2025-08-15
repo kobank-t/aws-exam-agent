@@ -124,7 +124,7 @@
 
   _Requirements: AgentCore Runtime での問題生成機能_
 
-- [ ] 5. Teams 連携の基本実装
+- [-] 5. Teams 連携の基本実装
 
   **完了基準**:
 
@@ -137,8 +137,8 @@
   **サブタスク**:
 
   - [ ] 5.1 Power Automate フロー設定（基本的な Webhook → Teams 投稿）
-  - [ ] 5.2 AgentCore エンドポイントからの Webhook 呼び出し実装
-  - [ ] 5.3 Teams 投稿テンプレートの実装（問題・選択肢・解説の整形）
+  - [x] 5.2 AgentCore エンドポイントからの Webhook 呼び出し実装
+  - [x] 5.3 Teams 投稿テンプレートの実装（問題・選択肢・解説の整形）
   - [ ] 5.4 実際の Teams チャネルでの動作確認
   - [ ] 5.5 ユーザーフィードバック収集・改善
 
