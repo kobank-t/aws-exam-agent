@@ -11,9 +11,11 @@ import logging
 from typing import Any
 
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
+from botocore.config import Config
 from mcp import StdioServerParameters, stdio_client
 from pydantic import BaseModel, Field
 from strands import Agent
+from strands.models import BedrockModel
 from strands.tools.mcp import MCPClient
 
 from app.agentcore.teams_client import TeamsClient
@@ -72,8 +74,8 @@ class AgentInput(BaseModel):
     question_count: int = Field(default=1, description="生成する問題数", ge=1, le=5)
 
 
-class AgentOutput(BaseModel):
-    """アウトプットモデル"""
+class Question(BaseModel):
+    """単一問題のモデル"""
 
     question: str = Field(description="問題文")
     options: list[str] = Field(description="回答の選択肢(A-Z)")
@@ -82,6 +84,12 @@ class AgentOutput(BaseModel):
     source: list[str] = Field(
         description="AWS Documentation MCP Serverで、妥当性検証に用いたAWS公式ドキュメントのURL"
     )
+
+
+class AgentOutput(BaseModel):
+    """エージェントのアウトプットモデル（複数問題対応）"""
+
+    questions: list[Question] = Field(description="生成された問題のリスト")
 
 
 # MCPクライアントを初期化する
@@ -95,10 +103,17 @@ mcp_client = MCPClient(
 )
 
 
-# エージェントを初期化する
+# エージェントを初期化する（タイムアウト設定付き）
 with mcp_client:
     agent = Agent(
-        model=MODEL_ID["claude-3.7-sonnet"],
+        model=BedrockModel(
+            model_id=MODEL_ID["claude-3.7-sonnet"],
+            boto_client_config=Config(
+                read_timeout=300,  # 5分（複数問題生成対応）
+                connect_timeout=60,  # 1分
+                retries={"max_attempts": 3},
+            ),
+        ),
         tools=mcp_client.list_tools_sync(),
         system_prompt="""
         あなたはAWS認定試験の問題を生成する専門エージェントです。
@@ -129,44 +144,49 @@ async def invoke(payload: dict[str, Any]) -> dict[str, Any]:
         payload (dict[str, Any]): AgentInputモデルに対応する入力データ
 
     Returns:
-        dict[str, Any]: AgentOutputモデルに対応する問題データまたはエラー情報
+        dict[str, Any]: AgentOutputモデルまたはエラー情報
+        - 成功時: AgentOutput.model_dump()
+        - エラー時: {"error": str}
     """
 
     try:
         input = AgentInput(**payload)
 
+        # 1回のプロンプトで複数問題を生成
         prompt = f"""
             以下の条件に沿って、{input.question_count}問の実践的な問題を作成してください。
 
             # 生成条件
             - **レベル**: {EXAM_TYPES[input.exam_type]["name"]}
             - **カテゴリ**: {input.category}（指定がある場合は、それを考慮してください）
-        """
-        logger.info(f"prompt: {prompt}")
+            - **問題数**: {input.question_count}問
 
-        result = agent.structured_output(
+            # 注意事項
+            - 各問題は重複しない内容にしてください
+            - 異なるAWSサービスや機能を扱ってください
+        """
+        logger.info(f"問題生成プロンプト: {prompt}")
+
+        # 複数問題を一度に生成
+        agent_output = agent.structured_output(
             output_model=AgentOutput,
             prompt=prompt,
         )
-        logger.info(f"問題生成結果: {result.model_dump_json()}")
+        logger.info(f"問題生成結果: {agent_output.model_dump_json()}")
 
-        # Power Automate Webhook経由でTeams投稿を実行
+        # Teams投稿
         teams_client = TeamsClient()
-        teams_result = await teams_client.send_agent_output_to_teams(
-            result.model_dump_json()
-        )
+        try:
+            await teams_client.send(agent_output)
 
-        # Teams投稿結果をログに記録
-        if teams_result.status == "success":
-            logger.info("Teams投稿成功")
-        else:
-            logger.error(f"Teams投稿失敗: {teams_result.error}")
+        except Exception as e:
+            # Teams投稿失敗でも問題生成結果は返す（処理継続）
+            logger.warning(f"Teams投稿に失敗しましたが、処理を継続します: {str(e)}")
 
-        return result.model_dump()
+        return agent_output.model_dump()
 
     except Exception as error:
-        logger.error(f"Failed to generate question: {str(error)}", exc_info=True)
-
+        logger.error(f"問題生成処理でエラーが発生しました: {str(error)}", exc_info=True)
         return {"error": str(error)}
 
 

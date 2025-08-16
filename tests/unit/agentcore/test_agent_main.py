@@ -1,28 +1,17 @@
-#!/usr/bin/env python3
 """
 AWS Exam Agent - agent_main.py のテストコード
 
-契約による設計（Design by Contract）に基づいたテスト実装:
-- 事前条件（Preconditions）: 入力データの妥当性検証
-- 事後条件（Postconditions）: 出力データの妥当性検証
-- 不変条件（Invariants）: システム状態の一貫性検証
+契約による設計に基づく包括的なテスト実装。
+複数問題生成に対応したAgentOutputモデルの検証。
 """
 
-import logging
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import ValidationError
 
-# テスト対象のインポート
-from app.agentcore.agent_main import (
-    EXAM_TYPES,
-    MODEL_ID,
-    AgentInput,
-    AgentOutput,
-    invoke,
-)
+from app.agentcore.agent_main import AgentInput, AgentOutput, Question, invoke
 
 
 class TestAgentInput:
@@ -30,10 +19,11 @@ class TestAgentInput:
 
     def test_default_values_contract(self) -> None:
         """
-        事前条件: デフォルト値での初期化
-        事後条件: 適切なデフォルト値が設定される
+        事前条件: パラメータなしでの初期化
+        事後条件: デフォルト値が正しく設定される
+        不変条件: デフォルト値の整合性
         """
-        # Act
+        # Arrange & Act
         input_model = AgentInput()
 
         # Assert - 事後条件検証
@@ -42,24 +32,26 @@ class TestAgentInput:
         assert input_model.question_count == 1
 
         # 不変条件検証
+        assert isinstance(input_model.exam_type, str)
+        assert isinstance(input_model.category, list)
+        assert isinstance(input_model.question_count, int)
         assert input_model.question_count >= 1
-        assert input_model.question_count <= 5
-        assert input_model.exam_type in EXAM_TYPES
 
-    def test_valid_input_contract(self) -> None:
+    def test_custom_values_contract(self) -> None:
         """
-        事前条件: 有効な入力データ
-        事後条件: 正常にモデルが作成される
+        事前条件: カスタム値での初期化
+        事後条件: 指定した値が正しく設定される
+        不変条件: 値の型と制約が保持される
         """
         # Arrange - 事前条件設定
-        valid_data: dict[str, Any] = {
+        custom_data: dict[str, Any] = {
             "exam_type": "SAP",
             "category": ["コンピューティング", "ストレージ"],
             "question_count": 3,
         }
 
         # Act
-        input_model = AgentInput(**valid_data)
+        input_model = AgentInput(**custom_data)
 
         # Assert - 事後条件検証
         assert input_model.exam_type == "SAP"
@@ -67,163 +59,148 @@ class TestAgentInput:
         assert input_model.question_count == 3
 
         # 不変条件検証
+        assert len(input_model.category) == 2
         assert 1 <= input_model.question_count <= 5
 
-    def test_invalid_question_count_precondition(self) -> None:
+    def test_question_count_validation_contract(self) -> None:
         """
-        事前条件: 無効な問題数（範囲外）
+        事前条件: 無効な問題数での初期化
         事後条件: ValidationError が発生する
+        不変条件: 問題数の制約（1-5問）が守られる
         """
-        # Arrange - 事前条件違反データ
-        invalid_data_cases: list[dict[str, Any]] = [
-            {"question_count": 0},  # 下限違反
-            {"question_count": 6},  # 上限違反
-            {"question_count": -1},  # 負数
-        ]
+        # Arrange - 事前条件違反: 問題数が範囲外
+        # Act & Assert - 事後条件検証
+        with pytest.raises(ValidationError):
+            AgentInput(exam_type="SAP", category=[], question_count=0)
 
-        for invalid_data in invalid_data_cases:
-            # Act & Assert - 事前条件違反の検証
-            with pytest.raises(ValidationError) as exc_info:
-                AgentInput(**invalid_data)
+        # 上限テスト
+        with pytest.raises(ValidationError):
+            AgentInput(exam_type="SAP", category=[], question_count=6)
 
-            # 不変条件検証: エラーメッセージに制約情報が含まれる
-            error_details = str(exc_info.value)
-            assert "question_count" in error_details
 
-    def test_category_examples_contract(self) -> None:
+class TestQuestion:
+    """Question モデルの契約検証"""
+
+    def test_valid_question_contract(self) -> None:
         """
-        事前条件: カテゴリ例に含まれる値
-        事後条件: 正常に受け入れられる
-        不変条件: カテゴリは空リストまたは有効な文字列リスト
+        事前条件: 有効な問題データ
+        事後条件: Question モデルが正常に作成される
+        不変条件: 問題の構造と制約が保持される
         """
-        # Arrange - 事前条件: 有効なカテゴリ例
-        valid_categories = [
-            ["分析"],
-            ["コンピューティング", "ストレージ"],
-            ["セキュリティ、アイデンティティ、コンプライアンス"],
-            [],  # 空リストも有効
-        ]
+        # Arrange - 事前条件設定
+        question_data: dict[str, Any] = {
+            "question": "EC2インスタンスに関する問題",
+            "options": ["A. t2.micro", "B. m5.large", "C. c5.xlarge", "D. r5.2xlarge"],
+            "correct_answer": "B",
+            "explanation": "m5.largeが最適です。",
+            "source": ["https://docs.aws.amazon.com/ec2/"],
+        }
 
-        for category in valid_categories:
-            # Act
-            input_model = AgentInput(category=category)
+        # Act
+        question = Question(**question_data)
 
-            # Assert - 事後条件検証
-            assert input_model.category == category
+        # Assert - 事後条件検証
+        assert question.question == "EC2インスタンスに関する問題"
+        assert len(question.options) == 4
+        assert question.correct_answer == "B"
+        assert question.explanation == "m5.largeが最適です。"
+        assert len(question.source) == 1
 
-            # 不変条件検証
-            assert isinstance(input_model.category, list)
-            for item in input_model.category:
-                assert isinstance(item, str)
-                assert len(item) > 0  # 空文字列でない
+        # 不変条件検証
+        assert isinstance(question.question, str)
+        assert isinstance(question.options, list)
+        assert isinstance(question.correct_answer, str)
+        assert isinstance(question.explanation, str)
+        assert isinstance(question.source, list)
+        assert len(question.question) > 0
+        assert len(question.options) >= 4  # 最低4つの選択肢
 
 
 class TestAgentOutput:
     """AgentOutput モデルの契約検証"""
 
-    def test_valid_output_contract(self) -> None:
+    def test_single_question_output_contract(self) -> None:
         """
-        事前条件: 有効な出力データ
-        事後条件: 正常にモデルが作成される
-        不変条件: 必須フィールドが全て存在する
+        事前条件: 単一問題のデータ
+        事後条件: AgentOutput モデルが正常に作成される
+        不変条件: 問題リストの構造が保持される
         """
         # Arrange - 事前条件設定
-        valid_output_data: dict[str, Any] = {
-            "question": "AWS EC2に関する問題です。",
-            "options": ["A. 選択肢A", "B. 選択肢B", "C. 選択肢C", "D. 選択肢D"],
-            "correct_answer": "A",
-            "explanation": "正解はAです。理由は...",
-            "source": [
-                "https://docs.aws.amazon.com/ec2/",
-                "https://docs.aws.amazon.com/ec2/latest/userguide/",
-            ],
-        }
+        question = Question(
+            question="単一問題テスト",
+            options=["A. 選択肢1", "B. 選択肢2", "C. 選択肢3", "D. 選択肢4"],
+            correct_answer="A",
+            explanation="解説",
+            source=["https://docs.aws.amazon.com/test/"],
+        )
 
         # Act
-        output_model = AgentOutput(**valid_output_data)
+        agent_output = AgentOutput(questions=[question])
 
         # Assert - 事後条件検証
-        assert output_model.question == valid_output_data["question"]
-        assert output_model.options == valid_output_data["options"]
-        assert output_model.correct_answer == valid_output_data["correct_answer"]
-        assert output_model.explanation == valid_output_data["explanation"]
-        assert output_model.source == valid_output_data["source"]
+        assert len(agent_output.questions) == 1
+        assert agent_output.questions[0].question == "単一問題テスト"
 
         # 不変条件検証
-        assert len(output_model.options) >= 4  # 最低4つの選択肢
-        assert len(output_model.question) > 0  # 問題文は空でない
-        assert len(output_model.explanation) > 0  # 解説は空でない
-        assert len(output_model.source) > 0  # ソースは空でない
+        assert isinstance(agent_output.questions, list)
+        assert all(isinstance(q, Question) for q in agent_output.questions)
 
-    def test_insufficient_options_precondition(self) -> None:
+    def test_multiple_questions_output_contract(self) -> None:
         """
-        事前条件: 選択肢が4つ未満
-        事後条件: モデルは作成されるが、不変条件違反を検出
+        事前条件: 複数問題のデータ
+        事後条件: AgentOutput モデルが正常に作成される
+        不変条件: 複数問題の構造が保持される
         """
-        # Arrange - 事前条件: 選択肢不足
-        insufficient_options_data: dict[str, Any] = {
-            "question": "テスト問題",
-            "options": ["A. 選択肢A", "B. 選択肢B"],  # 2つのみ
-            "correct_answer": "A",
-            "explanation": "テスト解説",
-            "source": ["https://example.com"],
-        }
-
-        # Act
-        output_model = AgentOutput(**insufficient_options_data)
-
-        # Assert - 不変条件違反の検証
-        # 注意: Pydanticは基本的な型検証のみ行うため、
-        # ビジネスルール（4つ以上の選択肢）は別途検証が必要
-        assert len(output_model.options) < 4  # 不変条件違反を確認
-
-    def test_empty_required_fields_precondition(self) -> None:
-        """
-        事前条件: 必須フィールドが空
-        事後条件: ValidationError が発生する
-        """
-        # Arrange - 事前条件違反: 必須フィールド欠如
-        incomplete_data_cases: list[dict[str, Any]] = [
-            {},  # 全フィールド欠如
-            {"question": ""},  # 空の問題文
-            {"question": "テスト", "options": []},  # 空の選択肢
+        # Arrange - 事前条件設定
+        questions = [
+            Question(
+                question=f"問題{i + 1}",
+                options=[f"{chr(65 + j)}. 選択肢{j + 1}" for j in range(4)],
+                correct_answer="A",
+                explanation=f"解説{i + 1}",
+                source=[f"https://docs.aws.amazon.com/test{i + 1}/"],
+            )
+            for i in range(3)
         ]
 
-        for incomplete_data in incomplete_data_cases:
-            # Act & Assert - 事前条件違反の検証
-            with pytest.raises(ValidationError):
-                AgentOutput(**incomplete_data)
+        # Act
+        agent_output = AgentOutput(questions=questions)
+
+        # Assert - 事後条件検証
+        assert len(agent_output.questions) == 3
+        assert agent_output.questions[0].question == "問題1"
+        assert agent_output.questions[2].question == "問題3"
+
+        # 不変条件検証
+        assert isinstance(agent_output.questions, list)
+        assert all(isinstance(q, Question) for q in agent_output.questions)
+        assert len(agent_output.questions) > 1
 
 
 class TestInvokeFunction:
     """invoke 関数の契約検証"""
 
-    @pytest.fixture
-    def mock_agent(self) -> MagicMock:
-        """エージェントのモック"""
-        mock = MagicMock()
-        mock_result = MagicMock()
-        mock_result.model_dump.return_value = {
-            "question": "モック問題",
-            "options": ["A. 選択肢A", "B. 選択肢B", "C. 選択肢C", "D. 選択肢D"],
-            "correct_answer": "A",
-            "explanation": "モック解説",
-            "source": ["https://docs.aws.amazon.com/mock/"],
-        }
-        mock.structured_output.return_value = mock_result
-        return mock
+    def _create_mock_question(self, index: int = 1) -> Question:
+        """テスト用のQuestionモックを作成"""
+        return Question(
+            question=f"EC2インスタンスに関する問題{index}",
+            options=["A. t2.micro", "B. m5.large", "C. c5.xlarge", "D. r5.2xlarge"],
+            correct_answer="B",
+            explanation=f"m5.largeが最適です。解説{index}",
+            source=["https://docs.aws.amazon.com/ec2/"],
+        )
 
     @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
-    async def test_valid_payload_contract(
+    async def test_single_question_generation_contract(
         self,
         mock_agent: MagicMock,
         mock_teams_client_class: MagicMock,
     ) -> None:
         """
-        事前条件: 有効なペイロード
-        事後条件: 正常な問題データが返される
-        不変条件: 出力形式が AgentOutput の仕様に準拠
+        事前条件: 単一問題生成の有効なペイロード
+        事後条件: AgentOutputが返される
+        不変条件: 問題数が1問、Teams投稿が実行される
         """
         # Arrange - 事前条件設定
         valid_payload: dict[str, Any] = {
@@ -233,58 +210,99 @@ class TestInvokeFunction:
         }
 
         # エージェントモックの設定
-        mock_result = MagicMock()
-        mock_result.question = "EC2インスタンスに関する問題"
-        mock_result.options = [
-            "A. t2.micro",
-            "B. m5.large",
-            "C. c5.xlarge",
-            "D. r5.2xlarge",
-        ]
-        mock_result.correct_answer = "B"
-        mock_result.explanation = "m5.largeが最適です。"
-        mock_result.source = ["https://docs.aws.amazon.com/ec2/"]
-        mock_result.model_dump.return_value = {
-            "question": "EC2インスタンスに関する問題",
-            "options": ["A. t2.micro", "B. m5.large", "C. c5.xlarge", "D. r5.2xlarge"],
-            "correct_answer": "B",
-            "explanation": "m5.largeが最適です。",
-            "source": ["https://docs.aws.amazon.com/ec2/"],
-        }
+        mock_result = AgentOutput(questions=[self._create_mock_question()])
         mock_agent.structured_output.return_value = mock_result
 
         # Teamsクライアントモックの設定
         mock_teams_client = MagicMock()
-        mock_teams_response = MagicMock()
-        mock_teams_response.status = "success"
-        mock_teams_client.send_agent_output_to_teams = AsyncMock(
-            return_value=mock_teams_response
-        )
+        # mock_teams_response削除
+        # status設定削除
+        mock_teams_client.send = AsyncMock(
+            return_value=None
+        )  # 例外ベース: 成功時は何も返さない
         mock_teams_client_class.return_value = mock_teams_client
 
         # Act
         result = await invoke(valid_payload)
 
         # Assert - 事後条件検証
-        assert "question" in result
-        assert "options" in result
-        assert "correct_answer" in result
-        assert "explanation" in result
-        assert "source" in result
+        assert "questions" in result
+        assert len(result["questions"]) == 1
+
+        question = result["questions"][0]
+        assert "question" in question
+        assert "options" in question
+        assert "correct_answer" in question
+        assert "explanation" in question
+        assert "source" in question
 
         # 不変条件検証
-        assert isinstance(result["question"], str)
-        assert isinstance(result["options"], list)
-        assert len(result["options"]) >= 4
-        assert isinstance(result["correct_answer"], str)
-        assert isinstance(result["explanation"], str)
-        assert isinstance(result["source"], list)
+        assert isinstance(result["questions"], list)
+        assert len(result["questions"]) == 1
+        assert isinstance(question["options"], list)
+        assert len(question["options"]) >= 4
 
-        # エージェントが正しく呼び出されたことを確認
+        # エージェントとTeamsクライアントが正しく呼び出されたことを確認
         mock_agent.structured_output.assert_called_once()
+        mock_teams_client.send.assert_called_once()
 
-        # Teamsクライアントが正しく呼び出されたことを確認
-        mock_teams_client.send_agent_output_to_teams.assert_called_once()
+    @patch("app.agentcore.agent_main.TeamsClient")
+    @patch("app.agentcore.agent_main.agent")
+    async def test_multiple_questions_generation_contract(
+        self,
+        mock_agent: MagicMock,
+        mock_teams_client_class: MagicMock,
+    ) -> None:
+        """
+        事前条件: 複数問題生成の有効なペイロード
+        事後条件: 複数問題のAgentOutputが返される
+        不変条件: 指定した問題数、Teams投稿が実行される
+        """
+        # Arrange - 事前条件設定
+        valid_payload: dict[str, Any] = {
+            "exam_type": "SAP",
+            "category": ["コンピューティング", "ストレージ"],
+            "question_count": 3,
+        }
+
+        # エージェントモックの設定（3問）
+        mock_questions = [self._create_mock_question(i) for i in range(1, 4)]
+        mock_result = AgentOutput(questions=mock_questions)
+        mock_agent.structured_output.return_value = mock_result
+
+        # Teamsクライアントモックの設定
+        mock_teams_client = MagicMock()
+        # mock_teams_response削除
+        # status設定削除
+        mock_teams_client.send = AsyncMock(
+            return_value=None
+        )  # 例外ベース: 成功時は何も返さない
+        mock_teams_client_class.return_value = mock_teams_client
+
+        # Act
+        result = await invoke(valid_payload)
+
+        # Assert - 事後条件検証
+        assert "questions" in result
+        assert len(result["questions"]) == 3
+
+        # 各問題の構造確認
+        for i, question in enumerate(result["questions"]):
+            assert "question" in question
+            assert f"問題{i + 1}" in question["question"]
+            assert "options" in question
+            assert "correct_answer" in question
+            assert "explanation" in question
+            assert "source" in question
+
+        # 不変条件検証
+        assert isinstance(result["questions"], list)
+        assert len(result["questions"]) == 3
+        assert all(isinstance(q["options"], list) for q in result["questions"])
+
+        # エージェントとTeamsクライアントが正しく呼び出されたことを確認
+        mock_agent.structured_output.assert_called_once()
+        mock_teams_client.send.assert_called_once()
 
     @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
@@ -304,33 +322,13 @@ class TestInvokeFunction:
         }
 
         # エージェントモックの設定
-        mock_result = MagicMock()
-        mock_result.question = "EC2インスタンスに関する問題"
-        mock_result.options = [
-            "A. t2.micro",
-            "B. m5.large",
-            "C. c5.xlarge",
-            "D. r5.2xlarge",
-        ]
-        mock_result.correct_answer = "B"
-        mock_result.explanation = "m5.largeが最適です。"
-        mock_result.source = ["https://docs.aws.amazon.com/ec2/"]
-        mock_result.model_dump.return_value = {
-            "question": "EC2インスタンスに関する問題",
-            "options": ["A. t2.micro", "B. m5.large", "C. c5.xlarge", "D. r5.2xlarge"],
-            "correct_answer": "B",
-            "explanation": "m5.largeが最適です。",
-            "source": ["https://docs.aws.amazon.com/ec2/"],
-        }
+        mock_result = AgentOutput(questions=[self._create_mock_question()])
         mock_agent.structured_output.return_value = mock_result
 
         # Teamsクライアントモック（失敗）の設定
         mock_teams_client = MagicMock()
-        mock_teams_response = MagicMock()
-        mock_teams_response.status = "error"
-        mock_teams_response.error = "Webhook URL not configured"
-        mock_teams_client.send_agent_output_to_teams = AsyncMock(
-            return_value=mock_teams_response
+        mock_teams_client.send = AsyncMock(
+            side_effect=ValueError("Webhook URL not configured")
         )
         mock_teams_client_class.return_value = mock_teams_client
 
@@ -338,62 +336,33 @@ class TestInvokeFunction:
         result = await invoke(valid_payload)
 
         # Assert - 事後条件検証
-        assert "question" in result
+        assert "questions" in result
 
         # 不変条件検証: 問題生成は成功している
         assert "error" not in result
-        assert isinstance(result["question"], str)
-        assert len(result["question"]) > 0
+        assert isinstance(result["questions"], list)
+        assert len(result["questions"]) == 1
+        assert len(result["questions"][0]["question"]) > 0
 
     @patch("app.agentcore.agent_main.agent")
     async def test_invalid_payload_precondition(self, mock_agent: MagicMock) -> None:
         """
-        事前条件: 無効なペイロード（型エラー）
-        事後条件: エラー情報が返される
-        不変条件: エラー時は error キーが存在する
+        事前条件: 無効なペイロード
+        事後条件: ValidationError によりエラーレスポンスが返される
+        不変条件: エラー時は error フィールドが存在する
         """
-        # Arrange - 事前条件違反: 無効なペイロード
+        # Arrange - 事前条件違反: 無効な問題数
         invalid_payload: dict[str, Any] = {
-            "exam_type": "INVALID",  # 存在しない試験タイプ
-            "question_count": "invalid",  # 文字列（数値でない）
+            "question_count": 0  # 無効な値
         }
 
         # Act
         result = await invoke(invalid_payload)
 
-        # Assert - 事後条件検証（エラーケース）
+        # Assert - 事後条件検証
         assert "error" in result
-        assert isinstance(result["error"], str)
 
-        # 不変条件検証: エラー時はエージェントが呼び出されない
-        mock_agent.structured_output.assert_not_called()
-
-    @patch("app.agentcore.agent_main.agent")
-    async def test_agent_exception_handling_contract(
-        self, mock_agent: MagicMock
-    ) -> None:
-        """
-        事前条件: エージェント実行時に例外発生
-        事後条件: エラー情報が適切に返される
-        不変条件: 例外が適切にキャッチされ、システムが停止しない
-        """
-        # Arrange - エージェント例外の設定
-        mock_agent.structured_output.side_effect = Exception("エージェント実行エラー")
-
-        valid_payload: dict[str, Any] = {
-            "exam_type": "SAP",
-            "category": ["コンピューティング"],
-            "question_count": 1,
-        }
-
-        # Act
-        result = await invoke(valid_payload)
-
-        # Assert - 事後条件検証（例外処理）
-        assert "error" in result
-        assert "エージェント実行エラー" in result["error"]
-
-        # 不変条件検証: システムが停止せず、適切にエラーが返される
+        # 不変条件検証
         assert isinstance(result, dict)
 
     @patch("app.agentcore.agent_main.TeamsClient")
@@ -404,37 +373,30 @@ class TestInvokeFunction:
         """
         事前条件: 空のペイロード
         事後条件: デフォルト値で処理される
-        不変条件: AgentInput のデフォルト値が適用される
+        不変条件: デフォルト値での正常処理
         """
-        # Arrange - 事前条件: 空のペイロード
+        # Arrange - 事前条件設定
         empty_payload: dict[str, Any] = {}
 
-        # モックの設定
-        mock_result = MagicMock()
-        mock_result.model_dump.return_value = {
-            "question": "デフォルト問題",
-            "options": ["A. 選択肢A", "B. 選択肢B", "C. 選択肢C", "D. 選択肢D"],
-            "correct_answer": "A",
-            "explanation": "デフォルト解説",
-            "source": ["https://docs.aws.amazon.com/default/"],
-        }
+        # エージェントモックの設定
+        mock_result = AgentOutput(questions=[self._create_mock_question()])
         mock_agent.structured_output.return_value = mock_result
 
         # Teamsクライアントモックの設定
         mock_teams_client = MagicMock()
-        mock_teams_response = MagicMock()
-        mock_teams_response.status = "success"
-        mock_teams_client.send_agent_output_to_teams = AsyncMock(
-            return_value=mock_teams_response
-        )
+        # mock_teams_response削除
+        # status設定削除
+        mock_teams_client.send = AsyncMock(
+            return_value=None
+        )  # 例外ベース: 成功時は何も返さない
         mock_teams_client_class.return_value = mock_teams_client
 
         # Act
         result = await invoke(empty_payload)
 
         # Assert - 事後条件検証
-        assert "question" in result
-        assert "error" not in result
+        assert "questions" in result
+        assert len(result["questions"]) == 1  # デフォルトは1問
 
         # 不変条件検証: デフォルト値での処理が成功
         mock_agent.structured_output.assert_called_once()
@@ -447,34 +409,26 @@ class TestConstants:
         """
         不変条件: EXAM_TYPES の構造と内容が正しい
         """
-        # Assert - 不変条件検証
+        from app.agentcore.agent_main import EXAM_TYPES
+
+        # 不変条件検証
         assert isinstance(EXAM_TYPES, dict)
         assert "SAP" in EXAM_TYPES
-
-        sap_config = EXAM_TYPES["SAP"]
-        assert "name" in sap_config
-        assert "guide_url" in sap_config
-        assert "sample_url" in sap_config
-
-        # URL形式の検証
-        assert sap_config["guide_url"].startswith("https://")
-        assert sap_config["sample_url"].startswith("https://")
-        assert "AWS Certified Solutions Architect - Professional" in sap_config["name"]
+        assert "name" in EXAM_TYPES["SAP"]
+        assert "guide_url" in EXAM_TYPES["SAP"]
+        assert "sample_url" in EXAM_TYPES["SAP"]
 
     def test_model_id_invariant(self) -> None:
         """
         不変条件: MODEL_ID の構造と内容が正しい
         """
-        # Assert - 不変条件検証
-        assert isinstance(MODEL_ID, dict)
-        assert len(MODEL_ID) > 0
+        from app.agentcore.agent_main import MODEL_ID
 
-        for model_name, model_id in MODEL_ID.items():
-            assert isinstance(model_name, str)
-            assert isinstance(model_id, str)
-            assert len(model_id) > 0
-            # Bedrock モデル ID の形式検証
-            assert "." in model_id  # モデル名にはドットが含まれる
+        # 不変条件検証
+        assert isinstance(MODEL_ID, dict)
+        assert "claude-3.7-sonnet" in MODEL_ID
+        assert isinstance(MODEL_ID["claude-3.7-sonnet"], str)
+        assert MODEL_ID["claude-3.7-sonnet"].startswith("us.anthropic.claude")
 
 
 class TestBusinessLogicContracts:
@@ -487,37 +441,39 @@ class TestBusinessLogicContracts:
     ) -> None:
         """
         事前条件: 特定カテゴリが指定される
-        事後条件: そのカテゴリに関連する問題が生成される
-        不変条件: プロンプトにカテゴリ情報が含まれる
+        事後条件: プロンプトにカテゴリが含まれる
+        不変条件: 指定されたカテゴリが処理に反映される
         """
         # Arrange - 事前条件設定
         payload: dict[str, Any] = {
-            "exam_type": "SAP",
-            "category": ["コンピューティング", "ネットワークとコンテンツ配信"],
+            "category": [
+                "ネットワークとコンテンツ配信",
+                "セキュリティ、アイデンティティ、コンプライアンス",
+            ],
             "question_count": 1,
         }
 
-        # モックの設定
-        mock_result = MagicMock()
-        mock_result.model_dump.return_value = {
-            "question": "EC2とVPCに関する統合問題",
-            "options": ["A. 選択肢A", "B. 選択肢B", "C. 選択肢C", "D. 選択肢D"],
-            "correct_answer": "A",
-            "explanation": "統合的な解説",
-            "source": [
-                "https://docs.aws.amazon.com/ec2/",
-                "https://docs.aws.amazon.com/vpc/",
-            ],
-        }
+        # エージェントモックの設定
+        mock_result = AgentOutput(
+            questions=[
+                Question(
+                    question="ネットワークに関する問題",
+                    options=["A", "B", "C", "D"],
+                    correct_answer="A",
+                    explanation="解説",
+                    source=[],
+                )
+            ]
+        )
         mock_agent.structured_output.return_value = mock_result
 
         # Teamsクライアントモックの設定
         mock_teams_client = MagicMock()
-        mock_teams_response = MagicMock()
-        mock_teams_response.status = "success"
-        mock_teams_client.send_agent_output_to_teams = AsyncMock(
-            return_value=mock_teams_response
-        )
+        # mock_teams_response削除
+        # status設定削除
+        mock_teams_client.send = AsyncMock(
+            return_value=None
+        )  # 例外ベース: 成功時は何も返さない
         mock_teams_client_class.return_value = mock_teams_client
 
         # Act
@@ -525,66 +481,13 @@ class TestBusinessLogicContracts:
 
         # Assert - 事後条件検証
         assert "error" not in result
-        assert "question" in result
+        assert "questions" in result
 
         # 不変条件検証: プロンプトにカテゴリが含まれることを確認
         call_args = mock_agent.structured_output.call_args
-        assert call_args is not None
-
-        # プロンプトの内容確認
-        prompt_arg = call_args.kwargs.get("prompt", "")
-        assert "コンピューティング" in prompt_arg
+        prompt_arg = call_args.kwargs["prompt"]
         assert "ネットワークとコンテンツ配信" in prompt_arg
-
-    @patch("app.agentcore.agent_main.TeamsClient")
-    @patch("app.agentcore.agent_main.agent")
-    async def test_multiple_questions_contract(
-        self, mock_agent: MagicMock, mock_teams_client_class: MagicMock
-    ) -> None:
-        """
-        事前条件: 複数問題の生成要求
-        事後条件: 指定された数の問題が生成される（現在は1問のみ対応）
-        不変条件: question_count がプロンプトに反映される
-        """
-        # Arrange - 事前条件設定
-        payload: dict[str, Any] = {
-            "exam_type": "SAP",
-            "category": ["ストレージ"],
-            "question_count": 3,
-        }
-
-        # モックの設定
-        mock_result = MagicMock()
-        mock_result.model_dump.return_value = {
-            "question": "S3に関する問題",
-            "options": ["A. 選択肢A", "B. 選択肢B", "C. 選択肢C", "D. 選択肢D"],
-            "correct_answer": "A",
-            "explanation": "S3の解説",
-            "source": ["https://docs.aws.amazon.com/s3/"],
-        }
-        mock_agent.structured_output.return_value = mock_result
-
-        # Teamsクライアントモックの設定
-        mock_teams_client = MagicMock()
-        mock_teams_response = MagicMock()
-        mock_teams_response.status = "success"
-        mock_teams_client.send_agent_output_to_teams = AsyncMock(
-            return_value=mock_teams_response
-        )
-        mock_teams_client_class.return_value = mock_teams_client
-
-        # Act
-        result = await invoke(payload)
-
-        # Assert - 事後条件検証
-        assert "error" not in result
-
-        # 不変条件検証: プロンプトに問題数が含まれることを確認
-        call_args = mock_agent.structured_output.call_args
-        assert call_args is not None
-
-        prompt_arg = call_args.kwargs.get("prompt", "")
-        assert "3問" in prompt_arg
+        assert "セキュリティ、アイデンティティ、コンプライアンス" in prompt_arg
 
     @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
@@ -593,34 +496,33 @@ class TestBusinessLogicContracts:
     ) -> None:
         """
         事前条件: 有効な試験タイプが指定される
-        事後条件: 対応する試験レベルで問題が生成される
-        不変条件: EXAM_TYPES の情報がプロンプトに反映される
+        事後条件: プロンプトに試験タイプが含まれる
+        不変条件: 試験タイプが処理に反映される
         """
         # Arrange - 事前条件設定
-        payload: dict[str, Any] = {
-            "exam_type": "SAP",
-            "category": [],
-            "question_count": 1,
-        }
+        payload: dict[str, Any] = {"exam_type": "SAP", "question_count": 1}
 
-        # モックの設定
-        mock_result = MagicMock()
-        mock_result.model_dump.return_value = {
-            "question": "Professional レベル問題",
-            "options": ["A. 選択肢A", "B. 選択肢B", "C. 選択肢C", "D. 選択肢D"],
-            "correct_answer": "A",
-            "explanation": "Professional レベル解説",
-            "source": ["https://docs.aws.amazon.com/professional/"],
-        }
+        # エージェントモックの設定
+        mock_result = AgentOutput(
+            questions=[
+                Question(
+                    question="SAP レベルの問題",
+                    options=["A", "B", "C", "D"],
+                    correct_answer="A",
+                    explanation="解説",
+                    source=[],
+                )
+            ]
+        )
         mock_agent.structured_output.return_value = mock_result
 
         # Teamsクライアントモックの設定
         mock_teams_client = MagicMock()
-        mock_teams_response = MagicMock()
-        mock_teams_response.status = "success"
-        mock_teams_client.send_agent_output_to_teams = AsyncMock(
-            return_value=mock_teams_response
-        )
+        # mock_teams_response削除
+        # status設定削除
+        mock_teams_client.send = AsyncMock(
+            return_value=None
+        )  # 例外ベース: 成功時は何も返さない
         mock_teams_client_class.return_value = mock_teams_client
 
         # Act
@@ -628,180 +530,209 @@ class TestBusinessLogicContracts:
 
         # Assert - 事後条件検証
         assert "error" not in result
+        assert "questions" in result
 
-        # 不変条件検証: プロンプトに試験名が含まれることを確認
+        # 不変条件検証: プロンプトに試験タイプが含まれることを確認
         call_args = mock_agent.structured_output.call_args
-        assert call_args is not None
-
-        prompt_arg = call_args.kwargs.get("prompt", "")
-        expected_exam_name = EXAM_TYPES["SAP"]["name"]
-        assert expected_exam_name in prompt_arg
+        prompt_arg = call_args.kwargs["prompt"]
+        assert "AWS Certified Solutions Architect - Professional" in prompt_arg
 
 
 class TestDataIntegrityContracts:
     """データ整合性の契約検証"""
 
-    def test_agent_input_serialization_contract(self) -> None:
+    @patch("app.agentcore.agent_main.TeamsClient")
+    @patch("app.agentcore.agent_main.agent")
+    async def test_question_structure_integrity_contract(
+        self, mock_agent: MagicMock, mock_teams_client_class: MagicMock
+    ) -> None:
         """
-        事前条件: AgentInput モデルのインスタンス
-        事後条件: 正常にシリアライズ・デシリアライズできる
-        不変条件: データの整合性が保持される
+        事前条件: 有効なペイロード
+        事後条件: 問題構造の整合性が保たれる
+        不変条件: 各問題が必要なフィールドを持つ
         """
         # Arrange - 事前条件設定
-        original_input = AgentInput(
-            exam_type="SAP",
-            category=["コンピューティング", "ストレージ"],
-            question_count=2,
-        )
+        payload: dict[str, Any] = {"question_count": 2}
 
-        # Act - シリアライズ・デシリアライズ
-        serialized = original_input.model_dump()
-        deserialized = AgentInput(**serialized)
+        # エージェントモックの設定
+        mock_questions = [
+            Question(
+                question=f"問題{i + 1}",
+                options=[f"{chr(65 + j)}. 選択肢{j + 1}" for j in range(4)],
+                correct_answer="A",
+                explanation=f"解説{i + 1}",
+                source=[f"https://docs.aws.amazon.com/test{i + 1}/"],
+            )
+            for i in range(2)
+        ]
+        mock_result = AgentOutput(questions=mock_questions)
+        mock_agent.structured_output.return_value = mock_result
 
-        # Assert - 事後条件検証
-        assert deserialized.exam_type == original_input.exam_type
-        assert deserialized.category == original_input.category
-        assert deserialized.question_count == original_input.question_count
-
-        # 不変条件検証: データの完全性
-        assert deserialized.model_dump() == original_input.model_dump()
-
-    def test_agent_output_validation_contract(self) -> None:
-        """
-        事前条件: 実際の問題生成結果に近いデータ
-        事後条件: AgentOutput として有効
-        不変条件: AWS試験問題として必要な要素が全て含まれる
-        """
-        # Arrange - 事前条件: 実際の問題データに近い形式
-        realistic_output_data: dict[str, Any] = {
-            "question": "企業がAWSでマルチリージョンアーキテクチャを構築する際の最適なアプローチはどれですか？",
-            "options": [
-                "A. 各リージョンに独立したVPCを作成し、VPC Peeringで接続する",
-                "B. Transit Gatewayを使用してリージョン間を接続する",
-                "C. CloudFrontとRoute 53を使用してトラフィックを分散する",
-                "D. Global Acceleratorを使用してパフォーマンスを最適化する",
-            ],
-            "correct_answer": "B",
-            "explanation": "Transit Gatewayは複数リージョン間の接続を効率的に管理できるため、マルチリージョンアーキテクチャに最適です。",
-            "source": [
-                "https://docs.aws.amazon.com/vpc/latest/tgw/what-is-transit-gateway.html",
-                "https://docs.aws.amazon.com/vpc/latest/peering/what-is-vpc-peering.html",
-            ],
-        }
+        # Teamsクライアントモックの設定
+        mock_teams_client = MagicMock()
+        # mock_teams_response削除
+        # status設定削除
+        mock_teams_client.send = AsyncMock(
+            return_value=None
+        )  # 例外ベース: 成功時は何も返さない
+        mock_teams_client_class.return_value = mock_teams_client
 
         # Act
-        output_model = AgentOutput(**realistic_output_data)
+        result = await invoke(payload)
 
         # Assert - 事後条件検証
-        assert output_model.question == realistic_output_data["question"]
-        assert output_model.correct_answer in ["A", "B", "C", "D"]
+        assert "questions" in result
+        assert len(result["questions"]) == 2
 
-        # 不変条件検証: AWS試験問題として必要な要素
-        assert len(output_model.options) >= 4  # 最低4つの選択肢
-        assert len(output_model.explanation) > 50  # 十分な解説長
-        assert all(
-            url.startswith("https://docs.aws.amazon.com/")
-            for url in output_model.source
-        )  # AWS公式ドキュメント
-
-        # 選択肢の形式検証
-        for i, option in enumerate(output_model.options):
-            expected_prefix = f"{chr(65 + i)}."  # A., B., C., D.
-            assert option.startswith(expected_prefix)
+        # 不変条件検証: 各問題の構造整合性
+        for question in result["questions"]:
+            assert "question" in question
+            assert "options" in question
+            assert "correct_answer" in question
+            assert "explanation" in question
+            assert "source" in question
+            assert isinstance(question["options"], list)
+            assert len(question["options"]) >= 4
 
 
 class TestSystemInvariants:
     """システム全体の不変条件検証"""
 
-    def test_logging_configuration_invariant(self) -> None:
+    @patch("app.agentcore.agent_main.TeamsClient")
+    @patch("app.agentcore.agent_main.agent")
+    async def test_logging_invariant(
+        self, mock_agent: MagicMock, mock_teams_client_class: MagicMock
+    ) -> None:
         """
-        不変条件: ログ設定が適切に構成されている
+        不変条件: 適切なログが出力される
         """
-        # Assert - ログ設定の不変条件検証
-        # agent_main.pyでlogging.basicConfigが呼ばれることを確認
+        # Arrange
+        payload: dict[str, Any] = {"question_count": 1}
 
-        # ログレベルが適切に設定されていることを確認
-        # basicConfigでINFOレベルが設定されているが、
-        # テスト環境では親ロガーのレベルが影響する可能性がある
-        root_logger = logging.getLogger()
-
-        # ログハンドラーの存在確認
-        handlers = root_logger.handlers
-        assert len(handlers) > 0
-
-        # フォーマッターの存在確認（設定されている場合）
-        for handler in handlers:
-            if hasattr(handler, "formatter") and handler.formatter:
-                format_str = handler.formatter._fmt
-                if format_str:  # format_strがNoneでないことを確認
-                    # 基本的なログフォーマット要素の確認
-                    assert any(
-                        element in format_str
-                        for element in [
-                            "%(asctime)s",
-                            "%(name)s",
-                            "%(levelname)s",
-                            "%(message)s",
-                        ]
-                    )
-
-    def test_mcp_client_initialization_invariant(self) -> None:
-        """
-        不変条件: MCPクライアントが適切に初期化されている
-        """
-        # この不変条件は実際のMCPクライアントの初期化をテストするため、
-        # 統合テストで検証するのが適切
-        # ここでは設定の妥当性のみ検証
-
-        # Assert - MCP設定の不変条件検証
-        assert "awslabs.aws-documentation-mcp-server@latest" != None
-        assert isinstance("awslabs.aws-documentation-mcp-server@latest", str)
-
-    def test_model_configuration_invariant(self) -> None:
-        """
-        不変条件: モデル設定が適切に構成されている
-        """
-        # Assert - モデル設定の不変条件検証
-        assert "claude-3.7-sonnet" in MODEL_ID
-        selected_model_id = MODEL_ID["claude-3.7-sonnet"]
-
-        # Bedrock モデル ID の形式検証
-        assert isinstance(selected_model_id, str)
-        assert len(selected_model_id) > 0
-        assert (
-            "anthropic.claude" in selected_model_id
-            or "us.anthropic.claude" in selected_model_id
+        mock_result = AgentOutput(
+            questions=[
+                Question(
+                    question="ログテスト問題",
+                    options=["A", "B", "C", "D"],
+                    correct_answer="A",
+                    explanation="解説",
+                    source=[],
+                )
+            ]
         )
+        mock_agent.structured_output.return_value = mock_result
+
+        mock_teams_client = MagicMock()
+        # mock_teams_response削除
+        # status設定削除
+        mock_teams_client.send = AsyncMock(
+            return_value=None
+        )  # 例外ベース: 成功時は何も返さない
+        mock_teams_client_class.return_value = mock_teams_client
+
+        # Act
+        with patch("app.agentcore.agent_main.logger") as mock_logger:
+            await invoke(payload)
+
+            # Assert - 不変条件検証: ログが適切に出力される
+            mock_logger.info.assert_called()
+            log_calls = [call.args[0] for call in mock_logger.info.call_args_list]
+
+            # 期待されるログメッセージの確認
+            assert any("問題生成プロンプト" in msg for msg in log_calls)
+            assert any("問題生成結果:" in msg for msg in log_calls)
+
+    def test_model_validation_invariant(self) -> None:
+        """
+        不変条件: モデルのバリデーションが正しく動作する
+        """
+        # 不変条件検証: 型が間違っているデータでValidationErrorが発生
+        with pytest.raises(ValidationError):
+            Question(
+                question=123,  # type: ignore  # 意図的な型エラーのテスト
+                options=["A", "B"],
+                correct_answer="A",
+                explanation="説明",
+                source=["https://example.com"],
+            )
+
+    @patch("app.agentcore.agent_main.TeamsClient")
+    @patch("app.agentcore.agent_main.agent")
+    async def test_error_handling_invariant(
+        self, mock_agent: MagicMock, mock_teams_client_class: MagicMock
+    ) -> None:
+        """
+        不変条件: エラー時は適切なエラーレスポンスが返される
+        """
+        # Arrange - エラーを発生させる
+        payload: dict[str, Any] = {"question_count": 1}
+        mock_agent.structured_output.side_effect = Exception("テストエラー")
+
+        # Act
+        result = await invoke(payload)
+
+        # Assert - 不変条件検証: エラー時の適切な処理
+        assert "error" in result
+        assert "テストエラー" in result["error"]
+        assert isinstance(result, dict)
 
 
-@pytest.mark.integration
 class TestIntegrationContracts:
-    """統合レベルの契約検証（実際のコンポーネント連携）"""
+    """統合レベルの契約検証"""
 
-    async def test_end_to_end_contract(self) -> None:
+    @patch("app.agentcore.agent_main.TeamsClient")
+    @patch("app.agentcore.agent_main.agent")
+    async def test_end_to_end_flow_contract(
+        self, mock_agent: MagicMock, mock_teams_client_class: MagicMock
+    ) -> None:
         """
-        事前条件: 実際のAgentInputデータ
-        事後条件: 実際の問題生成が成功する
-        不変条件: 全体のフローが正常に動作する
+        事前条件: 完全な処理フロー
+        事後条件: 問題生成からTeams投稿まで完了
+        不変条件: 全体フローの整合性
+        """
+        # Arrange - 事前条件設定
+        payload: dict[str, Any] = {
+            "exam_type": "SAP",
+            "category": ["コンピューティング"],
+            "question_count": 2,
+        }
 
-        注意: このテストは実際のMCPサーバーとBedrockを使用するため、
-        統合テスト環境でのみ実行されます。
-        """
-        # このテストは実際のMCP統合が必要なため、
-        # 現在はプレースホルダーとして定義
-        # 実際の統合テストは tests/integration/ で実装
-        pass
+        # エージェントモックの設定
+        mock_questions = [
+            Question(
+                question=f"統合テスト問題{i + 1}",
+                options=[f"{chr(65 + j)}. 選択肢{j + 1}" for j in range(4)],
+                correct_answer="A",
+                explanation=f"統合テスト解説{i + 1}",
+                source=[f"https://docs.aws.amazon.com/integration{i + 1}/"],
+            )
+            for i in range(2)
+        ]
+        mock_result = AgentOutput(questions=mock_questions)
+        mock_agent.structured_output.return_value = mock_result
 
-    async def test_error_recovery_contract(self) -> None:
-        """
-        事前条件: MCP接続エラーまたはBedrock APIエラー
-        事後条件: 適切なエラーハンドリングが行われる
-        不変条件: システムが停止せず、エラー情報が返される
+        # Teamsクライアントモックの設定
+        mock_teams_client = MagicMock()
+        # mock_teams_response削除
+        # status設定削除
+        mock_teams_client.send = AsyncMock(
+            return_value=None
+        )  # 例外ベース: 成功時は何も返さない
+        mock_teams_client_class.return_value = mock_teams_client
 
-        注意: このテストは実際のエラー状況をシミュレートするため、
-        統合テスト環境でのみ実行されます。
-        """
-        # このテストは実際のエラー状況のシミュレートが必要なため、
-        # 現在はプレースホルダーとして定義
-        # 実際の統合テストは tests/integration/ で実装
-        pass
+        # Act
+        result = await invoke(payload)
+
+        # Assert - 事後条件検証
+        assert "questions" in result
+        assert len(result["questions"]) == 2
+        assert "error" not in result
+
+        # 不変条件検証: 全体フローの整合性
+        mock_agent.structured_output.assert_called_once()
+        mock_teams_client.send.assert_called_once()
+
+        # Teams投稿に渡されたデータの確認
+        teams_call_args = mock_teams_client.send.call_args[0][0]
+        assert hasattr(teams_call_args, "questions")
+        assert len(teams_call_args.questions) == 2

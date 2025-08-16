@@ -7,22 +7,15 @@ Power Automate "Anyone"モードを使用するため、APIキー認証は不要
 
 import logging
 import os
+from typing import Any
 
 import httpx
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
 
 # .envファイルを読み込み
 load_dotenv()
 
 logger = logging.getLogger(__name__)
-
-
-class TeamsResponse(BaseModel):
-    """Teams投稿レスポンスモデル（最小限）"""
-
-    status: str = Field(description="処理ステータス")
-    error: str | None = Field(default=None, description="エラーメッセージ")
 
 
 class TeamsClient:
@@ -42,24 +35,28 @@ class TeamsClient:
         if not self.webhook_url:
             logger.warning("POWER_AUTOMATE_WEBHOOK_URL が設定されていません")
 
-    async def send_agent_output_to_teams(self, agent_output_json: str) -> TeamsResponse:
+    async def send(self, agent_output: Any) -> None:
         """
         AgentOutputをPower Automate経由でTeamsに送信
 
         Args:
-            agent_output_json: AgentOutput.model_dump_json()の結果
+            agent_output: AgentOutputモデルインスタンス
 
-        Returns:
-            TeamsResponse: 送信結果
+        Raises:
+            ValueError: Webhook URL が設定されていない場合
+            httpx.HTTPStatusError: HTTP エラー時
+            httpx.TimeoutException: タイムアウト時
+            Exception: その他のエラー時
         """
         if not self.webhook_url:
-            return TeamsResponse(
-                status="error", error="POWER_AUTOMATE_WEBHOOK_URL が設定されていません"
-            )
+            raise ValueError("POWER_AUTOMATE_WEBHOOK_URL が設定されていません")
 
         try:
+            # AgentOutputをJSON文字列に変換
+            agent_output_json = agent_output.model_dump_json()
+
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                logger.info("Power Automate Webhook送信開始")
+                logger.info("Power Automate への送信を開始します")
 
                 response = await client.post(
                     self.webhook_url,
@@ -68,20 +65,19 @@ class TeamsClient:
                 )
 
                 response.raise_for_status()  # 4xx, 5xx で HTTPStatusError を発生
-                logger.info(f"Webhook送信成功 (HTTP {response.status_code})")
-                return TeamsResponse(status="success")
+                logger.info(f"Teams投稿完了 (HTTP {response.status_code})")
 
         except httpx.HTTPStatusError as e:
             error_msg = f"HTTP {e.response.status_code}: {e.response.text}"
-            logger.error(f"Webhook送信失敗: {error_msg}")
-            return TeamsResponse(status="error", error=error_msg)
+            logger.error(f"Teams投稿失敗: {error_msg}")
+            raise  # 例外を再発生
 
         except httpx.TimeoutException:
             error_msg = f"タイムアウト: {self.timeout}秒"
-            logger.error(f"Webhook送信タイムアウト: {error_msg}")
-            return TeamsResponse(status="error", error=error_msg)
+            logger.error(f"Teams投稿タイムアウト: {error_msg}")
+            raise  # 例外を再発生
 
         except Exception as e:
             error_msg = f"予期しないエラー: {str(e)}"
-            logger.error(f"Webhook送信エラー: {error_msg}", exc_info=True)
-            return TeamsResponse(status="error", error=error_msg)
+            logger.error(f"Teams投稿でエラーが発生: {error_msg}", exc_info=True)
+            raise  # 例外を再発生
