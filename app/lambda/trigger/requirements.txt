@@ -1,0 +1,5 @@
+# AWS Exam Agent - Trigger Lambda Dependencies
+# 最新のboto3でbedrock-agentcoreサポートを確保
+
+boto3>=1.40.0
+botocore>=1.40.0

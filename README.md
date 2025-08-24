@@ -71,7 +71,11 @@ aws-exam-agent/
 │   │   ├── agent_main.py        # メインエージェント（監督者）
 │   │   ├── requirements.txt     # エージェント依存関係
 │   │   └── mcp/                 # MCP統合
-│   ├── lambda/                  # 補助Lambda関数（最小限）
+│   ├── lambda/                  # Lambda関数
+│   │   └── trigger/             # EventBridge Scheduler用トリガー関数
+│   │       ├── lambda_function.py    # Lambda関数メインファイル
+│   │       ├── requirements.txt      # Lambda依存関係
+│   │       └── buildspec.yml         # Lambda専用ビルド設定
 │   ├── models/                  # データモデル
 │   ├── services/                # ビジネスロジック
 │   └── shared/                  # 共通モジュール
@@ -81,8 +85,12 @@ aws-exam-agent/
 │   │   └── shared/             # test_プレフィックス削除済み
 │   ├── integration/             # 統合テスト
 │   └── e2e/                     # E2Eテスト
-├── infrastructure/              # インフラ定義（将来実装）
+├── infrastructure/              # インフラ定義
+│   ├── eventbridge-scheduler.yaml   # EventBridge Scheduler定義
+│   └── parameters-development.json  # 開発環境パラメータ
 ├── scripts/                     # デプロイ・運用スクリプト
+│   ├── build-lambda.sh          # Lambda関数ビルド
+│   └── deploy-eventbridge-scheduler.sh  # 統合デプロイ
 ├── .kiro/specs/aws-exam-agent/  # 設計書・仕様書
 └── pyproject.toml              # Python プロジェクト設定
 ```
@@ -192,6 +200,17 @@ agentcore configure
 agentcore launch
 ```
 
+**詳細な手順**: [AgentCore デプロイメントガイド](docs/agentcore-deployment-guide.md)
+
+### EventBridge Scheduler デプロイ
+
+```bash
+# 定期実行システムのデプロイ
+./scripts/deploy-eventbridge-scheduler.sh
+```
+
+**詳細な手順**: [EventBridge Scheduler デプロイ手順書](docs/eventbridge-scheduler-deployment.md)
+
 ### Lambda + API Gateway デプロイ
 
 ```bash
@@ -199,6 +218,20 @@ agentcore launch
 sam build
 sam deploy --guided
 ```
+
+## 📖 運用ドキュメント
+
+### AgentCore 関連
+
+- **[AgentCore デプロイメントガイド](docs/agentcore-deployment-guide.md)** - デプロイ、設定、動作確認の包括的なガイド
+- **[AgentCore 運用・保守ガイド](docs/agentcore-operations-guide.md)** - 日常運用、監視、トラブルシューティング
+- **[環境変数設定ガイド](docs/environment-variables-guide.md)** - 環境変数設定のクイックリファレンス
+- **[調査・トラブルシューティング手法](docs/agentcore-troubleshooting-methodology.md)** - 問題解決の系統的アプローチ
+
+### その他のコンポーネント
+
+- **[EventBridge Scheduler デプロイ手順](docs/eventbridge-scheduler-deployment.md)** - 定期実行システムの設定
+- **[Teams 連携セットアップ](docs/teams-integration-setup.md)** - Power Automate との連携設定
 
 ## 🤝 コントリビューション
 

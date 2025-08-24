@@ -1,0 +1,67 @@
+version: 0.2
+
+# AWS Exam Agent - Lambda Trigger Function Build Specification
+# EventBridge Scheduler Trigger Lambda のパッケージング
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.12
+    commands:
+      - echo "Installing build dependencies..."
+      - pip install --upgrade pip
+
+  pre_build:
+    commands:
+      - echo "Pre-build phase started on `date`"
+      - echo "Current directory: $(pwd)"
+      - echo "Python version: $(python --version)"
+      - echo "Pip version: $(pip --version)"
+
+  build:
+    commands:
+      - echo "Build phase started on `date`"
+      
+      # Lambda Trigger Function のパッケージング
+      - echo "Building Lambda Trigger Function..."
+      - mkdir -p build
+      - cp lambda_function.py build/
+      
+      # 依存関係のインストール
+      - echo "Installing dependencies..."
+      - pip install -r requirements.txt -t build/
+      
+      # boto3バージョンの確認
+      - echo "Checking boto3 version and bedrock-agentcore support..."
+      - cd build && python -c "
+        import boto3;
+        print(f'boto3 version: {boto3.__version__}');
+        session = boto3.Session();
+        services = session.get_available_services();
+        print(f'bedrock-agentcore supported: {\"bedrock-agentcore\" in services}');
+        assert 'bedrock-agentcore' in services, 'bedrock-agentcore not supported'
+        " && cd ..
+      
+      # ZIPパッケージの作成
+      - echo "Creating deployment package..."
+      - cd build
+      - zip -r ../trigger-function.zip . -x "*.pyc" "*/__pycache__/*"
+      - cd ..
+      
+      # パッケージサイズの確認
+      - echo "Package size: $(du -h trigger-function.zip)"
+      - ls -la trigger-function.zip
+
+  post_build:
+    commands:
+      - echo "Post-build phase started on `date`"
+      - echo "Build completed successfully"
+
+artifacts:
+  files:
+    - trigger-function.zip
+  name: aws-exam-agent-lambda-trigger-artifacts
+
+cache:
+  paths:
+    - '/root/.cache/pip/**/*'

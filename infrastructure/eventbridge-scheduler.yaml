@@ -1,0 +1,193 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: AWS Exam Agent - EventBridge Scheduler (Minimal Version)
+
+Parameters:
+  Environment:
+    Type: String
+    Default: development
+    Description: Environment name (development, staging, production)
+
+  AgentCoreRuntimeArn:
+    Type: String
+    Description: AgentCore Runtime ARN
+    # 例: arn:aws:bedrock-agentcore:us-east-1:792223357133:runtime/agent_main-4h7OvMAtVL
+
+  ScheduleExpression:
+    Type: String
+    Default: "cron(0 9 * * ? *)"
+    Description: Schedule expression (default - daily at 9 AM JST)
+
+  ScheduleTimezone:
+    Type: String
+    Default: "Asia/Tokyo"
+    Description: Schedule execution timezone (IANA Time Zone Database format)
+
+  ExamType:
+    Type: String
+    Default: "SAP"
+    Description: AWS certification exam type
+    AllowedValues:
+      - "SAP"
+      - "SAA"
+      - "DVA"
+      - "SOA"
+
+  QuestionCount:
+    Type: Number
+    Default: 1
+    Description: Number of questions to generate
+    MinValue: 1
+    MaxValue: 5
+
+  ScheduleState:
+    Type: String
+    Default: "ENABLED"
+    Description: Initial state of the schedule
+    AllowedValues:
+      - "ENABLED"
+      - "DISABLED"
+
+  LambdaCodeBucket:
+    Type: String
+    Description: S3 bucket containing Lambda deployment package
+    Default: ""
+
+  LambdaCodeKey:
+    Type: String
+    Description: S3 key for Lambda deployment package
+    Default: "app/lambda/trigger/trigger-function.zip"
+
+Conditions:
+  UseS3Code: !Not [!Equals [!Ref LambdaCodeBucket, ""]]
+
+Resources:
+  # Lambda関数（AgentCore呼び出し用）
+  TriggerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub aws-exam-agent-trigger-${Environment}
+      Runtime: python3.12
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt TriggerFunctionRole.Arn
+      Timeout: 300
+      MemorySize: 256
+      Code: !If
+        - UseS3Code
+        - S3Bucket: !Ref LambdaCodeBucket
+          S3Key: !Ref LambdaCodeKey
+        - ZipFile: |
+            # Fallback inline code (should not be used in production)
+            import json
+            def lambda_handler(event, context):
+                return {
+                    'statusCode': 500,
+                    'body': json.dumps({'error': 'Lambda code not properly deployed'})
+                }
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          LOG_LEVEL: INFO
+
+  # Lambda実行ロール
+  TriggerFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub LambdaTriggerFunctionRole-${Environment}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: AgentCoreInvokePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock-agentcore:InvokeAgentRuntime
+                Resource: !Sub "${AgentCoreRuntimeArn}*"
+
+  # EventBridge Scheduler 実行ロール
+  SchedulerExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub EventBridgeSchedulerExecutionRole-${Environment}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: scheduler.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: SchedulerExecutionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # Lambda 呼び出し権限
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource: !GetAtt TriggerFunction.Arn
+
+  # EventBridge Schedule
+  DailyQuestionSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Name: !Sub aws-exam-agent-daily-${Environment}
+      Description: !Sub "AWS Exam Agent daily question generation (${ExamType}, ${QuestionCount} questions)"
+      State: !Ref ScheduleState
+      ScheduleExpression: !Ref ScheduleExpression
+      ScheduleExpressionTimezone: !Ref ScheduleTimezone
+      FlexibleTimeWindow:
+        Mode: "OFF"
+      Target:
+        Arn: "arn:aws:scheduler:::aws-sdk:lambda:invoke"
+        RoleArn: !GetAtt SchedulerExecutionRole.Arn
+        Input: !Sub |
+          {
+            "FunctionName": "${TriggerFunction}",
+            "InvocationType": "Event",
+            "Payload": "{\"agentRuntimeArn\":\"${AgentCoreRuntimeArn}\",\"exam_type\":\"${ExamType}\",\"question_count\":${QuestionCount}}"
+          }
+        RetryPolicy:
+          MaximumRetryAttempts: 3
+          MaximumEventAgeInSeconds: 3600
+
+Outputs:
+  SchedulerExecutionRoleArn:
+    Description: EventBridge Scheduler execution role ARN
+    Value: !GetAtt SchedulerExecutionRole.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-SchedulerExecutionRoleArn
+
+  ScheduleName:
+    Description: EventBridge Schedule name
+    Value: !Ref DailyQuestionSchedule
+    Export:
+      Name: !Sub ${AWS::StackName}-ScheduleName
+
+  ScheduleArn:
+    Description: EventBridge Schedule ARN
+    Value: !Sub arn:aws:scheduler:${AWS::Region}:${AWS::AccountId}:schedule/default/${DailyQuestionSchedule}
+    Export:
+      Name: !Sub ${AWS::StackName}-ScheduleArn
+
+  ScheduleTimezone:
+    Description: Schedule execution timezone
+    Value: !Ref ScheduleTimezone
+    Export:
+      Name: !Sub ${AWS::StackName}-ScheduleTimezone
+
+  TriggerFunctionArn:
+    Description: Lambda trigger function ARN
+    Value: !GetAtt TriggerFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-TriggerFunctionArn

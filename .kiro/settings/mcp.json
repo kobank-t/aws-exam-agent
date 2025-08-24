@@ -18,7 +18,7 @@
         "FASTMCP_LOG_LEVEL": "ERROR"
       },
       "disabled": false,
-      "autoApprove": []
+      "autoApprove": ["read_documentation", "search_documentation"]
     },
     "aws-knowledge": {
       "command": "npx",
@@ -51,7 +51,8 @@
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR"
       },
-      "disabled": false
+      "disabled": false,
+      "autoApprove": []
     },
     "context7": {
       "command": "npx",

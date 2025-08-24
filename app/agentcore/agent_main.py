@@ -17,8 +17,10 @@ from pydantic import BaseModel, Field
 from strands import Agent
 from strands.models import BedrockModel
 from strands.tools.mcp import MCPClient
+from teams_client import TeamsClient
 
-from app.agentcore.teams_client import TeamsClient
+# 現状、手動実行する際は、絶対パスでインポートしないとエラーになる
+# from app.agentcore.teams_client import TeamsClient
 
 # ログ設定
 logging.basicConfig(
@@ -78,7 +80,7 @@ class Question(BaseModel):
     """単一問題のモデル"""
 
     question: str = Field(description="問題文")
-    options: list[str] = Field(description="回答の選択肢(A-Z)")
+    options: list[str] = Field(description="回答の選択肢(A. xxxx, B. xxxx, …)")
     correct_answer: str = Field(description="正解の選択肢")
     explanation: str = Field(description="正解の理由と他選択肢が不適切な理由")
     source: list[str] = Field(
@@ -107,7 +109,7 @@ mcp_client = MCPClient(
 with mcp_client:
     agent = Agent(
         model=BedrockModel(
-            model_id=MODEL_ID["claude-3.7-sonnet"],
+            model_id=MODEL_ID["claude-sonnet-4"],
             boto_client_config=Config(
                 read_timeout=300,  # 5分（複数問題生成対応）
                 connect_timeout=60,  # 1分

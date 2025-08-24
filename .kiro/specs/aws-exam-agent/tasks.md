@@ -136,11 +136,16 @@
 
   **サブタスク**:
 
-  - [ ] 5.1 Power Automate フロー設定（基本的な Webhook → Teams 投稿）
+  - [x] 5.1 Power Automate フロー設定（基本的な Webhook → Teams 投稿）
   - [x] 5.2 AgentCore エンドポイントからの Webhook 呼び出し実装
   - [x] 5.3 Teams 投稿テンプレートの実装（問題・選択肢・解説の整形）
-  - [ ] 5.4 実際の Teams チャネルでの動作確認
-  - [ ] 5.5 ユーザーフィードバック収集・改善
+  - [x] 5.4 実際の Teams チャネルでの動作確認
+  - [x] 5.5 EventBridge Scheduler 定期実行機能の実装
+    - [x] 5.5.1 IAM 実行ロールの作成（bedrock-agentcore:InvokeAgentRuntime 権限）
+    - [x] 5.5.2 EventBridge Schedule の作成（Universal Target 使用）
+    - [x] 5.5.3 CloudFormation/SAM テンプレート実装
+    - [x] 5.5.4 手動テスト実行・動作確認
+    - [x] 5.5.5 定期実行の有効化
 
   _Requirements: 問題生成 → Teams 投稿の完全な価値提供_
 
@@ -148,7 +153,7 @@
 
 以下の機能は、基本フローが動作してからの拡張として実装：
 
-- [ ] 6. 自動スケジュール実行
+- [ ] 6. 高度なスケジュール機能（複数時間帯、カテゴリ別など）
 - [ ] 7. 回答収集・統計分析
 - [ ] 8. DynamoDB データ永続化
 - [ ] 9. 高度な品質管理機能

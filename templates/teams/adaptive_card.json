@@ -1,0 +1,62 @@
+{
+    "type": "AdaptiveCard",
+    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+    "version": "1.5",
+    "msteams": {
+        "width": "Full"
+    },
+    "body": [
+        {
+            "type": "TextBlock",
+            "text": "@{items('Send_each_adaptive_card')?['question']}",
+            "wrap": true,
+            "weight": "Bolder"
+        },
+        {
+            "type": "Container",
+            "items": @{outputs('Options').body}
+        },
+        {
+            "type": "ActionSet",
+            "actions": [
+                {
+                    "type": "Action.ShowCard",
+                    "title": "回答を見る",
+                    "card": {
+                        "type": "AdaptiveCard",
+                        "body": [
+                            {
+                                "type": "Container",
+                                "style": "Accent",
+                                "items": [
+                                    {
+                                        "type": "TextBlock",
+                                        "text": "正解は @{items('Send_each_adaptive_card')?['correct_answer']} です",
+                                        "size": "Large",
+                                        "weight": "Bolder",
+                                        "color": "Good"
+                                    },
+                                    {
+                                        "type": "TextBlock",
+                                        "text": "@{items('Send_each_adaptive_card')?['explanation']}",
+                                        "wrap": true
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "type": "TextBlock",
+            "text": "参考リンク",
+            "size": "Small",
+            "isSubtle": true
+        },
+        {
+            "type": "Container",
+            "items": @{outputs('Source').body}
+        }
+    ]
+}

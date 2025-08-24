@@ -97,6 +97,11 @@ node_modules/
 infrastructure/.aws-sam/
 # infrastructure/samconfig.toml はチーム共有のためコミットする
 
+# Lambda build artifacts
+app/lambda/*/build/
+app/lambda/*/*.zip
+*.zip
+
 # Local development
 .local/
 *.local

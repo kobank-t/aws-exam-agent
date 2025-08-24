@@ -3,6 +3,12 @@ Teams クライアント - Power Automate Webhook 連携
 
 AgentOutputをそのままPower Automate Webhookに送信してTeams投稿を実行します。
 Power Automate "Anyone"モードを使用するため、APIキー認証は不要です。
+
+設計判断:
+- AgentOutput型の直接インポートは循環インポートを引き起こすため、Any型を使用
+- agent_main.py ⇄ teams_client.py の相互依存を回避
+- model_dump_json()メソッドの存在で実行時の型安全性を保証
+- 使用箇所が限定的（agent_main.pyのみ）なため、実用上問題なし
 """
 
 import logging
@@ -41,6 +47,9 @@ class TeamsClient:
 
         Args:
             agent_output: AgentOutputモデルインスタンス
+                         注意: 循環インポート回避のためAny型を使用。
+                         実際はapp.agentcore.agent_main.AgentOutputを期待。
+                         model_dump_json()メソッドの存在で型安全性を保証。
 
         Raises:
             ValueError: Webhook URL が設定されていない場合

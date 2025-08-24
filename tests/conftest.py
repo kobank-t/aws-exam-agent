@@ -10,11 +10,18 @@ import asyncio
 import os
 import sys
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 
 # プロジェクトルートをパスに追加
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+# AgentCore Runtime環境での相対インポート対応
+# テスト環境でagentcoreディレクトリをPythonパスに追加
+agentcore_path = Path(__file__).parent.parent / "app" / "agentcore"
+if agentcore_path.exists():
+    sys.path.insert(0, str(agentcore_path))
 
 
 @pytest.fixture(scope="session")
