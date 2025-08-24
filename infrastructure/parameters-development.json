@@ -4,10 +4,6 @@
     "ParameterValue": "development"
   },
   {
-    "ParameterKey": "AgentCoreRuntimeArn",
-    "ParameterValue": "arn:aws:bedrock-agentcore:us-east-1:792223357133:runtime/agent_main-4h7OvMAtVL"
-  },
-  {
     "ParameterKey": "ScheduleExpression",
     "ParameterValue": "cron(0 9 * * ? *)"
   },

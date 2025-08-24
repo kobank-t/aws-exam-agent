@@ -10,7 +10,7 @@ RUN pip install -r requirements.txt
 
 
 
-RUN pip install aws-opentelemetry-distro>=0.10.0
+RUN pip install aws-opentelemetry-distro>=0.10.1
 
 
 # Set AWS region environment variable

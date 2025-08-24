@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Lambda関数ローカルビルドスクリプト
+# Lambda関数ローカルビルドスクリプト（プロファイル対応版）
 # buildspec.ymlと同じ処理をローカルで実行
 
 set -e
@@ -11,9 +11,16 @@ BUILD_DIR="$LAMBDA_DIR/build"
 PACKAGE_NAME="trigger-function.zip"
 
 echo "🚀 Lambda関数ビルド開始"
-echo "Lambda Directory: $LAMBDA_DIR"
+echo "=============================="
+echo "📋 Lambda Directory: $LAMBDA_DIR"
+
+# プロファイル情報表示（設定されている場合）
+if [ -n "$AWS_PROFILE" ]; then
+    echo "📋 AWS Profile: $AWS_PROFILE"
+fi
 
 # 1. ビルドディレクトリの準備
+echo ""
 echo "📁 ビルドディレクトリ準備中..."
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
@@ -60,15 +67,20 @@ ls -la "$PACKAGE_PATH"
 echo "🧹 ビルドディレクトリクリーンアップ中..."
 rm -rf "$BUILD_DIR"
 
+echo ""
 echo "✅ Lambda関数ビルド完了"
+echo "========================"
 echo "📍 パッケージ場所: $PACKAGE_PATH"
 echo ""
 echo "🎯 次のステップ:"
-echo "1. S3にアップロード:"
-echo "   aws s3 cp $PACKAGE_PATH s3://YOUR-BUCKET/lambda-packages/"
-echo ""
-echo "2. CloudFormationでデプロイ:"
-echo "   ./scripts/deploy-eventbridge-scheduler.sh"
+if [ -n "$AWS_PROFILE" ]; then
+    echo "1. EventBridge Scheduler デプロイ:"
+    echo "   AWS_PROFILE=$AWS_PROFILE ./scripts/deploy-eventbridge-scheduler.sh"
+else
+    echo "1. プロファイル設定後にEventBridge Scheduler デプロイ:"
+    echo "   export AWS_PROFILE=sandbox"
+    echo "   ./scripts/deploy-eventbridge-scheduler.sh"
+fi
 echo ""
 echo "💡 ヒント:"
 echo "   デプロイ後にZIPファイルを削除する場合:"

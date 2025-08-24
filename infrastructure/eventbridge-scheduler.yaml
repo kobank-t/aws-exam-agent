@@ -12,7 +12,7 @@ Parameters:
   AgentCoreRuntimeArn:
     Type: String
     Description: AgentCore Runtime ARN
-    # 例: arn:aws:bedrock-agentcore:us-east-1:792223357133:runtime/agent_main-4h7OvMAtVL
+    # 例: arn:aws:bedrock-agentcore:us-east-1:ACCOUNT_ID:runtime/agent_main-xxx
 
   ScheduleExpression:
     Type: String

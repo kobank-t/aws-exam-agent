@@ -109,7 +109,8 @@ mcp_client = MCPClient(
 with mcp_client:
     agent = Agent(
         model=BedrockModel(
-            model_id=MODEL_ID["claude-sonnet-4"],
+            model_id=MODEL_ID["claude-3.5-sonnet"],
+            region_name="us-east-1",  # バージニア北部に明示的に指定
             boto_client_config=Config(
                 read_timeout=300,  # 5分（複数問題生成対応）
                 connect_timeout=60,  # 1分

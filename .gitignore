@@ -91,7 +91,10 @@ node_modules/
 
 # AgentCore specific
 .agentcore/
-# agentcore-config.yaml はチーム共有のためコミットする
+
+# AgentCore 設定ファイル（アカウント固有情報を含むため除外）
+app/agentcore/.bedrock_agentcore.yaml
+app/agentcore/.bedrock_agentcore.yaml.backup
 
 # Infrastructure
 infrastructure/.aws-sam/
