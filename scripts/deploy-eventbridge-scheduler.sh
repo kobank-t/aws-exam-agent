@@ -115,7 +115,7 @@ cat > "$TEMP_PARAM_FILE" << EOF
   },
   {
     "ParameterKey": "ScheduleExpression",
-    "ParameterValue": "cron(0 9 * * ? *)"
+    "ParameterValue": "cron(0 9 ? * MON-FRI *)"
   },
   {
     "ParameterKey": "ScheduleTimezone",

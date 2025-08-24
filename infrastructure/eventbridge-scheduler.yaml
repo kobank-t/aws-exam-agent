@@ -16,8 +16,8 @@ Parameters:
 
   ScheduleExpression:
     Type: String
-    Default: "cron(0 9 * * ? *)"
-    Description: Schedule expression (default - daily at 9 AM JST)
+    Default: "cron(0 9 ? * MON-FRI *)"
+    Description: Schedule expression (default - weekdays at 9 AM JST)
 
   ScheduleTimezone:
     Type: String

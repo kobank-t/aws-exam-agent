@@ -34,13 +34,43 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     exit 1
 fi
 
+# .envファイルから環境変数を読み込み
+echo ""
+echo "🔧 環境変数設定..."
+
+# プロジェクトルートの.envファイルパスを設定
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ENV_FILE="$PROJECT_ROOT/.env"
+
+echo "📋 プロジェクトルート: $PROJECT_ROOT"
+echo "📋 .envファイルパス: $ENV_FILE"
+
+if [ ! -f "$ENV_FILE" ]; then
+    echo "❌ .env ファイルが見つかりません: $ENV_FILE"
+    echo "💡 プロジェクトルートに .env ファイルを作成してください"
+    exit 1
+fi
+
+# .envファイルから POWER_AUTOMATE_WEBHOOK_URL を抽出
+WEBHOOK_URL=$(grep "^POWER_AUTOMATE_WEBHOOK_URL=" "$ENV_FILE" | cut -d'=' -f2-)
+if [ -z "$WEBHOOK_URL" ]; then
+    echo "❌ POWER_AUTOMATE_WEBHOOK_URL が .env ファイルに設定されていません"
+    echo "💡 .env ファイルに以下の形式で設定してください:"
+    echo "   POWER_AUTOMATE_WEBHOOK_URL=https://your-webhook-url"
+    exit 1
+fi
+
+echo "✅ POWER_AUTOMATE_WEBHOOK_URL を .env から読み込みました"
+ENV_ARGS="--env POWER_AUTOMATE_WEBHOOK_URL=$WEBHOOK_URL"
+
 # AgentCore ディレクトリに移動
 cd app/agentcore
 
 # デプロイ実行
 echo ""
 echo "🚀 AgentCore デプロイ実行..."
-agentcore launch --auto-update-on-conflict
+echo "📋 環境変数付きでデプロイします"
+agentcore launch --auto-update-on-conflict $ENV_ARGS
 
 # デプロイ結果確認
 echo ""

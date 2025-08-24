@@ -108,7 +108,7 @@ aws logs filter-log-events \
 
 ### 定期的な確認項目
 
-#### 毎日の確認
+#### 平日の確認
 
 ```bash
 # 1. AgentCore の稼働状況確認
@@ -160,10 +160,10 @@ aws ce get-cost-and-usage \
 #### スケジュール変更
 
 ```bash
-# スケジュール式の変更（例：毎日9時から毎日18時に変更）
+# スケジュール式の変更（例：平日9時から平日18時に変更）
 aws scheduler update-schedule \
   --name aws-exam-agent-daily-development \
-  --schedule-expression "cron(0 18 * * ? *)" \
+  --schedule-expression "cron(0 18 ? * MON-FRI *)" \
   --profile $AWS_PROFILE
 ```
 

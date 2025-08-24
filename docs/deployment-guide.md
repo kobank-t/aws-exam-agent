@@ -127,13 +127,26 @@ agentcore configure --entrypoint agent_main.py
 - **Dependency file**: **Enter**（requirements.txt使用）
 - **OAuth authorizer**: **no**（IAM認証使用）
 
-#### 3.3 AgentCore のデプロイ実行
+#### 3.3 環境変数の設定
+
+AgentCoreデプロイ前に、Teams連携用のWebhook URLを設定する必要があります：
+
+```bash
+# .envファイルの作成（プロジェクトルート）
+cat > .env << EOF
+POWER_AUTOMATE_WEBHOOK_URL=https://prod-XX.japaneast.logic.azure.com/workflows/YOUR-WORKFLOW-ID/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=YOUR-SIGNATURE
+EOF
+```
+
+**⚠️ 重要**: `POWER_AUTOMATE_WEBHOOK_URL`が設定されていない場合、デプロイは失敗します。
+
+#### 3.4 AgentCore のデプロイ実行
 
 ```bash
 # 環境変数設定
 export AWS_PROFILE=YOUR_PROFILE_NAME
 
-# デプロイスクリプト実行
+# デプロイスクリプト実行（.envから自動的にWebhook URLを読み込み）
 ./scripts/deploy-agentcore.sh
 ```
 
@@ -184,7 +197,7 @@ arn:aws:bedrock-agentcore:us-east-1:123456789012:runtime/agent_main-XXXXX
 - Lambda関数: `aws-exam-agent-trigger-development`
 - IAM ロール: Lambda実行ロール・Scheduler実行ロール
 - S3バケット: Lambda関数パッケージ保存用
-- EventBridge Schedule: `aws-exam-agent-daily-development`
+- EventBridge Schedule: `aws-exam-agent-daily-development` (平日午前9時実行)
 
 #### 5.2 Lambda関数テスト
 

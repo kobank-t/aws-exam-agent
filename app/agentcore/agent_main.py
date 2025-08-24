@@ -38,9 +38,13 @@ EXAM_TYPES = {
     }
 }
 
-# Bedrock基盤モデル
+# Bedrock基盤モデル（SCP制限対応: ON_DEMAND対応モデルはus.プレフィックスなし）
 MODEL_ID = {
-    "claude-3.5-sonnet": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+    # ON_DEMAND対応モデル（SCP制限回避）
+    "claude-3.5-sonnet": "anthropic.claude-3-5-sonnet-20240620-v1:0",
+    "nova-pro": "amazon.nova-pro-v1:0",
+    # INFERENCE_PROFILE のみ対応（SCP制限解除が必要）
+    "claude-3.5-sonnet-v2": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
     "claude-3.7-sonnet": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
     "claude-sonnet-4": "us.anthropic.claude-sonnet-4-20250514-v1:0",
 }
@@ -109,7 +113,7 @@ mcp_client = MCPClient(
 with mcp_client:
     agent = Agent(
         model=BedrockModel(
-            model_id=MODEL_ID["claude-3.5-sonnet"],
+            model_id=MODEL_ID["nova-pro"],
             region_name="us-east-1",  # バージニア北部に明示的に指定
             boto_client_config=Config(
                 read_timeout=300,  # 5分（複数問題生成対応）
