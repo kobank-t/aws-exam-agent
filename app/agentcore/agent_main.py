@@ -17,10 +17,14 @@ from pydantic import BaseModel, Field
 from strands import Agent
 from strands.models import BedrockModel
 from strands.tools.mcp import MCPClient
-from teams_client import TeamsClient
 
-# 現状、手動実行する際は、絶対パスでインポートしないとエラーになる
-# from app.agentcore.teams_client import TeamsClient
+# 環境検出による動的インポート（AgentCore vs ローカル環境対応）
+try:
+    # AgentCore環境では相対インポートが必要
+    from teams_client import TeamsClient
+except ImportError:
+    # ローカル環境（テスト・開発）では絶対インポートが必要
+    from app.agentcore.teams_client import TeamsClient
 
 # ログ設定
 logging.basicConfig(
@@ -98,31 +102,33 @@ class AgentOutput(BaseModel):
     questions: list[Question] = Field(description="生成された問題のリスト")
 
 
-# MCPクライアントを初期化する
-mcp_client = MCPClient(
-    lambda: stdio_client(
-        StdioServerParameters(
-            command="uvx",
-            args=["awslabs.aws-documentation-mcp-server@latest"],
+# シンプルで安全な初期化（テスト環境対応）
+agent: Agent | None = None
+
+try:
+    # 本番環境での初期化
+    mcp_client = MCPClient(
+        lambda: stdio_client(
+            StdioServerParameters(
+                command="uvx",
+                args=["awslabs.aws-documentation-mcp-server@latest"],
+            )
         )
     )
-)
 
-
-# エージェントを初期化する（タイムアウト設定付き）
-with mcp_client:
-    agent = Agent(
-        model=BedrockModel(
-            model_id=MODEL_ID["claude-3.5-sonnet"],
-            region_name="us-east-1",  # バージニア北部に明示的に指定
-            boto_client_config=Config(
-                read_timeout=300,  # 5分（複数問題生成対応）
-                connect_timeout=60,  # 1分
-                retries={"max_attempts": 3},
+    with mcp_client:
+        agent = Agent(
+            model=BedrockModel(
+                model_id=MODEL_ID["claude-3.5-sonnet"],
+                region_name="us-east-1",  # バージニア北部に明示的に指定
+                boto_client_config=Config(
+                    read_timeout=300,  # 5分（複数問題生成対応）
+                    connect_timeout=60,  # 1分
+                    retries={"max_attempts": 3},
+                ),
             ),
-        ),
-        tools=mcp_client.list_tools_sync(),
-        system_prompt="""
+            tools=mcp_client.list_tools_sync(),
+            system_prompt="""
         あなたはAWS認定試験の問題を生成する専門エージェントです。
 
         # 重要な要件
@@ -137,7 +143,11 @@ with mcp_client:
         - **選択肢の妥当性**: 適切な誤答選択肢
         - **解説の充実性**: 学習に役立つ詳細な解説
         """,
-    )
+        )
+except Exception as e:
+    # テスト環境や開発環境での初期化失敗時
+    logger.warning(f"MCP初期化に失敗しました（テスト環境の可能性）: {e}")
+    agent = None
 
 # AgentCore アプリケーションの初期化
 app = BedrockAgentCoreApp()
@@ -173,6 +183,10 @@ async def invoke(payload: dict[str, Any]) -> dict[str, Any]:
             - 異なるAWSサービスや機能を扱ってください
         """
         logger.info(f"問題生成プロンプト: {prompt}")
+
+        # エージェントが利用可能かチェック
+        if agent is None:
+            raise RuntimeError("エージェントが初期化されていません（MCP初期化失敗）")
 
         # 複数問題を一度に生成
         agent_output = agent.structured_output(

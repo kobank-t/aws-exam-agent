@@ -64,10 +64,10 @@ class TestAgentInput:
             "question_count": 3,
         }
 
-        # Act
+        # When - AgentInputインスタンスを作成
         input_model = AgentInput(**custom_data)
 
-        # Assert - 事後条件検証
+        # Then - 事後条件検証
         assert input_model.exam_type == "SAP"
         assert input_model.category == ["コンピューティング", "ストレージ"]
         assert input_model.question_count == 3
@@ -78,12 +78,19 @@ class TestAgentInput:
 
     def test_question_count_validation_contract(self) -> None:
         """
+        契約による設計: AgentInputの問題数バリデーション検証
+
+        Given: 無効な問題数での初期化
+        When: AgentInputインスタンスを作成する
+        Then: ValidationErrorが発生する
+
         事前条件: 無効な問題数での初期化
         事後条件: ValidationError が発生する
         不変条件: 問題数の制約（1-5問）が守られる
         """
-        # Arrange - 事前条件違反: 問題数が範囲外
-        # Act & Assert - 事後条件検証
+        # Given - 事前条件違反: 問題数が範囲外
+
+        # When & Then - ValidationErrorが発生することを検証
         with pytest.raises(ValidationError):
             AgentInput(exam_type="SAP", category=[], question_count=0)
 
@@ -97,11 +104,17 @@ class TestQuestion:
 
     def test_valid_question_contract(self) -> None:
         """
+        契約による設計: Questionモデルの有効性検証
+
+        Given: 有効な問題データ
+        When: Questionインスタンスを作成する
+        Then: Questionモデルが正常に作成される
+
         事前条件: 有効な問題データ
         事後条件: Question モデルが正常に作成される
         不変条件: 問題の構造と制約が保持される
         """
-        # Arrange - 事前条件設定
+        # Given - 事前条件設定
         question_data: dict[str, Any] = {
             "question": "EC2インスタンスに関する問題",
             "options": ["A. t2.micro", "B. m5.large", "C. c5.xlarge", "D. r5.2xlarge"],
@@ -110,10 +123,10 @@ class TestQuestion:
             "source": ["https://docs.aws.amazon.com/ec2/"],
         }
 
-        # Act
+        # When - Questionインスタンスを作成
         question = Question(**question_data)
 
-        # Assert - 事後条件検証
+        # Then - 事後条件検証
         assert question.question == "EC2インスタンスに関する問題"
         assert len(question.options) == 4
         assert question.correct_answer == "B"
@@ -135,11 +148,17 @@ class TestAgentOutput:
 
     def test_single_question_output_contract(self) -> None:
         """
+        契約による設計: AgentOutput単一問題出力検証
+
+        Given: 単一問題のデータ
+        When: AgentOutputインスタンスを作成する
+        Then: AgentOutputモデルが正常に作成される
+
         事前条件: 単一問題のデータ
         事後条件: AgentOutput モデルが正常に作成される
         不変条件: 問題リストの構造が保持される
         """
-        # Arrange - 事前条件設定
+        # Given - 事前条件設定
         question = Question(
             question="単一問題テスト",
             options=["A. 選択肢1", "B. 選択肢2", "C. 選択肢3", "D. 選択肢4"],
@@ -148,10 +167,10 @@ class TestAgentOutput:
             source=["https://docs.aws.amazon.com/test/"],
         )
 
-        # Act
+        # When - AgentOutputインスタンスを作成
         agent_output = AgentOutput(questions=[question])
 
-        # Assert - 事後条件検証
+        # Then - 事後条件検証
         assert len(agent_output.questions) == 1
         assert agent_output.questions[0].question == "単一問題テスト"
 
@@ -161,11 +180,17 @@ class TestAgentOutput:
 
     def test_multiple_questions_output_contract(self) -> None:
         """
+        契約による設計: AgentOutput複数問題出力検証
+
+        Given: 複数問題のデータ
+        When: AgentOutputインスタンスを作成する
+        Then: AgentOutputモデルが正常に作成される
+
         事前条件: 複数問題のデータ
         事後条件: AgentOutput モデルが正常に作成される
         不変条件: 複数問題の構造が保持される
         """
-        # Arrange - 事前条件設定
+        # Given - 事前条件設定
         questions = [
             Question(
                 question=f"問題{i + 1}",
@@ -177,10 +202,10 @@ class TestAgentOutput:
             for i in range(3)
         ]
 
-        # Act
+        # When - AgentOutputインスタンスを作成
         agent_output = AgentOutput(questions=questions)
 
-        # Assert - 事後条件検証
+        # Then - 事後条件検証
         assert len(agent_output.questions) == 3
         assert agent_output.questions[0].question == "問題1"
         assert agent_output.questions[2].question == "問題3"
@@ -294,7 +319,7 @@ class TestInvokeFunction:
         事後条件: 複数問題のAgentOutputが返される
         不変条件: 指定した問題数、Teams投稿が実行される
         """
-        # Arrange - 事前条件設定
+        # Given - 事前条件設定
         valid_payload: dict[str, Any] = {
             "exam_type": "SAP",
             "category": ["コンピューティング", "ストレージ"],
@@ -315,10 +340,10 @@ class TestInvokeFunction:
         )  # 例外ベース: 成功時は何も返さない
         mock_teams_client_class.return_value = mock_teams_client
 
-        # Act
+        # When - invoke関数を実行
         result = await invoke(valid_payload)
 
-        # Assert - 事後条件検証
+        # Then - 事後条件検証
         assert "questions" in result
         assert len(result["questions"]) == 3
 
@@ -353,11 +378,17 @@ class TestInvokeFunction:
         self, mock_agent: MagicMock, mock_teams_client_class: MagicMock
     ) -> None:
         """
+        契約による設計: Teams投稿失敗時の処理検証
+
+        Given: 有効なペイロードとTeams投稿失敗環境
+        When: invoke関数を実行する
+        Then: 問題生成は成功し、Teams投稿失敗がログに記録される
+
         事前条件: 有効なペイロード、Teams投稿失敗
         事後条件: 問題生成は成功、Teams投稿失敗はログに記録
         不変条件: 問題データは正常に生成される
         """
-        # Arrange - 事前条件設定
+        # Given - 事前条件設定
         valid_payload: dict[str, Any] = {
             "exam_type": "SAP",
             "category": ["コンピューティング"],
@@ -375,10 +406,10 @@ class TestInvokeFunction:
         )
         mock_teams_client_class.return_value = mock_teams_client
 
-        # Act
+        # When - invoke関数を実行
         result = await invoke(valid_payload)
 
-        # Assert - 事後条件検証
+        # Then - 事後条件検証
         assert "questions" in result
 
         # 不変条件検証: 問題生成は成功している
@@ -390,19 +421,25 @@ class TestInvokeFunction:
     @patch("app.agentcore.agent_main.agent")
     async def test_invalid_payload_precondition(self, mock_agent: MagicMock) -> None:
         """
+        契約による設計: 無効ペイロード時の事前条件検証
+
+        Given: 無効なペイロード
+        When: invoke関数を実行する
+        Then: ValidationErrorによりエラーレスポンスが返される
+
         事前条件: 無効なペイロード
         事後条件: ValidationError によりエラーレスポンスが返される
         不変条件: エラー時は error フィールドが存在する
         """
-        # Arrange - 事前条件違反: 無効な問題数
+        # Given - 事前条件違反: 無効な問題数
         invalid_payload: dict[str, Any] = {
             "question_count": 0  # 無効な値
         }
 
-        # Act
+        # When - invoke関数を実行
         result = await invoke(invalid_payload)
 
-        # Assert - 事後条件検証
+        # Then - 事後条件検証
         assert "error" in result
 
         # 不変条件検証
@@ -421,11 +458,17 @@ class TestInvokeFunction:
         self, mock_agent: MagicMock, mock_teams_client_class: MagicMock
     ) -> None:
         """
+        契約による設計: 空ペイロード時のデフォルト値処理検証
+
+        Given: 空のペイロード
+        When: invoke関数を実行する
+        Then: デフォルト値で処理される
+
         事前条件: 空のペイロード
         事後条件: デフォルト値で処理される
         不変条件: デフォルト値での正常処理
         """
-        # Arrange - 事前条件設定
+        # Given - 事前条件設定
         empty_payload: dict[str, Any] = {}
 
         # エージェントモックの設定
@@ -441,10 +484,10 @@ class TestInvokeFunction:
         )  # 例外ベース: 成功時は何も返さない
         mock_teams_client_class.return_value = mock_teams_client
 
-        # Act
+        # When - invoke関数を実行
         result = await invoke(empty_payload)
 
-        # Assert - 事後条件検証
+        # Then - 事後条件検証
         assert "questions" in result
         assert len(result["questions"]) == 1  # デフォルトは1問
 
@@ -497,11 +540,17 @@ class TestBusinessLogicContracts:
         self, mock_agent: MagicMock, mock_teams_client_class: MagicMock
     ) -> None:
         """
+        契約による設計: カテゴリ指定時の問題生成検証
+
+        Given: 特定カテゴリが指定されたペイロード
+        When: invoke関数を実行する
+        Then: プロンプトにカテゴリが含まれる
+
         事前条件: 特定カテゴリが指定される
         事後条件: プロンプトにカテゴリが含まれる
         不変条件: 指定されたカテゴリが処理に反映される
         """
-        # Arrange - 事前条件設定
+        # Given - 事前条件設定
         payload: dict[str, Any] = {
             "category": [
                 "ネットワークとコンテンツ配信",
@@ -533,10 +582,10 @@ class TestBusinessLogicContracts:
         )  # 例外ベース: 成功時は何も返さない
         mock_teams_client_class.return_value = mock_teams_client
 
-        # Act
+        # When - invoke関数を実行
         result = await invoke(payload)
 
-        # Assert - 事後条件検証
+        # Then - 事後条件検証
         assert "error" not in result
         assert "questions" in result
 
@@ -559,11 +608,17 @@ class TestBusinessLogicContracts:
         self, mock_agent: MagicMock, mock_teams_client_class: MagicMock
     ) -> None:
         """
+        契約による設計: 試験タイプ指定時の処理検証
+
+        Given: 有効な試験タイプが指定されたペイロード
+        When: invoke関数を実行する
+        Then: プロンプトに試験タイプが含まれる
+
         事前条件: 有効な試験タイプが指定される
         事後条件: プロンプトに試験タイプが含まれる
         不変条件: 試験タイプが処理に反映される
         """
-        # Arrange - 事前条件設定
+        # Given - 事前条件設定
         payload: dict[str, Any] = {"exam_type": "SAP", "question_count": 1}
 
         # エージェントモックの設定
@@ -589,10 +644,10 @@ class TestBusinessLogicContracts:
         )  # 例外ベース: 成功時は何も返さない
         mock_teams_client_class.return_value = mock_teams_client
 
-        # Act
+        # When - invoke関数を実行
         result = await invoke(payload)
 
-        # Assert - 事後条件検証
+        # Then - 事後条件検証
         assert "error" not in result
         assert "questions" in result
 
@@ -618,11 +673,17 @@ class TestDataIntegrityContracts:
         self, mock_agent: MagicMock, mock_teams_client_class: MagicMock
     ) -> None:
         """
+        契約による設計: 問題構造整合性検証
+
+        Given: 有効なペイロード
+        When: invoke関数を実行する
+        Then: 問題構造の整合性が保たれる
+
         事前条件: 有効なペイロード
         事後条件: 問題構造の整合性が保たれる
         不変条件: 各問題が必要なフィールドを持つ
         """
-        # Arrange - 事前条件設定
+        # Given - 事前条件設定
         payload: dict[str, Any] = {"question_count": 2}
 
         # エージェントモックの設定
@@ -648,10 +709,10 @@ class TestDataIntegrityContracts:
         )  # 例外ベース: 成功時は何も返さない
         mock_teams_client_class.return_value = mock_teams_client
 
-        # Act
+        # When - invoke関数を実行
         result = await invoke(payload)
 
-        # Assert - 事後条件検証
+        # Then - 事後条件検証
         assert "questions" in result
         assert len(result["questions"]) == 2
 
@@ -684,7 +745,7 @@ class TestSystemInvariants:
         """
         不変条件: 適切なログが出力される
         """
-        # Arrange
+        # Given - 事前条件設定
         payload: dict[str, Any] = {"question_count": 1}
 
         mock_result = AgentOutput(
@@ -708,11 +769,11 @@ class TestSystemInvariants:
         )  # 例外ベース: 成功時は何も返さない
         mock_teams_client_class.return_value = mock_teams_client
 
-        # Act
+        # When - ログ出力をモックしてinvoke関数を実行
         with patch("app.agentcore.agent_main.logger") as mock_logger:
             await invoke(payload)
 
-            # Assert - 不変条件検証: ログが適切に出力される
+            # Then - 不変条件検証: ログが適切に出力される
             mock_logger.info.assert_called()
             log_calls = [call.args[0] for call in mock_logger.info.call_args_list]
 
@@ -749,14 +810,14 @@ class TestSystemInvariants:
         """
         不変条件: エラー時は適切なエラーレスポンスが返される
         """
-        # Arrange - エラーを発生させる
+        # Given - エラーを発生させる設定
         payload: dict[str, Any] = {"question_count": 1}
         mock_agent.structured_output.side_effect = Exception("テストエラー")
 
-        # Act
+        # When - invoke関数を実行
         result = await invoke(payload)
 
-        # Assert - 不変条件検証: エラー時の適切な処理
+        # Then - 不変条件検証: エラー時の適切な処理
         assert "error" in result
         assert "テストエラー" in result["error"]
         assert isinstance(result, dict)
@@ -764,6 +825,35 @@ class TestSystemInvariants:
 
 class TestIntegrationContracts:
     """統合レベルの契約検証"""
+
+    @patch("app.agentcore.agent_main.agent", None)
+    async def test_agent_not_initialized_error_contract(self) -> None:
+        """
+        契約による設計: エージェント未初期化時のエラーハンドリング検証
+
+        Given: エージェントが初期化されていない状態
+        When: invoke関数を呼び出す
+        Then: エラー辞書が返される
+
+        事前条件: エージェントがNoneに設定されている
+        事後条件: エラー辞書が返される
+        不変条件: エラーメッセージが適切に設定される
+        """
+        # Given - 有効なペイロード（正しい形式）
+
+        # When - invoke関数を呼び出す
+        payload = {
+            "exam_type": "SAP",
+            "question_count": 1,
+            "category": ["compute"]  # リスト形式に修正
+        }
+
+        # When - invoke関数を呼び出す
+        result = await invoke(payload)
+
+        # Then - 事後条件検証: エラー辞書が返される
+        assert "error" in result
+        assert "エージェントが初期化されていません" in result["error"]
 
     @patch.dict(
         "os.environ",
@@ -778,11 +868,17 @@ class TestIntegrationContracts:
         self, mock_agent: MagicMock, mock_teams_client_class: MagicMock
     ) -> None:
         """
+        契約による設計: エンドツーエンドフロー検証
+
+        Given: 完全な処理フロー環境
+        When: invoke関数を実行する
+        Then: 問題生成からTeams投稿まで完了する
+
         事前条件: 完全な処理フロー
         事後条件: 問題生成からTeams投稿まで完了
         不変条件: 全体フローの整合性
         """
-        # Arrange - 事前条件設定
+        # Given - 事前条件設定
         payload: dict[str, Any] = {
             "exam_type": "SAP",
             "category": ["コンピューティング"],
@@ -812,10 +908,10 @@ class TestIntegrationContracts:
         )  # 例外ベース: 成功時は何も返さない
         mock_teams_client_class.return_value = mock_teams_client
 
-        # Act
+        # When - invoke関数を実行
         result = await invoke(payload)
 
-        # Assert - 事後条件検証
+        # Then - 事後条件検証
         assert "questions" in result
         assert len(result["questions"]) == 2
         assert "error" not in result
