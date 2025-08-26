@@ -71,17 +71,17 @@ aws-exam-agent/
 │   │   ├── agent_main.py        # メインエージェント（監督者）
 │   │   ├── requirements.txt     # エージェント依存関係
 │   │   └── mcp/                 # MCP統合
-│   ├── lambda/                  # Lambda関数
-│   │   └── trigger/             # EventBridge Scheduler用トリガー関数
-│   │       ├── lambda_function.py    # Lambda関数メインファイル
-│   │       ├── requirements.txt      # Lambda依存関係
-│   │       └── buildspec.yml         # Lambda専用ビルド設定
+│   ├── trigger/                 # EventBridge Scheduler用トリガー関数
+│   │   ├── lambda_function.py   # Lambda関数メインファイル
+│   │   ├── requirements.txt     # Lambda依存関係
+│   │   └── buildspec.yml        # Lambda専用ビルド設定
 │   ├── models/                  # データモデル
 │   ├── services/                # ビジネスロジック
 │   └── shared/                  # 共通モジュール
 ├── tests/                       # テストコード
 │   ├── unit/                    # 単体テスト
 │   │   ├── agentcore/          # test_プレフィックス削除済み
+│   │   ├── trigger/            # Lambda関数テスト
 │   │   └── shared/             # test_プレフィックス削除済み
 │   ├── integration/             # 統合テスト
 │   └── e2e/                     # E2Eテスト

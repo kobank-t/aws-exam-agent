@@ -57,7 +57,7 @@ Parameters:
   LambdaCodeKey:
     Type: String
     Description: S3 key for Lambda deployment package
-    Default: "app/lambda/trigger/trigger-function.zip"
+    Default: "app/trigger/trigger-function.zip"
 
 Conditions:
   UseS3Code: !Not [!Equals [!Ref LambdaCodeBucket, ""]]

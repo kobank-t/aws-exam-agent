@@ -16,8 +16,7 @@ AWS Exam Agent のテスト戦略と実装手順について説明します。
 tests/
 ├── unit/                    # 単体テスト（メイン）
 │   ├── agentcore/          # AgentCore関連テスト
-│   ├── lambda/             # Lambda関数テスト
-│   │   └── trigger/        # EventBridge Trigger関数
+│   ├── trigger/            # Lambda関数テスト
 │   └── shared/             # 共通モジュールテスト
 └── fixtures/               # テスト用データ・モック
 ```
@@ -32,7 +31,7 @@ tests/
 # アプリ本体の構造に対応
 app/agentcore/agent_main.py     → tests/unit/agentcore/test_agent_main.py
 app/agentcore/teams_client.py   → tests/unit/agentcore/test_teams_client.py
-app/lambda/trigger/lambda_function.py → tests/unit/lambda/trigger/test_lambda_function.py
+app/trigger/lambda_function.py → tests/unit/trigger/test_lambda_function.py
 ```
 
 #### 2. ファイル命名規則
@@ -45,8 +44,7 @@ app/lambda/trigger/lambda_function.py → tests/unit/lambda/trigger/test_lambda_
 
 ```bash
 # 各テストディレクトリに__init__.pyを作成
-touch tests/unit/lambda/__init__.py
-touch tests/unit/lambda/trigger/__init__.py
+touch tests/unit/trigger/__init__.py
 ```
 
 ### インポート方法の統一
@@ -57,33 +55,34 @@ touch tests/unit/lambda/trigger/__init__.py
 # pyproject.tomlの設定に従った標準的なインポート
 from app.agentcore.agent_main import AgentOutput, Question
 from app.agentcore.teams_client import TeamsClient
+from app.trigger.lambda_function import lambda_handler
 ```
 
-#### 2. 予約語回避のインポート（特殊ケース）
+#### 2. 予約語回避のインポート（不要になりました）
+
+構造変更により、予約語問題が解決されたため、特殊なインポート処理は不要です：
 
 ```python
-# lambdaなどの予約語を含むモジュールの場合
-import importlib
-from typing import Any
-from unittest.mock import Mock, patch
+# 以前は必要だった動的インポート（現在は不要）
+# import importlib
+# lambda_module = importlib.import_module("app.lambda.trigger.lambda_function")
+# lambda_handler = lambda_module.lambda_handler
 
-import pytest
-
-# 動的インポートを使用
-lambda_module = importlib.import_module("app.lambda.trigger.lambda_function")
-lambda_handler = lambda_module.lambda_handler
+# 現在はシンプルなインポートが可能
+from app.trigger.lambda_function import lambda_handler
 ```
 
-#### 3. pyproject.toml設定の更新
+#### 3. pyproject.toml設定（参考）
 
-予約語を含むモジュールがある場合、`pyproject.toml`に追加：
+構造変更により予約語問題が解決されたため、特別な設定は不要ですが、
+将来的に予約語を含むモジュールがある場合の参考として：
 
 ```toml
 [[tool.mypy.overrides]]
 module = [
     # 既存の設定...
-    # 予約語回避
-    "lambda_function",
+    # 予約語回避（現在は不要）
+    # "lambda_function",
 ]
 ignore_missing_imports = true
 ```
@@ -109,7 +108,6 @@ ignore_missing_imports = true
 
 ```python
 import json  # 必要に応じて
-import importlib  # 動的インポートが必要な場合
 from typing import Any
 from unittest.mock import Mock, patch
 
@@ -117,9 +115,6 @@ import pytest
 
 # テスト対象のインポート - pyproject.tomlの設定に従った統一的なアプローチ
 from app.module.target import target_function
-# または動的インポート（予約語回避）
-# target_module = importlib.import_module("app.module.target")
-# target_function = target_module.target_function
 ```
 
 #### 3. テストクラス構造
@@ -461,27 +456,21 @@ uv run ruff format tests/unit/path/to/module/test_target_file.py
 
 ### インポート関連の問題
 
-#### 問題1: 予約語を含むモジュールのインポートエラー
+#### 問題1: モジュールが見つからないエラー
 
 ```python
 # ❌ 問題のあるインポート
-from app.lambda.trigger.lambda_function import lambda_handler  # SyntaxError
+from wrong.path.module import function  # ModuleNotFoundError
 
-# ✅ 解決方法
-import importlib
-lambda_module = importlib.import_module("app.lambda.trigger.lambda_function")
-lambda_handler = lambda_module.lambda_handler
+# ✅ 解決方法 - 正しいパス構造を確認
+from app.trigger.lambda_function import lambda_handler
 ```
 
-#### 問題2: mypyの型チェックエラー
+#### 問題2: pyproject.toml設定との不整合
 
-```toml
-# pyproject.tomlに追加
-[[tool.mypy.overrides]]
-module = [
-    "lambda_function",  # 予約語を含むモジュール
-]
-ignore_missing_imports = true
+```bash
+# pyproject.tomlのsrc設定を確認
+# src = ["app", "tests"] が設定されていることを確認
 ```
 
 ### モック関連の問題
@@ -493,7 +482,7 @@ ignore_missing_imports = true
 patch('lambda_function.logger')  # ModuleNotFoundError
 
 # ✅ 正しいパッチ対象
-patch('app.lambda.trigger.lambda_function.logger')
+patch('app.trigger.lambda_function.logger')
 ```
 
 #### 問題2: モックの設定不足
@@ -549,5 +538,5 @@ def test_function_contract(self) -> None:
 ### 実装例の参照
 
 - **AgentCore テスト**: `tests/unit/agentcore/test_*.py`
-- **Lambda関数テスト**: `tests/unit/lambda/trigger/test_lambda_function.py`
+- **Lambda関数テスト**: `tests/unit/trigger/test_lambda_function.py`
 - **Teams連携テスト**: `tests/unit/agentcore/test_teams_client.py`

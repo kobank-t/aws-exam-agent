@@ -23,7 +23,7 @@ STACK_NAME="aws-exam-agent-scheduler-development"
 TEMPLATE_FILE="infrastructure/eventbridge-scheduler.yaml"
 ENVIRONMENT="development"
 BUCKET_NAME="aws-exam-agent-deployments-${ENVIRONMENT}-${ACCOUNT_ID}"
-LAMBDA_PACKAGE="app/lambda/trigger/trigger-function.zip"
+LAMBDA_PACKAGE="app/trigger/trigger-function.zip"
 LAMBDA_S3_KEY="lambda-packages/trigger-function-$(date +%Y%m%d-%H%M%S).zip"
 
 echo "🚀 EventBridge Scheduler デプロイ開始"

@@ -10,17 +10,14 @@ EventBridge SchedulerからAgentCore Runtimeを呼び出すLambda関数の
 - 不変条件: エラー時も含めた一貫したレスポンス形式の維持
 """
 
-import importlib
 import json
 from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
 
-# テスト対象のインポート - pyproject.tomlの設定に従った統一的なアプローチ
-# lambdaが予約語のため、importlibを使用してモジュールを動的にインポート
-lambda_module = importlib.import_module("app.lambda.trigger.lambda_function")
-lambda_handler = lambda_module.lambda_handler
+# テスト対象のインポート - 構造変更によりシンプルなインポートが可能に
+from app.trigger.lambda_function import lambda_handler
 
 
 class TestLambdaHandler:
@@ -355,7 +352,7 @@ class TestLambdaHandler:
         # When - ログをキャプチャしながらlambda_handler()を実行
         with (
             patch("boto3.client") as mock_boto_client,
-            patch("app.lambda.trigger.lambda_function.logger") as mock_logger,
+            patch("app.trigger.lambda_function.logger") as mock_logger,
         ):
             mock_bedrock_client = Mock()
             mock_bedrock_client.invoke_agent_runtime.return_value = {
@@ -450,7 +447,7 @@ class TestLambdaHandler:
                     }
                     mock_boto_client.return_value = mock_bedrock_client
 
-                result = lambda_handler(scenario["event"], Mock())
+                result = lambda_handler(scenario["event"], Mock())  # type: ignore
 
                 # 不変条件検証: レスポンス構造の一貫性
                 assert "statusCode" in result, (

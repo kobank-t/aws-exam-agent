@@ -6,7 +6,7 @@
 set -e
 
 # 設定
-LAMBDA_DIR="app/lambda/trigger"
+LAMBDA_DIR="app/trigger"
 BUILD_DIR="$LAMBDA_DIR/build"
 PACKAGE_NAME="trigger-function.zip"
 
