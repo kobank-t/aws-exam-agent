@@ -27,19 +27,29 @@ logger = logging.getLogger(__name__)
 class TeamsClient:
     """Teams投稿クライアント（Power Automate Webhook経由）"""
 
-    def __init__(self, webhook_url: str | None = None, timeout: int = 30):
+    def __init__(self, timeout: int = 30):
         """
         Webhook クライアントを初期化
 
         Args:
-            webhook_url: Power Automate Webhook URL
             timeout: HTTPリクエストタイムアウト（秒）
-        """
-        self.webhook_url = webhook_url or os.getenv("POWER_AUTOMATE_WEBHOOK_URL")
-        self.timeout = timeout
 
-        if not self.webhook_url:
-            logger.warning("POWER_AUTOMATE_WEBHOOK_URL が設定されていません")
+        Raises:
+            ValueError: WebhookURLまたはセキュリティトークンが未設定の場合
+        """
+        webhook_url = os.getenv("POWER_AUTOMATE_WEBHOOK_URL")
+        security_token = os.getenv("POWER_AUTOMATE_SECURITY_TOKEN")
+
+        if not webhook_url:
+            raise ValueError("POWER_AUTOMATE_WEBHOOK_URL の設定が必須です")
+
+        if not security_token:
+            raise ValueError("POWER_AUTOMATE_SECURITY_TOKEN の設定が必須です")
+
+        # 型安全性を保証: 初期化時にチェック済みのため、Noneではない
+        self.webhook_url: str = webhook_url
+        self.security_token: str = security_token
+        self.timeout = timeout
 
     async def send(self, agent_output: Any) -> None:
         """
@@ -52,25 +62,26 @@ class TeamsClient:
                          model_dump_json()メソッドの存在で型安全性を保証。
 
         Raises:
-            ValueError: Webhook URL が設定されていない場合
             httpx.HTTPStatusError: HTTP エラー時
             httpx.TimeoutException: タイムアウト時
             Exception: その他のエラー時
         """
-        if not self.webhook_url:
-            raise ValueError("POWER_AUTOMATE_WEBHOOK_URL が設定されていません")
-
         try:
-            # AgentOutputをJSON文字列に変換
-            agent_output_json = agent_output.model_dump_json()
+            # AgentOutputをJSONオブジェクトに変換
+            agent_output_data = agent_output.model_dump()
+
+            # セキュリティトークンを追加
+            secure_payload = {
+                "security_token": self.security_token,  # Power Automateで検証
+                **agent_output_data,  # 既存のAgentOutputデータを展開
+            }
 
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 logger.info("Power Automate への送信を開始します")
 
                 response = await client.post(
                     self.webhook_url,
-                    content=agent_output_json,
-                    headers={"Content-Type": "application/json"},
+                    json=secure_payload,
                 )
 
                 response.raise_for_status()  # 4xx, 5xx で HTTPStatusError を発生

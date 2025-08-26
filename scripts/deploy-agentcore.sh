@@ -60,8 +60,18 @@ if [ -z "$WEBHOOK_URL" ]; then
     exit 1
 fi
 
+# .envファイルから POWER_AUTOMATE_SECURITY_TOKEN を抽出
+SECURITY_TOKEN=$(grep "^POWER_AUTOMATE_SECURITY_TOKEN=" "$ENV_FILE" | cut -d'=' -f2-)
+if [ -z "$SECURITY_TOKEN" ]; then
+    echo "❌ POWER_AUTOMATE_SECURITY_TOKEN が .env ファイルに設定されていません"
+    echo "💡 .env ファイルに以下の形式で設定してください:"
+    echo "   POWER_AUTOMATE_SECURITY_TOKEN=your-security-token"
+    exit 1
+fi
+
 echo "✅ POWER_AUTOMATE_WEBHOOK_URL を .env から読み込みました"
-ENV_ARGS="--env POWER_AUTOMATE_WEBHOOK_URL=$WEBHOOK_URL"
+echo "✅ POWER_AUTOMATE_SECURITY_TOKEN を .env から読み込みました"
+ENV_ARGS="--env POWER_AUTOMATE_WEBHOOK_URL=$WEBHOOK_URL --env POWER_AUTOMATE_SECURITY_TOKEN=$SECURITY_TOKEN"
 
 # AgentCore ディレクトリに移動
 cd app/agentcore

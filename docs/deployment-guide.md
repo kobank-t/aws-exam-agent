@@ -129,16 +129,24 @@ agentcore configure --entrypoint agent_main.py
 
 #### 3.3 環境変数の設定
 
-AgentCoreデプロイ前に、Teams連携用のWebhook URLを設定する必要があります：
+AgentCoreデプロイ前に、Teams連携用のWebhook URLとセキュリティトークンを設定する必要があります：
 
 ```bash
+# セキュリティトークンの生成（64文字のランダム文字列）
+SECURITY_TOKEN=$(openssl rand -hex 32)
+echo "生成されたセキュリティトークン: $SECURITY_TOKEN"
+
 # .envファイルの作成（プロジェクトルート）
 cat > .env << EOF
 POWER_AUTOMATE_WEBHOOK_URL=https://prod-XX.japaneast.logic.azure.com/workflows/YOUR-WORKFLOW-ID/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=YOUR-SIGNATURE
+POWER_AUTOMATE_SECURITY_TOKEN=$SECURITY_TOKEN
 EOF
 ```
 
-**⚠️ 重要**: `POWER_AUTOMATE_WEBHOOK_URL`が設定されていない場合、デプロイは失敗します。
+**⚠️ 重要**: 
+- `POWER_AUTOMATE_WEBHOOK_URL`と`POWER_AUTOMATE_SECURITY_TOKEN`の両方が設定されていない場合、デプロイは失敗します
+- セキュリティトークンはWebhook URL漏洩対策として必須です
+- 生成されたセキュリティトークンは後でPower Automateフローの設定で使用します
 
 #### 3.4 AgentCore のデプロイ実行
 

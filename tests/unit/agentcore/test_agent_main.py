@@ -3,6 +3,7 @@ AWS Exam Agent - agent_main.py のテストコード
 
 契約による設計に基づく包括的なテスト実装。
 複数問題生成に対応したAgentOutputモデルの検証。
+Given-When-Thenパターンによる明確なテスト構造。
 """
 
 from typing import Any
@@ -19,19 +20,26 @@ class TestAgentInput:
 
     def test_default_values_contract(self) -> None:
         """
+        契約による設計: AgentInputのデフォルト値検証
+
+        Given: パラメータなしでの初期化
+        When: AgentInputインスタンスを作成する
+        Then: デフォルト値が正しく設定される
+
         事前条件: パラメータなしでの初期化
         事後条件: デフォルト値が正しく設定される
-        不変条件: デフォルト値の整合性
+        不変条件: デフォルト値の整合性と型制約
         """
-        # Arrange & Act
+        # Given - パラメータなしでの初期化条件
+        # When - AgentInputインスタンスを作成
         input_model = AgentInput()
 
-        # Assert - 事後条件検証
+        # Then - 事後条件検証: デフォルト値が正しく設定される
         assert input_model.exam_type == "SAP"
         assert input_model.category == []
         assert input_model.question_count == 1
 
-        # 不変条件検証
+        # 不変条件検証: 型制約と値の整合性
         assert isinstance(input_model.exam_type, str)
         assert isinstance(input_model.category, list)
         assert isinstance(input_model.question_count, int)
@@ -39,11 +47,17 @@ class TestAgentInput:
 
     def test_custom_values_contract(self) -> None:
         """
+        契約による設計: AgentInputのカスタム値検証
+
+        Given: カスタム値での初期化
+        When: AgentInputインスタンスを作成する
+        Then: 指定した値が正しく設定される
+
         事前条件: カスタム値での初期化
         事後条件: 指定した値が正しく設定される
         不変条件: 値の型と制約が保持される
         """
-        # Arrange - 事前条件設定
+        # Given - カスタム値での初期化条件
         custom_data: dict[str, Any] = {
             "exam_type": "SAP",
             "category": ["コンピューティング", "ストレージ"],
@@ -190,6 +204,13 @@ class TestInvokeFunction:
             source=["https://docs.aws.amazon.com/ec2/"],
         )
 
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
     @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
     async def test_single_question_generation_contract(
@@ -198,11 +219,17 @@ class TestInvokeFunction:
         mock_teams_client_class: MagicMock,
     ) -> None:
         """
+        契約による設計: 単一問題生成の包括的検証
+
+        Given: 単一問題生成の有効なペイロードと正常なモック環境
+        When: invoke関数を実行する
+        Then: AgentOutputが返され、Teams投稿が実行される
+
         事前条件: 単一問題生成の有効なペイロード
         事後条件: AgentOutputが返される
         不変条件: 問題数が1問、Teams投稿が実行される
         """
-        # Arrange - 事前条件設定
+        # Given - 事前条件設定: 有効なペイロードとモック環境
         valid_payload: dict[str, Any] = {
             "exam_type": "SAP",
             "category": ["コンピューティング"],
@@ -215,17 +242,13 @@ class TestInvokeFunction:
 
         # Teamsクライアントモックの設定
         mock_teams_client = MagicMock()
-        # mock_teams_response削除
-        # status設定削除
-        mock_teams_client.send = AsyncMock(
-            return_value=None
-        )  # 例外ベース: 成功時は何も返さない
+        mock_teams_client.send = AsyncMock(return_value=None)
         mock_teams_client_class.return_value = mock_teams_client
 
-        # Act
+        # When - invoke関数を実行
         result = await invoke(valid_payload)
 
-        # Assert - 事後条件検証
+        # Then - 事後条件検証: AgentOutputが返される
         assert "questions" in result
         assert len(result["questions"]) == 1
 
@@ -246,6 +269,13 @@ class TestInvokeFunction:
         mock_agent.structured_output.assert_called_once()
         mock_teams_client.send.assert_called_once()
 
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
     @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
     async def test_multiple_questions_generation_contract(
@@ -254,6 +284,12 @@ class TestInvokeFunction:
         mock_teams_client_class: MagicMock,
     ) -> None:
         """
+        契約による設計: 複数問題生成の包括的検証
+
+        Given: 複数問題生成の有効なペイロードと正常なモック環境
+        When: invoke関数を実行する
+        Then: 複数問題のAgentOutputが返され、Teams投稿が実行される
+
         事前条件: 複数問題生成の有効なペイロード
         事後条件: 複数問題のAgentOutputが返される
         不変条件: 指定した問題数、Teams投稿が実行される
@@ -304,6 +340,13 @@ class TestInvokeFunction:
         mock_agent.structured_output.assert_called_once()
         mock_teams_client.send.assert_called_once()
 
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
     @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
     async def test_teams_posting_failure_contract(
@@ -365,6 +408,13 @@ class TestInvokeFunction:
         # 不変条件検証
         assert isinstance(result, dict)
 
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
     @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
     async def test_empty_payload_contract(
@@ -434,6 +484,13 @@ class TestConstants:
 class TestBusinessLogicContracts:
     """ビジネスロジックの契約検証"""
 
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
     @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
     async def test_category_specific_generation_contract(
@@ -489,6 +546,13 @@ class TestBusinessLogicContracts:
         assert "ネットワークとコンテンツ配信" in prompt_arg
         assert "セキュリティ、アイデンティティ、コンプライアンス" in prompt_arg
 
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
     @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
     async def test_exam_type_contract(
@@ -541,6 +605,13 @@ class TestBusinessLogicContracts:
 class TestDataIntegrityContracts:
     """データ整合性の契約検証"""
 
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
     @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
     async def test_question_structure_integrity_contract(
@@ -598,6 +669,13 @@ class TestDataIntegrityContracts:
 class TestSystemInvariants:
     """システム全体の不変条件検証"""
 
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
     @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
     async def test_logging_invariant(
@@ -656,6 +734,13 @@ class TestSystemInvariants:
                 source=["https://example.com"],
             )
 
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
     @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
     async def test_error_handling_invariant(
@@ -680,6 +765,13 @@ class TestSystemInvariants:
 class TestIntegrationContracts:
     """統合レベルの契約検証"""
 
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
     @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
     async def test_end_to_end_flow_contract(

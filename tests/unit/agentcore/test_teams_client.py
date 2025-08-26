@@ -22,54 +22,63 @@ load_dotenv()
 class TestTeamsClient:
     """TeamsClient の契約検証（例外ベースアプローチ）"""
 
-    def test_initialization_with_parameters_contract(self) -> None:
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
+    def test_initialization_contract(self) -> None:
         """
-        事前条件: 明示的なパラメータでの初期化
-        事後条件: 指定されたパラメータが設定される
+        契約による設計: TeamsClientの環境変数初期化検証
+
+        Given: 環境変数が設定された状態
+        When: TeamsClientインスタンスを作成する
+        Then: 環境変数の値が正しく設定される
+
+        事前条件: 環境変数での初期化
+        事後条件: 環境変数の値が正しく設定される
         不変条件: 設定値が正しく保持される
         """
-        # Arrange - 事前条件設定
-        webhook_url = "https://test.webhook.url"
+        # Given - 環境変数が設定された状態（patch.dictで設定済み）
         timeout = 60
 
-        # Act
-        client = TeamsClient(webhook_url=webhook_url, timeout=timeout)
+        # When - TeamsClientインスタンスを作成
+        client = TeamsClient(timeout=timeout)
 
-        # Assert - 事後条件検証
-        assert client.webhook_url == webhook_url
+        # Then - 事後条件検証: 環境変数の値が正しく設定される
+        assert client.webhook_url == "https://test.webhook.url"
+        assert client.security_token == "test-security-token"
         assert client.timeout == timeout
 
-        # 不変条件検証
+        # 不変条件検証: 型制約と値の整合性
         assert isinstance(client.webhook_url, str)
+        assert isinstance(client.security_token, str)
         assert isinstance(client.timeout, int)
 
-    @patch.dict("os.environ", {"POWER_AUTOMATE_WEBHOOK_URL": "https://env.webhook.url"})
-    def test_initialization_with_environment_variables_contract(self) -> None:
-        """
-        事前条件: 環境変数での初期化
-        事後条件: 環境変数の値が設定される
-        不変条件: デフォルト値が適用される
-        """
-        # Act
-        client = TeamsClient()
-
-        # Assert - 事後条件検証
-        assert client.webhook_url == "https://env.webhook.url"
-        assert client.timeout == 30  # デフォルト値
-
-        # 不変条件検証
-        assert isinstance(client.webhook_url, str)
-        assert isinstance(client.timeout, int)
-
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
     @pytest.mark.asyncio
     async def test_successful_send_contract(self) -> None:
         """
-        事前条件: 有効なAgentOutputと正常なHTTPレスポンス
+        契約による設計: 正常送信の事後条件検証
+
+        Given: 有効なAgentOutputと正常なHTTPレスポンス環境
+        When: send()メソッドを実行する
+        Then: 例外が発生せず正常に完了する
+
+        事前条件: 有効なWebhookURL、セキュリティトークン、AgentOutput
         事後条件: 例外が発生せず正常に完了する
         不変条件: HTTPリクエストが正しく送信される
         """
-        # Arrange - 事前条件設定
-        client = TeamsClient(webhook_url="https://test.webhook.url")
+        # Given - 事前条件設定
+        client = TeamsClient()
         test_question = Question(
             question="テスト問題",
             options=["A. 選択肢1", "B. 選択肢2", "C. 選択肢3", "D. 選択肢4"],
@@ -89,21 +98,34 @@ class TestTeamsClient:
                 return_value=mock_response
             )
 
-            # Act - 例外が発生しないことを確認
+            # When - 例外が発生しないことを確認
             await client.send(agent_output)
 
-            # Assert - 不変条件検証: HTTPリクエストが送信された
+            # Then - 不変条件検証: HTTPリクエストが送信された
             mock_client.return_value.__aenter__.return_value.post.assert_called_once()
 
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
     @pytest.mark.asyncio
     async def test_http_error_handling_contract(self) -> None:
         """
+        契約による設計: HTTPエラー時の例外処理検証
+
+        Given: HTTPエラーレスポンス環境
+        When: send()メソッドを実行する
+        Then: HTTPStatusError例外が発生する
+
         事前条件: HTTPエラーレスポンス
         事後条件: HTTPStatusError例外が発生する
         不変条件: 元の例外が再発生される
         """
-        # Arrange - 事前条件設定
-        client = TeamsClient(webhook_url="https://test.webhook.url")
+        # Given - 事前条件設定
+        client = TeamsClient()
         test_question = Question(
             question="エラーテスト問題",
             options=["A. 選択肢1", "B. 選択肢2"],
@@ -126,19 +148,32 @@ class TestTeamsClient:
                 side_effect=http_error
             )
 
-            # Act & Assert - 事後条件検証: HTTPStatusError例外が発生
+            # When & Then - 事後条件検証: HTTPStatusError例外が発生
             with pytest.raises(httpx.HTTPStatusError):
                 await client.send(agent_output)
 
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
     @pytest.mark.asyncio
     async def test_timeout_handling_contract(self) -> None:
         """
+        契約による設計: タイムアウト時の例外処理検証
+
+        Given: タイムアウト発生環境
+        When: send()メソッドを実行する
+        Then: TimeoutException例外が発生する
+
         事前条件: タイムアウト発生
         事後条件: TimeoutException例外が発生する
         不変条件: 元の例外が再発生される
         """
-        # Arrange - 事前条件設定
-        client = TeamsClient(webhook_url="https://test.webhook.url", timeout=1)
+        # Given - 事前条件設定
+        client = TeamsClient(timeout=1)
         test_question = Question(
             question="タイムアウトテスト問題",
             options=["A. 選択肢1", "B. 選択肢2"],
@@ -153,43 +188,96 @@ class TestTeamsClient:
                 side_effect=httpx.TimeoutException("Timeout")
             )
 
-            # Act & Assert - 事後条件検証: TimeoutException例外が発生
+            # When & Then - 事後条件検証: TimeoutException例外が発生
             with pytest.raises(httpx.TimeoutException):
                 await client.send(agent_output)
 
-    @pytest.mark.asyncio
-    async def test_missing_webhook_url_precondition(self) -> None:
+    def test_missing_webhook_url_precondition(self) -> None:
         """
-        事前条件違反: Webhook URLが設定されていない
-        事後条件: ValueError例外が発生する
+        契約による設計: 初期化時の事前条件検証
+
+        Given: Webhook URLが設定されていない環境
+        When: TeamsClientを初期化する
+        Then: ValueError例外が発生する
+
+        事前条件違反: POWER_AUTOMATE_WEBHOOK_URL が未設定
+        事後条件: ValueError例外が発生し、適切なエラーメッセージが表示される
+        不変条件: 初期化が失敗し、インスタンスが作成されない
         """
-        # Arrange - 事前条件違反
+        # Given - 事前条件違反の環境設定
         with patch.dict("os.environ", {}, clear=True):
-            client = TeamsClient()  # webhook_url=None
-            test_question = Question(
-                question="設定エラーテスト問題",
-                options=["A. 選択肢1", "B. 選択肢2"],
-                correct_answer="A",
-                explanation="解説",
-                source=[],
-            )
-            agent_output = AgentOutput(questions=[test_question])
-
-            # Act & Assert - 事前条件検証
+            # When & Then - 初期化時の事前条件検証
             with pytest.raises(
-                ValueError, match="POWER_AUTOMATE_WEBHOOK_URL が設定されていません"
+                ValueError, match="POWER_AUTOMATE_WEBHOOK_URL の設定が必須です"
             ):
-                await client.send(agent_output)
+                TeamsClient()
 
+    def test_missing_security_token_precondition(self) -> None:
+        """
+        契約による設計: セキュリティトークン事前条件検証
+
+        Given: WebhookURLは設定されているがセキュリティトークンが未設定の環境
+        When: TeamsClientを初期化する
+        Then: ValueError例外が発生する
+
+        事前条件違反: POWER_AUTOMATE_SECURITY_TOKEN が未設定
+        事後条件: ValueError例外が発生し、適切なエラーメッセージが表示される
+        不変条件: 初期化が失敗し、インスタンスが作成されない
+        """
+        # Given - セキュリティトークンのみ未設定の環境
+        with patch.dict(
+            "os.environ",
+            {"POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url"},
+            clear=True,
+        ):
+            # When & Then - 初期化時の事前条件検証
+            with pytest.raises(
+                ValueError, match="POWER_AUTOMATE_SECURITY_TOKEN の設定が必須です"
+            ):
+                TeamsClient()
+
+    def test_missing_both_configurations_precondition(self) -> None:
+        """
+        契約による設計: 両方の設定が未設定時の事前条件検証
+
+        Given: WebhookURLとセキュリティトークンの両方が未設定の環境
+        When: TeamsClientを初期化する
+        Then: WebhookURLのエラーが優先して発生する
+
+        事前条件違反: 両方の必須設定が未設定
+        事後条件: WebhookURLのValueError例外が発生する（優先順位による）
+        不変条件: 初期化が失敗し、インスタンスが作成されない
+        """
+        # Given - 両方とも未設定の環境
+        with patch.dict("os.environ", {}, clear=True):
+            # When & Then - WebhookURLが先にチェックされることを確認
+            with pytest.raises(
+                ValueError, match="POWER_AUTOMATE_WEBHOOK_URL の設定が必須です"
+            ):
+                TeamsClient()
+
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
     @pytest.mark.asyncio
     async def test_unexpected_exception_handling_contract(self) -> None:
         """
+        契約による設計: 予期しない例外時の処理検証
+
+        Given: 予期しない例外発生環境
+        When: send()メソッドを実行する
+        Then: 元の例外が再発生される
+
         事前条件: 予期しない例外発生
         事後条件: 元の例外が再発生される
         不変条件: 例外情報が適切にログ出力される
         """
-        # Arrange - 事前条件設定
-        client = TeamsClient(webhook_url="https://test.webhook.url")
+        # Given - 事前条件設定
+        client = TeamsClient()
         test_question = Question(
             question="予期しないエラーテスト問題",
             options=["A. 選択肢1", "B. 選択肢2"],
@@ -204,19 +292,32 @@ class TestTeamsClient:
                 side_effect=RuntimeError("予期しないエラー")
             )
 
-            # Act & Assert - 事後条件検証: RuntimeError例外が発生
+            # When & Then - 事後条件検証: RuntimeError例外が発生
             with pytest.raises(RuntimeError, match="予期しないエラー"):
                 await client.send(agent_output)
 
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
     @pytest.mark.asyncio
-    async def test_agent_output_json_serialization_contract(self) -> None:
+    async def test_payload_structure_contract(self) -> None:
         """
+        契約による設計: ペイロード構造の包括的検証
+
+        Given: 複数問題を含むAgentOutput
+        When: send()メソッドを実行する
+        Then: セキュリティトークン付きの正しいJSON形式で送信される
+
         事前条件: 複数問題を含むAgentOutput
-        事後条件: 正しいJSON形式で送信される
-        不変条件: AgentOutputの構造が保持される
+        事後条件: セキュリティトークンが含まれたJSONペイロードが送信される
+        不変条件: AgentOutputの構造が保持され、セキュリティトークンが追加される
         """
-        # Arrange - 事前条件設定
-        client = TeamsClient(webhook_url="https://test.webhook.url")
+        # Given - 事前条件設定: 複数問題を含むAgentOutput
+        client = TeamsClient()
         test_questions = [
             Question(
                 question=f"テスト問題{i + 1}",
@@ -232,11 +333,11 @@ class TestTeamsClient:
         # HTTPクライアントをモック
         mock_response = MagicMock()
         mock_response.status_code = 202
-        captured_content = None
+        captured_payload = None
 
         async def capture_post(*args: Any, **kwargs: Any) -> MagicMock:
-            nonlocal captured_content
-            captured_content = kwargs.get("content")
+            nonlocal captured_payload
+            captured_payload = kwargs.get("json")
             return mock_response
 
         with patch("httpx.AsyncClient") as mock_client:
@@ -244,16 +345,21 @@ class TestTeamsClient:
                 side_effect=capture_post
             )
 
-            # Act
+            # When - ペイロード送信
             await client.send(agent_output)
 
-            # Assert - 事後条件検証
-            assert captured_content is not None
-            assert "questions" in captured_content
-            assert "テスト問題1" in captured_content
-            assert "テスト問題2" in captured_content
+            # Then - 事後条件検証: セキュリティトークンが含まれている
+            assert captured_payload is not None
+            assert "security_token" in captured_payload
+            assert captured_payload["security_token"] == "test-security-token"
 
-            # 不変条件検証: 正しいContent-Typeヘッダー
+            # 不変条件検証: AgentOutputの構造が保持されている
+            assert "questions" in captured_payload
+            assert len(captured_payload["questions"]) == 2
+            assert "テスト問題1" in str(captured_payload["questions"])
+            assert "テスト問題2" in str(captured_payload["questions"])
+
+            # 不変条件検証: JSONペイロードとして送信されている
             call_args = mock_client.return_value.__aenter__.return_value.post.call_args
-            headers = call_args.kwargs.get("headers", {})
-            assert headers.get("Content-Type") == "application/json"
+            assert "json" in call_args.kwargs
+            assert call_args.kwargs["json"] == captured_payload

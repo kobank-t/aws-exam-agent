@@ -131,6 +131,8 @@ module = [
     "botocore.*",
     # AgentCore Runtime環境での相対インポート対応
     "teams_client",
+    # Lambda関数 (予約語lambda回避)
+    "lambda_function",
     # テスト用ライブラリ (型スタブなし)
     "moto.*",
     "freezegun.*",
