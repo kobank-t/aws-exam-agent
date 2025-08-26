@@ -49,15 +49,22 @@ uv run python app/agentcore/agent_main.py
 ### テストの実行
 
 ```bash
-# 全テストの実行
-./scripts/test-agents.sh
+# 包括的な品質チェック（推奨）
+./scripts/python-quality-check.sh
 
 # 単体テストのみ
 uv run pytest tests/unit/ -v
 
-# コード品質チェック
-uv run ruff check app/
-uv run ruff format app/
+# 特定のテストファイル
+uv run pytest tests/unit/agentcore/test_agent_main.py -v
+
+# カバレッジ付きテスト実行
+uv run pytest tests/unit/ --cov=app --cov-report=html
+
+# コード品質チェック（個別実行）
+uv run ruff check app/ tests/
+uv run ruff format app/ tests/
+uv run mypy app/
 ```
 
 ## 📁 プロジェクト構造
@@ -80,9 +87,9 @@ aws-exam-agent/
 │   └── shared/                  # 共通モジュール
 ├── tests/                       # テストコード
 │   ├── unit/                    # 単体テスト
-│   │   ├── agentcore/          # test_プレフィックス削除済み
+│   │   ├── agentcore/          # AgentCore関連テスト
 │   │   ├── trigger/            # Lambda関数テスト
-│   │   └── shared/             # test_プレフィックス削除済み
+│   │   └── shared/             # 共通モジュールテスト
 │   ├── integration/             # 統合テスト
 │   └── e2e/                     # E2Eテスト
 ├── infrastructure/              # インフラ定義
@@ -90,7 +97,12 @@ aws-exam-agent/
 │   └── parameters-development.json  # 開発環境パラメータ
 ├── scripts/                     # デプロイ・運用スクリプト
 │   ├── build-lambda.sh          # Lambda関数ビルド
-│   └── deploy-eventbridge-scheduler.sh  # 統合デプロイ
+│   ├── deploy-eventbridge-scheduler.sh  # 統合デプロイ
+│   └── python-quality-check.sh  # 品質チェック自動化
+├── docs/                        # ドキュメント
+│   ├── testing-guide.md         # テスト実装ガイド
+│   ├── security-guide.md        # セキュリティガイド
+│   └── [その他運用ドキュメント]
 ├── .kiro/specs/aws-exam-agent/  # 設計書・仕様書
 └── pyproject.toml              # Python プロジェクト設定
 ```
@@ -119,19 +131,47 @@ aws-exam-agent/
 **Phase 1: 環境セットアップ** ✅
 
 1. Python 開発環境のセットアップ ✅
-2. AgentCore 開発環境のセットアップ
-3. テスト環境のセットアップ
+2. AgentCore 開発環境のセットアップ ✅
+3. テスト環境のセットアップ ✅
+4. 品質管理基盤の構築 ✅
+5. テストガイドとコメントスタイル統一 ✅
 
-**Phase 2: データ基盤とコア機能** 4. データモデルと DynamoDB 基盤の実装 5. キャッシュシステムの実装
+**Phase 2: データ基盤とコア機能** 🚧
 
-**Phase 3: マルチエージェントシステムのコア機能** 6. MCP 統合と AWS 情報取得エージェントの実装 7. 問題生成エージェントの実装 8. 品質管理エージェントと監督者エージェントの実装
+4. データモデルと DynamoDB 基盤の実装
+5. キャッシュシステムの実装
+
+**Phase 3: マルチエージェントシステムのコア機能** 📋
+
+6. MCP 統合と AWS 情報取得エージェントの実装
+7. 問題生成エージェントの実装
+8. 品質管理エージェントと監督者エージェントの実装
 
 ### コーディング規約
 
 - **Python**: PEP8 準拠 + Ruff による自動フォーマット
 - **型ヒント**: 必須（mypy による型チェック）
-- **テスト**: pytest + TDD アプローチ
+- **テスト**: pytest + 契約による設計アプローチ
 - **コミット**: Conventional Commits 形式
+
+### 品質管理
+
+#### テスト品質基準
+- **カバレッジ**: 90%以上を維持
+- **テストスタイル**: 契約による設計 + Given-When-Then パターン
+- **コメント統一**: docstring と インラインコメントの統一フォーマット
+- **品質チェック**: 全テスト実行前に自動品質チェック必須
+
+#### 品質チェック自動化
+```bash
+# 包括的品質チェック（推奨）
+./scripts/python-quality-check.sh
+
+# 個別チェック
+uv run ruff check app/ tests/     # コードスタイル
+uv run mypy app/                  # 型チェック  
+uv run pytest tests/unit/ --cov=app  # テスト + カバレッジ
+```
 
 ## 🔧 開発ツール
 
