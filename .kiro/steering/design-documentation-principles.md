@@ -190,5 +190,4 @@ async def test_generate_question_success(self, service):
 ---
 
 **適用範囲**: 全プロジェクトの設計書作成  
-**更新日**: 2025 年 8 月 1 日  
 **バージョン**: 1.0

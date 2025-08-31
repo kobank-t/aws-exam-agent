@@ -18,6 +18,73 @@ EventBridge Scheduler → Lambda Function → AgentCore Runtime → Bedrock Mode
      (定期実行)         (トリガー関数)      (問題生成AI)        (Claude等)
 ```
 
+## 🔧 事前準備：環境変数設定
+
+### 必須環境変数
+
+| 変数名                          | 説明                                       | 例                                                                 |
+| ------------------------------- | ------------------------------------------ | ------------------------------------------------------------------ |
+| `POWER_AUTOMATE_WEBHOOK_URL`    | Teams 連携用 Webhook URL                   | `https://prod-XX.japaneast.logic.azure.com/workflows/...`          |
+| `POWER_AUTOMATE_SECURITY_TOKEN` | Webhook URL 漏洩対策用セキュリティトークン | `cef26f0de574983a475345f2e3518abbd6472d102b5254384ef6912931f8a68f` |
+
+### 環境変数の設定
+
+プロジェクトルートに `.env` ファイルを作成：
+
+```bash
+# セキュリティトークンの生成（64文字のランダム文字列）
+SECURITY_TOKEN=$(openssl rand -hex 32)
+echo $SECURITY_TOKEN
+# 例: a1b2c3d4e5f6789... （実際の値は毎回異なります）
+
+# .envファイルの作成
+cat > .env << EOF
+# Teams 連携（必須）
+POWER_AUTOMATE_WEBHOOK_URL=https://prod-XX.japaneast.logic.azure.com/workflows/YOUR-WORKFLOW-ID/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=YOUR-SIGNATURE
+
+# セキュリティトークン（必須）
+POWER_AUTOMATE_SECURITY_TOKEN=$SECURITY_TOKEN
+EOF
+```
+
+**重要**: 上記の例の値は実際には使用しないでください。必ず `openssl rand -hex 32` で生成した値を使用してください。
+
+### Power Automate Webhook URL の取得
+
+1. **Power Automate** にアクセス
+2. **新しいフロー** を作成
+3. **HTTP 要求の受信時** トリガーを選択
+4. **JSON スキーマ** を設定：
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "question": {
+      "type": "string"
+    },
+    "options": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "correct_answer": {
+      "type": "string"
+    },
+    "explanation": {
+      "type": "string"
+    },
+    "security_token": {
+      "type": "string"
+    }
+  }
+}
+```
+
+5. **Teams にメッセージを投稿** アクションを追加
+6. **保存** して **HTTP POST URL** をコピー
+
 ## 🚀 前提条件
 
 ### 必要なツール
