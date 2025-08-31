@@ -1,1 +1,1 @@
-# AWS Exam Agent - Main Application Package
+# Cloud CoPassAgent - Main Application Package

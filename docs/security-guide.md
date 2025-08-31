@@ -1,6 +1,6 @@
-# AWS Exam Agent セキュリティガイド
+# Cloud CoPassAgent セキュリティガイド
 
-AWS Exam Agent のセキュリティ機能と運用上のセキュリティ考慮事項について説明します。
+Cloud CoPassAgent のセキュリティ機能と運用上のセキュリティ考慮事項について説明します。
 
 ## 🔒 セキュリティ機能概要
 
@@ -34,8 +34,8 @@ AWS AgentCore → Power Automate → セキュリティトークン検証 → Te
 
 ### トークン仕様
 
-- **長さ**: 64文字（256ビット相当）
-- **形式**: 16進数文字列
+- **長さ**: 64 文字（256 ビット相当）
+- **形式**: 16 進数文字列
 - **生成方法**: `openssl rand -hex 32`
 - **有効期限**: 設定なし（手動更新推奨）
 
@@ -50,10 +50,10 @@ class TeamsClient:
         # 事前条件: セキュリティトークンは64文字
         if len(security_token) != 64:
             raise ValueError("Security token must be 64 characters")
-        
+
         self.webhook_url = webhook_url
         self.security_token = security_token
-    
+
     def send(self, questions: List[Question]) -> requests.Response:
         payload = {
             "security_token": self.security_token,
@@ -109,39 +109,41 @@ echo "POWER_AUTOMATE_SECURITY_TOKEN=$SECURITY_TOKEN" >> .env
 AgentCore 実行ロールは必要最小限の権限のみを付与：
 
 #### Bedrock 権限
+
 ```json
 {
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "bedrock:InvokeModel",
-                "bedrock:InvokeModelWithResponseStream"
-            ],
-            "Resource": [
-                "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0"
-            ]
-        }
-    ]
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0"
+      ]
+    }
+  ]
 }
 ```
 
 #### CloudWatch Logs 権限
+
 ```json
 {
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "logs:CreateLogGroup",
-                "logs:CreateLogStream",
-                "logs:PutLogEvents"
-            ],
-            "Resource": "arn:aws:logs:*:*:log-group:/aws/bedrock-agentcore/*"
-        }
-    ]
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:*:*:log-group:/aws/bedrock-agentcore/*"
+    }
+  ]
 }
 ```
 
@@ -152,6 +154,7 @@ AgentCore 実行ロールは必要最小限の権限のみを付与：
 #### 即座に実行すべき対応
 
 1. **新しいセキュリティトークンの生成**
+
    ```bash
    # 新しいトークンを生成
    NEW_TOKEN=$(openssl rand -hex 32)
@@ -159,12 +162,14 @@ AgentCore 実行ロールは必要最小限の権限のみを付与：
    ```
 
 2. **環境変数の更新**
+
    ```bash
    # .env ファイルの更新
    sed -i '' "s/POWER_AUTOMATE_SECURITY_TOKEN=.*/POWER_AUTOMATE_SECURITY_TOKEN=$NEW_TOKEN/" .env
    ```
 
 3. **Power Automate フローの更新**
+
    - Power Automate フローの条件設定を新しいトークンに更新
    - フローを保存して有効化
 
@@ -176,7 +181,7 @@ AgentCore 実行ロールは必要最小限の権限のみを付与：
 ### Webhook URL 漏洩時の対応
 
 1. **Power Automate フローの無効化**
-2. **新しいフローの作成**（新しいWebhook URL）
+2. **新しいフローの作成**（新しい Webhook URL）
 3. **環境変数の更新**
 4. **AgentCore の再デプロイ**
 5. **古いフローの削除**
@@ -219,7 +224,7 @@ aws cloudwatch put-metric-alarm \
 ### デプロイ前チェックリスト
 
 - [ ] `.env` ファイルが適切に設定されている
-- [ ] セキュリティトークンが64文字の16進数文字列である
+- [ ] セキュリティトークンが 64 文字の 16 進数文字列である
 - [ ] Webhook URL が正しい形式である
 - [ ] `.gitignore` に `.env` が含まれている
 - [ ] Power Automate フローでセキュリティトークン認証が設定されている
@@ -246,7 +251,8 @@ aws cloudwatch put-metric-alarm \
 ### 短期的な改善
 
 1. **セキュリティトークンの定期ローテーション**
-   - 3-6ヶ月での手動更新
+
+   - 3-6 ヶ月での手動更新
    - 更新手順の自動化スクリプト作成
 
 2. **ログ監視の強化**
@@ -256,6 +262,7 @@ aws cloudwatch put-metric-alarm \
 ### 長期的な改善
 
 1. **OAuth 2.0 認証の導入**
+
    - より堅牢な認証メカニズムへの移行
    - トークンの自動更新機能
 
@@ -278,11 +285,6 @@ aws cloudwatch put-metric-alarm \
 3. **セキュリティメトリクスの監視**
 
 ## 📞 セキュリティサポート
-
-### 緊急時連絡先
-
-- **GitHub Issues**: セキュリティ関連の問題報告
-- **セキュリティ責任者**: プロジェクト管理者に連絡
 
 ### セキュリティ関連リソース
 

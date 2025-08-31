@@ -1,6 +1,6 @@
 ---
 inclusion: fileMatch
-fileMatchPattern: "design/*.md"
+fileMatchPattern: ".kiro/specs/*/design.md"
 ---
 
 # 設計書作成原則
@@ -154,13 +154,14 @@ async def test_generate_question_success(self, service):
 ```markdown
 ## プロジェクト固有の実装
 
-本規約は [設計書](../specs/aws-exam-coach/design/) で定義された
+本規約は [統合設計書](../specs/aws-exam-agent/design.md) で定義された
 アーキテクチャに基づく実装ガイドラインです。
 
-特に以下の設計方針に準拠:
+設計書で定義された以下の方針に準拠:
 
-- [AI エンジン設計](../specs/aws-exam-coach/design/03-ai-engine.md)
-- [データモデル設計](../specs/aws-exam-coach/design/05-data-models.md)
+- システムアーキテクチャ
+- 技術選択の記録
+- 実装方針
 ```
 
 ## チェックリスト
@@ -178,7 +179,7 @@ async def test_generate_question_success(self, service):
 - [ ] 実装レベルの詳細が含まれていないか
 - [ ] 概念的な説明で理解可能か
 - [ ] 将来の技術変更に対応できる抽象度か
-- [ ] 外部参照リンクが正確で存在するセクションを指しているか
+- [ ] 外部参照リンクが正確で存在するファイル・セクションを指しているか
 
 ### コーディング規約更新時
 

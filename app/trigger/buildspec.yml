@@ -1,6 +1,6 @@
 version: 0.2
 
-# AWS Exam Agent - Lambda Trigger Function Build Specification
+# Cloud CoPassAgent - Lambda Trigger Function Build Specification
 # EventBridge Scheduler Trigger Lambda のパッケージング
 
 phases:

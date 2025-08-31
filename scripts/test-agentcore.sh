@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# AWS Exam Agent - AgentCore 動作確認スクリプト（ログパス表示対応版）
+# Cloud CoPassAgent - AgentCore 動作確認スクリプト（ログパス表示対応版）
 # このスクリプトは AgentCore の動作確認を行い、ログパスを表示します
 
 set -e
@@ -13,7 +13,7 @@ if [ -z "$AWS_PROFILE" ]; then
     exit 1
 fi
 
-echo "🚀 AWS Exam Agent - AgentCore 動作確認開始"
+echo "🚀 Cloud CoPassAgent - AgentCore 動作確認開始"
 echo "============================================"
 echo "📋 使用プロファイル: $AWS_PROFILE"
 

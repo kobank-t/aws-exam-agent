@@ -1,7 +1,7 @@
 [project]
-name = "aws-exam-agent"
+name = "cloud-copass-agent"
 version = "0.1.0"
-description = "AI エージェントによる AWS 試験問題自動生成・配信システム"
+description = "Cloud CoPassAgent - AI エージェントによるクラウド資格学習支援システム"
 authors = [
     {name = "kobank-t", email = "kobank.t@example.com"}
 ]

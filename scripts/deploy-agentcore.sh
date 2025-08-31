@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# AWS Exam Agent - AgentCore デプロイスクリプト（プロファイル対応版）
+# Cloud CoPassAgent - AgentCore デプロイスクリプト（プロファイル対応版）
 
 set -e
 
@@ -12,7 +12,7 @@ if [ -z "$AWS_PROFILE" ]; then
     exit 1
 fi
 
-echo "🚀 AWS Exam Agent - AgentCore デプロイ開始"
+echo "🚀 Cloud CoPassAgent - AgentCore デプロイ開始"
 echo "=========================================="
 echo "📋 使用プロファイル: $AWS_PROFILE"
 

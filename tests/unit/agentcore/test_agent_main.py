@@ -1,5 +1,5 @@
 """
-AWS Exam Agent - agent_main.py のテストコード
+Cloud CoPassAgent - agent_main.py のテストコード
 
 契約による設計に基づく包括的なテスト実装。
 複数問題生成に対応したAgentOutputモデルの検証。
@@ -845,7 +845,7 @@ class TestIntegrationContracts:
         payload = {
             "exam_type": "SAP",
             "question_count": 1,
-            "category": ["compute"]  # リスト形式に修正
+            "category": ["compute"],  # リスト形式に修正
         }
 
         # When - invoke関数を呼び出す

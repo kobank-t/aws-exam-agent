@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AWS Exam Agent - シンプル化版 AgentCore Runtime メインエージェント
+Cloud CoPassAgent - シンプル化版 AgentCore Runtime メインエージェント
 
 実証済みの問題生成機能を中心とした最小限の実装。
 複雑な基盤構築を後回しにして、動く価値を最優先で提供します。

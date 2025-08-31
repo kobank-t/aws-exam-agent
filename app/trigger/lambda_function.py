@@ -1,5 +1,5 @@
 """
-AWS Exam Agent - EventBridge Scheduler Trigger Function
+Cloud CoPassAgent - EventBridge Scheduler Trigger Function
 
 EventBridge SchedulerからAgentCore Runtimeを呼び出すLambda関数
 """

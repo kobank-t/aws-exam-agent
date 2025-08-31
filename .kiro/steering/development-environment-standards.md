@@ -7,7 +7,7 @@ fileMatchPattern: "{.vscode/settings.json,pyproject.toml}"
 
 ## 概要
 
-AWS Exam Agent プロジェクトにおける開発環境設定の標準化規約です。
+Cloud CoPassAgent プロジェクトにおける開発環境設定の標準化規約です。
 VS Code 設定、Mypy 設定、Ruff 設定の最適化により、チーム全体で一貫した開発体験を提供します。
 
 ## 基本原則
@@ -488,5 +488,5 @@ doc_result = await mcp_client.get_aws_documentation("EC2", "overview")
 ---
 
 **更新日**: 2025 年 8 月 10 日  
-**適用範囲**: AWS Exam Agent プロジェクト全体  
+**適用範囲**: Cloud CoPassAgent プロジェクト全体  
 **必須遵守事項**: IDE 上でのエラー表示ゼロ、`# type: ignore` の使用禁止

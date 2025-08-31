@@ -1,14 +1,16 @@
-# AWS Exam Agent テストガイド
+# Cloud CoPassAgent テストガイド
 
-AWS Exam Agent のテスト戦略と実装手順について説明します。
+Cloud CoPassAgent のテスト戦略と実装手順について説明します。
 
-## 🎯 テスト戦略
+> **📍 テスト実装標準**: 汎用的なテスト実装ルールは [テスト設計標準](.kiro/steering/test-design-standards.md) を参照
+
+## 🎯 プロジェクト固有のテスト戦略
 
 ### 基本方針
 
-- **契約による設計**: メソッドの事前条件・事後条件・不変条件を検証
-- **Given-When-Then パターン**: 可読性の高いテスト実装
-- **品質チェック自動化**: スクリプトによる継続的な品質評価
+- **契約による設計**: [テスト設計標準](.kiro/steering/test-design-standards.md) に準拠
+- **AgentCore 中心**: シンプル化されたアーキテクチャに対応したテスト構成
+- **品質チェック自動化**: `./scripts/python-quality-check.sh` による継続的評価
 
 ### テスト構成
 
@@ -40,7 +42,7 @@ app/trigger/lambda_function.py → tests/unit/trigger/test_lambda_function.py
 - **テストクラス**: `Test` + `元のクラス名` または `Test` + `機能名`
 - **テストメソッド**: `test_` + `機能名` + `_contract` (契約検証の場合)
 
-#### 3. 必要な__init__.pyファイル
+#### 3. 必要な**init**.py ファイル
 
 ```bash
 # 各テストディレクトリに__init__.pyを作成
@@ -72,7 +74,7 @@ from app.trigger.lambda_function import lambda_handler
 from app.trigger.lambda_function import lambda_handler
 ```
 
-#### 3. pyproject.toml設定（参考）
+#### 3. pyproject.toml 設定（参考）
 
 構造変更により予約語問題が解決されたため、特別な設定は不要ですが、
 将来的に予約語を含むモジュールがある場合の参考として：
@@ -123,7 +125,7 @@ from app.module.target import target_function
 class TestTargetFunction:
     """
     [対象機能]の契約検証（例外ベースアプローチ）
-    
+
     [対象機能の説明]の動作を契約による設計の観点から検証する。
     """
 
@@ -135,27 +137,27 @@ class TestTargetFunction:
         When: [実行する操作]
         Then: [期待される結果]
 
-        事前条件: 
+        事前条件:
         - [具体的な事前条件1]
         - [具体的な事前条件2]
-        
+
         事後条件:
         - [具体的な事後条件1]
         - [具体的な事後条件2]
-        
+
         不変条件:
         - [具体的な不変条件1]
         - [具体的な不変条件2]
         """
         # Given - 事前条件設定: [具体的な説明]
         # [テストデータの準備]
-        
+
         # When - [操作の実行]
         # [実際の処理実行]
-        
+
         # Then - 事後条件検証: [具体的な説明]
         # [結果の検証]
-        
+
         # 不変条件検証: [具体的な説明]
         # [不変条件の検証]
 ```
@@ -181,7 +183,7 @@ def test_missing_required_parameter_precondition_violation(self) -> None:
     invalid_data = {
         # 意図的に必須パラメータを不足させる
     }
-    
+
     # When & Then - 事前条件違反で例外が発生
     with pytest.raises(ValueError, match="具体的なエラーメッセージ"):
         target_function(invalid_data)
@@ -206,14 +208,14 @@ def test_response_structure_postcondition(self) -> None:
     valid_input = {
         # 有効なテストデータ
     }
-    
+
     # When - [操作の実行]
     result = target_function(valid_input)
-    
+
     # Then - 事後条件検証: [具体的な説明]
     assert "expected_field" in result, "期待されるフィールドが含まれるべき"
     assert isinstance(result["expected_field"], expected_type), "期待される型であるべき"
-    
+
     # 不変条件検証: [具体的な説明]
     assert len(result) > 0, "結果は空でないべき"
 ```
@@ -229,7 +231,7 @@ def test_invariant_conditions_across_scenarios(self) -> None:
     When: [各シナリオで関数を実行する]
     Then: [全てのケースで不変条件が維持される]
 
-    不変条件: 
+    不変条件:
     - [具体的な不変条件1]
     - [具体的な不変条件2]
     """
@@ -238,11 +240,11 @@ def test_invariant_conditions_across_scenarios(self) -> None:
         {"name": "シナリオ1", "input": {...}, "expected": {...}},
         {"name": "シナリオ2", "input": {...}, "expected": {...}},
     ]
-    
+
     # When & Then - 各シナリオで不変条件を検証
     for scenario in test_scenarios:
         result = target_function(scenario["input"])
-        
+
         # 不変条件検証: [具体的な説明]
         assert "invariant_field" in result, f"{scenario['name']}: 不変条件が維持されるべき"
         assert result["invariant_field"] is not None, f"{scenario['name']}: 不変条件が維持されるべき"
@@ -255,16 +257,16 @@ def test_invariant_conditions_across_scenarios(self) -> None:
 ```python
 def test_external_service_integration_contract(self) -> None:
     """外部サービス統合の契約検証"""
-    
+
     # Given - 事前条件設定: モックされた外部サービス
     with patch('boto3.client') as mock_boto_client:
         mock_service = Mock()
         mock_service.operation.return_value = {"status": "success"}
         mock_boto_client.return_value = mock_service
-        
+
         # When - 外部サービスを使用する処理を実行
         result = target_function_with_external_service()
-        
+
         # Then - 事後条件検証: 正しい呼び出しが行われる
         mock_service.operation.assert_called_once()
         assert result["status"] == "success"
@@ -275,14 +277,14 @@ def test_external_service_integration_contract(self) -> None:
 ```python
 def test_logging_behavior_contract(self) -> None:
     """ログ出力動作の契約検証"""
-    
+
     # Given - 事前条件設定: 有効な入力
     valid_input = {...}
-    
+
     # When - ログをキャプチャしながら実行
     with patch('app.module.target.logger') as mock_logger:
         target_function(valid_input)
-        
+
         # Then - 事後条件検証: 適切なログが出力される
         mock_logger.info.assert_any_call("期待されるログメッセージ")
         mock_logger.error.assert_not_called()  # エラーログは出力されない
@@ -305,7 +307,7 @@ uv run pytest tests/unit/ --cov=app   # テスト実行
 
 ### 品質基準
 
-- **テストカバレッジ**: 90%以上（新規実装は100%を目指す）
+- **テストカバレッジ**: 90%以上（新規実装は 100%を目指す）
 - **型チェック**: mypy エラーなし
 - **リンティング**: ruff エラーなし
 - **フォーマット**: ruff format 適用済み
@@ -326,7 +328,7 @@ repos:
         pass_filenames: false
 ```
 
-#### GitHub Actions統合
+#### GitHub Actions 統合
 
 ```yaml
 # .github/workflows/quality-check.yml
@@ -340,7 +342,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
+          python-version: "3.12"
       - name: Install uv
         run: pip install uv
       - name: Install dependencies
@@ -351,7 +353,7 @@ jobs:
 
 ## 🧩 テスト実装の手順
 
-### ステップ1: ディレクトリとファイルの作成
+### ステップ 1: ディレクトリとファイルの作成
 
 ```bash
 # 1. テスト対象に対応するディレクトリを作成
@@ -366,7 +368,7 @@ touch tests/unit/path/to/module/__init__.py
 touch tests/unit/path/to/module/test_target_file.py
 ```
 
-### ステップ2: テストファイルの基本構造を実装
+### ステップ 2: テストファイルの基本構造を実装
 
 ```python
 # 1. ファイルヘッダーを記述
@@ -385,13 +387,13 @@ from app.module.target import target_function
 # 3. テストクラスを定義
 class TestTargetFunction:
     """[対象機能]の契約検証（例外ベースアプローチ）"""
-    
+
     def test_successful_operation_contract(self) -> None:
         """契約による設計: 正常実行時の事後条件検証"""
         # Given-When-Then パターンで実装
 ```
 
-### ステップ3: 契約検証テストの実装
+### ステップ 3: 契約検証テストの実装
 
 ```python
 # 1. 正常ケースの事後条件検証
@@ -413,7 +415,7 @@ def test_edge_case_handling(self) -> None:
     # Then - 適切な処理
 ```
 
-### ステップ4: 品質チェックと修正
+### ステップ 4: 品質チェックと修正
 
 ```bash
 # 1. 品質チェック実行
@@ -427,11 +429,12 @@ uv run ruff format tests/unit/path/to/module/test_target_file.py
 ./scripts/python-quality-check.sh
 ```
 
-### ステップ5: テストコメントスタイル統一
+### ステップ 5: テストコメントスタイル統一
 
 #### 1. docstring（看板コメント）の統一フォーマット
 
 **必須フォーマット:**
+
 ```python
 def test_example_contract(self) -> None:
     """
@@ -448,6 +451,7 @@ def test_example_contract(self) -> None:
 ```
 
 **重要なポイント:**
+
 - **タイトル**: 必ず `契約による設計: [具体的な検証内容]` で開始
 - **Given-When-Then**: 簡潔で明確な記述
 - **契約要素**: 事前条件・事後条件・不変条件を必ず記述
@@ -456,6 +460,7 @@ def test_example_contract(self) -> None:
 #### 2. インラインコメントの統一フォーマット
 
 **必須フォーマット:**
+
 ```python
 # Given - [具体的な条件設定]
 setup_data = {...}
@@ -471,6 +476,7 @@ assert isinstance(result, ExpectedType)
 ```
 
 **重要なポイント:**
+
 - **Given**: `# Given - [具体的な条件設定]`
 - **When**: `# When - [具体的な処理実行]`
 - **Then**: `# Then - 事後条件検証: [具体的な検証内容]`
@@ -479,6 +485,7 @@ assert isinstance(result, ExpectedType)
 #### 3. 禁止パターン
 
 **❌ 使用禁止:**
+
 ```python
 # Act (AAA パターン - 使用しない)
 # Assert (AAA パターン - 使用しない)
@@ -486,6 +493,7 @@ assert isinstance(result, ExpectedType)
 ```
 
 **✅ 正しい例:**
+
 ```python
 # When - AgentInputインスタンスを作成
 # When - invoke関数を実行
@@ -494,11 +502,11 @@ assert isinstance(result, ExpectedType)
 
 #### 4. コメント統一チェックリスト
 
-- [ ] docstringに「契約による設計:」タイトルがある
-- [ ] Given-When-Thenが明確に記述されている
+- [ ] docstring に「契約による設計:」タイトルがある
+- [ ] Given-When-Then が明確に記述されている
 - [ ] 事前条件・事後条件・不変条件が記述されている
 - [ ] インラインコメントが統一フォーマットに従っている
-- [ ] AAAパターン（Act/Assert）を使用していない
+- [ ] AAA パターン（Act/Assert）を使用していない
 - [ ] 不完全なコメント（`# When -`のみ）がない
 
 #### 5. 実装例（完全版）
@@ -544,13 +552,13 @@ def test_successful_invocation_contract(self) -> None:
         mock_bedrock.invoke_agent.return_value = {
             "output": {"text": '{"questions": [{"question": "test"}]}'}
         }
-        
+
         response = lambda_handler(valid_event, mock_context)
 
     # Then - 事後条件検証: 成功レスポンス（200）と適切な構造のボディが返される
     assert response["statusCode"] == 200
     assert "body" in response
-    
+
     # 不変条件検証: AgentCore Runtime が正確に1回呼び出される
     mock_bedrock.invoke_agent.assert_called_once()
 ```
@@ -562,7 +570,7 @@ def test_successful_invocation_contract(self) -> None:
 - [ ] テスト対象の機能を理解している
 - [ ] 契約（事前条件・事後条件・不変条件）を明確にしている
 - [ ] テストディレクトリ構造がアプリ本体と対応している
-- [ ] 必要な__init__.pyファイルが存在する
+- [ ] 必要な**init**.py ファイルが存在する
 
 ### 実装中チェックリスト
 
@@ -571,25 +579,25 @@ def test_successful_invocation_contract(self) -> None:
 - [ ] Given-When-Then パターンで実装している
 - [ ] 契約による設計の観点で検証している
 - [ ] 適切なモック・パッチを使用している
-- [ ] **docstringが統一フォーマットに従っている**
+- [ ] **docstring が統一フォーマットに従っている**
 - [ ] **インラインコメントが統一フォーマットに従っている**
-- [ ] **AAAパターン（Act/Assert）を使用していない**
+- [ ] **AAA パターン（Act/Assert）を使用していない**
 
 ### 実装後チェックリスト
 
 - [ ] 全てのテストがパスしている
-- [ ] テストカバレッジが90%以上である
+- [ ] テストカバレッジが 90%以上である
 - [ ] 品質チェックスクリプトが成功している
 - [ ] コメントが既存テストと同等レベルで充実している
 - [ ] **コメントスタイルが他のテストファイルと統一されている**
-- [ ] **docstring内のGiven-When-Then記述が完備されている**
+- [ ] **docstring 内の Given-When-Then 記述が完備されている**
 - [ ] エラーメッセージが具体的で分かりやすい
 
 ## 🚨 よくある問題と解決方法
 
 ### インポート関連の問題
 
-#### 問題1: モジュールが見つからないエラー
+#### 問題 1: モジュールが見つからないエラー
 
 ```python
 # ❌ 問題のあるインポート
@@ -599,7 +607,7 @@ from wrong.path.module import function  # ModuleNotFoundError
 from app.trigger.lambda_function import lambda_handler
 ```
 
-#### 問題2: pyproject.toml設定との不整合
+#### 問題 2: pyproject.toml 設定との不整合
 
 ```bash
 # pyproject.tomlのsrc設定を確認
@@ -608,7 +616,7 @@ from app.trigger.lambda_function import lambda_handler
 
 ### モック関連の問題
 
-#### 問題1: パッチ対象の指定ミス
+#### 問題 1: パッチ対象の指定ミス
 
 ```python
 # ❌ 間違ったパッチ対象
@@ -618,7 +626,7 @@ patch('lambda_function.logger')  # ModuleNotFoundError
 patch('app.trigger.lambda_function.logger')
 ```
 
-#### 問題2: モックの設定不足
+#### 問題 2: モックの設定不足
 
 ```python
 # ❌ 不完全なモック
@@ -632,7 +640,7 @@ mock_client.operation.return_value = {"expected": "response"}
 
 ### テスト構造の問題
 
-#### 問題1: Given-When-Thenの不明確さ
+#### 問題 1: Given-When-Then の不明確さ
 
 ```python
 # ❌ 不明確な構造
@@ -646,10 +654,10 @@ def test_function_contract(self) -> None:
     """契約による設計: 具体的な検証内容"""
     # Given - 事前条件設定: 具体的な説明
     data = {...}
-    
+
     # When - 操作実行: 具体的な説明
     result = target_function(data)
-    
+
     # Then - 事後条件検証: 具体的な説明
     assert result is not None, "結果が返されるべき"
 ```
@@ -671,5 +679,5 @@ def test_function_contract(self) -> None:
 ### 実装例の参照
 
 - **AgentCore テスト**: `tests/unit/agentcore/test_*.py`
-- **Lambda関数テスト**: `tests/unit/trigger/test_lambda_function.py`
-- **Teams連携テスト**: `tests/unit/agentcore/test_teams_client.py`
+- **Lambda 関数テスト**: `tests/unit/trigger/test_lambda_function.py`
+- **Teams 連携テスト**: `tests/unit/agentcore/test_teams_client.py`

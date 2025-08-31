@@ -7,7 +7,7 @@ fileMatchPattern: "*.py"
 
 ## 概要
 
-AWS Exam Agent プロジェクトにおける Python コーディング規約です。PEP8 を基準とし、Python 3.12 の最新機能を活用した型安全性と AWS サーバーレス開発に最適化された規約を定義します。
+Cloud CoPassAgent プロジェクトにおける Python コーディング規約です。PEP8 を基準とし、Python 3.12 の最新機能を活用した型安全性と AWS サーバーレス開発に最適化された規約を定義します。
 
 ## 基本原則
 
@@ -896,6 +896,6 @@ ignore_missing_imports = true
 
 ---
 
-**適用範囲**: AWS Exam Agent プロジェクト全体  
+**適用範囲**: Cloud CoPassAgent プロジェクト全体  
 **更新日**: 2025 年 8 月 10 日  
 **バージョン**: 2.0 - 統合版・Python 3.12 対応

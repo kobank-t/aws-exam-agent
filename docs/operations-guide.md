@@ -1,10 +1,10 @@
-# AWS Exam Agent 運用ガイド
+# Cloud CoPassAgent 運用ガイド
 
-AWS Exam Agent の日常運用、監視、メンテナンスに関する包括的なガイドです。
+Cloud CoPassAgent の日常運用、監視、メンテナンスに関する包括的なガイドです。
 
 ## 📋 概要
 
-このガイドでは、デプロイ済みの AWS Exam Agent システムの運用に必要な情報を提供します。
+このガイドでは、デプロイ済みの Cloud CoPassAgent システムの運用に必要な情報を提供します。
 
 ## 🏗️ システム構成
 
@@ -344,14 +344,16 @@ export AWS_PROFILE=source-account
 ```
 
 **削除されるリソース:**
-- ECRリポジトリ（全イメージ含む）
-- CloudFormationスタック
-- Lambda関数
-- CodeBuildプロジェクト
-- S3バケット
-- IAMロール
+
+- ECR リポジトリ（全イメージ含む）
+- CloudFormation スタック
+- Lambda 関数
+- CodeBuild プロジェクト
+- S3 バケット
+- IAM ロール
 
 **注意事項:**
+
 - 移行先での動作確認完了後に実行
 - 削除は取り消せません
 - バックアップファイル（`.bedrock_agentcore.yaml.backup`）が必要
@@ -366,7 +368,7 @@ aws logs delete-log-group --log-group-name /aws/bedrock-agentcore/runtimes/agent
 aws logs delete-log-group --log-group-name /aws/lambda/aws-exam-agent-trigger-development --profile $AWS_PROFILE
 ```
 
-### S3バケットのクリーンアップ
+### S3 バケットのクリーンアップ
 
 ```bash
 # 古いLambda関数パッケージの削除
@@ -379,6 +381,7 @@ aws s3 rm s3://aws-exam-agent-deployments-development-ACCOUNT-ID/lambda-packages
 ### 問題発生時の対応フロー
 
 1. **初期調査**
+
    ```bash
    # システム全体の状況確認
    ./scripts/get-agentcore-arn.sh
@@ -387,6 +390,7 @@ aws s3 rm s3://aws-exam-agent-deployments-development-ACCOUNT-ID/lambda-packages
    ```
 
 2. **ログ分析**
+
    ```bash
    # エラーログの確認
    ./scripts/show-agentcore-logs.sh
@@ -394,17 +398,8 @@ aws s3 rm s3://aws-exam-agent-deployments-development-ACCOUNT-ID/lambda-packages
    ```
 
 3. **詳細調査**
+
    - [トラブルシューティングガイド](./troubleshooting-guide.md) を参照
-
-4. **エスカレーション**
-   - GitHub Issues での報告
-   - 作業記録への記載
-
-### 緊急時の連絡先
-
-- **GitHub Issues**: バグ報告・機能要望
-- **作業記録**: [WORK_LOG.md](../WORK_LOG.md)
-- **設計判断記録**: [技術選択記録](../.kiro/specs/aws-exam-agent/design/09-decisions.md)
 
 ## 📚 関連ドキュメント
 

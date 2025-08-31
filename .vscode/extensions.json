@@ -11,6 +11,7 @@
     "ms-python.mypy-type-checker",
     "charliermarsh.ruff",
     "redhat.vscode-yaml",
-    "njpwerner.autodocstring"
+    "njpwerner.autodocstring",
+    "hediet.vscode-drawio"
   ]
 }

@@ -1,12 +1,12 @@
-# AWS Exam Agent デプロイガイド
+# Cloud CoPassAgent デプロイガイド
 
-AWS Exam Agent を新しいAWSアカウント（AWS SSO環境）にデプロイする包括的なガイドです。
+Cloud CoPassAgent を新しい AWS アカウント（AWS SSO 環境）にデプロイする包括的なガイドです。
 
 ## 📋 概要
 
 このガイドでは、以下のコンポーネントを統合的にデプロイします：
 
-- **AgentCore Runtime**: AWS Bedrock AgentCore で動作するAIエージェント
+- **AgentCore Runtime**: AWS Bedrock AgentCore で動作する AI エージェント
 - **Lambda 関数**: EventBridge Scheduler からの呼び出し用
 - **EventBridge Scheduler**: 定期実行スケジュール
 - **関連リソース**: ECR、IAM、S3、CodeBuild
@@ -24,14 +24,14 @@ EventBridge Scheduler → Lambda Function → AgentCore Runtime → Bedrock Mode
 
 - **Python 3.12+**
 - **bedrock-agentcore-starter-toolkit** (最新版)
-- **AWS CLI v2** (SSO対応)
-- **jq** (JSON処理用)
+- **AWS CLI v2** (SSO 対応)
+- **jq** (JSON 処理用)
 
 ### AWS SSO 情報
 
-デプロイ先アカウントのSSO情報を事前に確認：
+デプロイ先アカウントの SSO 情報を事前に確認：
 
-- **SSO Start URL**: 組織のSSO URL
+- **SSO Start URL**: 組織の SSO URL
 - **SSO Region**: SSO が設定されているリージョン
 - **デプロイ先アカウント ID**: 移行先アカウント
 - **使用ロール**: `AdministratorAccess` 等
@@ -48,7 +48,7 @@ EventBridge Scheduler → Lambda Function → AgentCore Runtime → Bedrock Mode
 
 ## 📝 デプロイ手順
 
-### ステップ1: AWS SSO の設定
+### ステップ 1: AWS SSO の設定
 
 #### 1.1 AWS CLI プロファイル設定
 
@@ -59,15 +59,15 @@ aws configure sso --profile YOUR_PROFILE_NAME
 
 **設定時の入力例:**
 
-| 項目 | 入力値例 | 説明 |
-|------|----------|------|
-| SSO session name | `deployment-session` | 任意のセッション名 |
-| SSO start URL | `https://d-xxxxxxxxx.awsapps.com/start/#` | 組織のSSO URL |
-| SSO region | `ap-northeast-1` | SSO が設定されているリージョン |
-| Account | `123456789012` | デプロイ先アカウント ID |
-| Role | `AdministratorAccess` | 使用するロール |
-| CLI default client Region | `us-east-1` | デプロイ先リージョン |
-| CLI default output format | `json` | 出力形式 |
+| 項目                      | 入力値例                                  | 説明                           |
+| ------------------------- | ----------------------------------------- | ------------------------------ |
+| SSO session name          | `deployment-session`                      | 任意のセッション名             |
+| SSO start URL             | `https://d-xxxxxxxxx.awsapps.com/start/#` | 組織の SSO URL                 |
+| SSO region                | `ap-northeast-1`                          | SSO が設定されているリージョン |
+| Account                   | `123456789012`                            | デプロイ先アカウント ID        |
+| Role                      | `AdministratorAccess`                     | 使用するロール                 |
+| CLI default client Region | `us-east-1`                               | デプロイ先リージョン           |
+| CLI default output format | `json`                                    | 出力形式                       |
 
 #### 1.2 SSO ログインと接続確認
 
@@ -82,7 +82,7 @@ aws sso login --profile $AWS_PROFILE
 aws sts get-caller-identity
 ```
 
-### ステップ2: 依存ツールの準備
+### ステップ 2: 依存ツールの準備
 
 #### 2.1 bedrock-agentcore-starter-toolkit の更新
 
@@ -97,7 +97,7 @@ pip install --upgrade bedrock-agentcore-starter-toolkit
 pip show bedrock-agentcore-starter-toolkit
 ```
 
-### ステップ3: AgentCore のデプロイ
+### ステップ 3: AgentCore のデプロイ
 
 #### 3.1 既存設定のバックアップ（既存環境の場合）
 
@@ -122,14 +122,15 @@ agentcore configure --entrypoint agent_main.py
 ```
 
 **設定時の選択:**
+
 - **Execution role**: **Enter**（自動作成）
 - **ECR Repository**: **Enter**（自動作成）
-- **Dependency file**: **Enter**（requirements.txt使用）
-- **OAuth authorizer**: **no**（IAM認証使用）
+- **Dependency file**: **Enter**（requirements.txt 使用）
+- **OAuth authorizer**: **no**（IAM 認証使用）
 
 #### 3.3 環境変数の設定
 
-AgentCoreデプロイ前に、Teams連携用のWebhook URLとセキュリティトークンを設定する必要があります：
+AgentCore デプロイ前に、Teams 連携用の Webhook URL とセキュリティトークンを設定する必要があります：
 
 ```bash
 # セキュリティトークンの生成（64文字のランダム文字列）
@@ -143,10 +144,11 @@ POWER_AUTOMATE_SECURITY_TOKEN=$SECURITY_TOKEN
 EOF
 ```
 
-**⚠️ 重要**: 
+**⚠️ 重要**:
+
 - `POWER_AUTOMATE_WEBHOOK_URL`と`POWER_AUTOMATE_SECURITY_TOKEN`の両方が設定されていない場合、デプロイは失敗します
-- セキュリティトークンはWebhook URL漏洩対策として必須です
-- 生成されたセキュリティトークンは後でPower Automateフローの設定で使用します
+- セキュリティトークンは Webhook URL 漏洩対策として必須です
+- 生成されたセキュリティトークンは後で Power Automate フローの設定で使用します
 
 #### 3.4 AgentCore のデプロイ実行
 
@@ -159,10 +161,11 @@ export AWS_PROFILE=YOUR_PROFILE_NAME
 ```
 
 **デプロイで自動作成されるリソース:**
+
 - ECR リポジトリ: `bedrock-agentcore-agent_main`
 - IAM ロール: 実行ロール・ビルドロール
-- S3 バケット: CodeBuild用ソース保存
-- CodeBuild プロジェクト: ARM64コンテナビルド
+- S3 バケット: CodeBuild 用ソース保存
+- CodeBuild プロジェクト: ARM64 コンテナビルド
 - AgentCore Runtime
 
 #### 3.4 AgentCore 動作確認
@@ -172,23 +175,24 @@ export AWS_PROFILE=YOUR_PROFILE_NAME
 ./scripts/test-agentcore.sh
 ```
 
-### ステップ4: AgentCore ARN の確認
+### ステップ 4: AgentCore ARN の確認
 
-#### 4.1 ARN確認スクリプトの実行
+#### 4.1 ARN 確認スクリプトの実行
 
 ```bash
 # AgentCore ARN確認
 ./scripts/get-agentcore-arn.sh
 ```
 
-#### 4.2 ARNの記録
+#### 4.2 ARN の記録
 
 出力された `Agent Arn:` の値を記録してください：
+
 ```
 arn:aws:bedrock-agentcore:us-east-1:123456789012:runtime/agent_main-XXXXX
 ```
 
-### ステップ5: Lambda + EventBridge Scheduler のデプロイ
+### ステップ 5: Lambda + EventBridge Scheduler のデプロイ
 
 #### 5.1 EventBridge Scheduler デプロイ
 
@@ -198,16 +202,18 @@ arn:aws:bedrock-agentcore:us-east-1:123456789012:runtime/agent_main-XXXXX
 ```
 
 **デプロイ時の入力:**
-- **AgentCore Runtime ARN**: ステップ4.2で記録したARNを入力
+
+- **AgentCore Runtime ARN**: ステップ 4.2 で記録した ARN を入力
 - **デプロイ確認**: `y` を入力
 
 **デプロイで自動作成されるリソース:**
-- Lambda関数: `aws-exam-agent-trigger-development`
-- IAM ロール: Lambda実行ロール・Scheduler実行ロール
-- S3バケット: Lambda関数パッケージ保存用
-- EventBridge Schedule: `aws-exam-agent-daily-development` (平日午前9時実行)
 
-#### 5.2 Lambda関数テスト
+- Lambda 関数: `aws-exam-agent-trigger-development`
+- IAM ロール: Lambda 実行ロール・Scheduler 実行ロール
+- S3 バケット: Lambda 関数パッケージ保存用
+- EventBridge Schedule: `aws-exam-agent-daily-development` (平日午前 9 時実行)
+
+#### 5.2 Lambda 関数テスト
 
 ```bash
 # Lambda関数テスト実行
@@ -215,9 +221,10 @@ arn:aws:bedrock-agentcore:us-east-1:123456789012:runtime/agent_main-XXXXX
 ```
 
 **テスト時の入力:**
-- **AgentCore Runtime ARN**: ステップ4.2で記録したARNを入力
 
-### ステップ6: EventBridge Scheduler 実行テスト
+- **AgentCore Runtime ARN**: ステップ 4.2 で記録した ARN を入力
+
+### ステップ 6: EventBridge Scheduler 実行テスト
 
 #### 6.1 テストスケジュールの作成
 
@@ -229,7 +236,7 @@ echo "実行予定時刻: $(TZ=Asia/Tokyo date -v+2M '+%Y-%m-%d %H:%M:%S')"
 
 aws scheduler create-schedule \
   --name "aws-exam-agent-test-2min" \
-  --description "Test schedule for AWS Exam Agent (runs once in 2 minutes)" \
+  --description "Test schedule for Cloud CoPassAgent (runs once in 2 minutes)" \
   --schedule-expression "cron($EXEC_TIME ? 2025)" \
   --schedule-expression-timezone "Asia/Tokyo" \
   --state "ENABLED" \
@@ -250,7 +257,7 @@ aws scheduler create-schedule \
 aws logs tail /aws/lambda/aws-exam-agent-trigger-development --since 10m --profile $AWS_PROFILE
 ```
 
-### ステップ7: 最終確認
+### ステップ 7: 最終確認
 
 #### 7.1 全体システムの確認
 
@@ -282,11 +289,13 @@ aws logs tail /aws/lambda/aws-exam-agent-trigger-development --follow --profile 
 #### 1. SSO セッション期限切れ
 
 **症状:**
+
 ```
 TokenRefreshRequired: Token refresh required
 ```
 
 **解決方法:**
+
 ```bash
 # 再ログイン
 aws sso login --profile $AWS_PROFILE
@@ -296,6 +305,7 @@ aws sts get-caller-identity --profile $AWS_PROFILE
 #### 2. Bedrock モデルアクセスエラー
 
 **症状:**
+
 ```
 AccessDeniedException: User is not authorized to perform: bedrock:InvokeModelWithResponseStream
 ```
@@ -303,20 +313,23 @@ AccessDeniedException: User is not authorized to perform: bedrock:InvokeModelWit
 **原因と対策:**
 
 1. **Service Control Policy (SCP) 制限**
-   - 組織管理者にSCP制限の解除を依頼
+
+   - 組織管理者に SCP 制限の解除を依頼
 
 2. **クロスリージョン推論の問題**
+
    - 推論プロファイル使用時に意図しないリージョンにアクセス
-   - 直接モデルID（ON_DEMAND対応）への変更を検討
+   - 直接モデル ID（ON_DEMAND 対応）への変更を検討
 
 3. **モデルアクセス権限不足**
    - IAM ロールに適切な Bedrock 権限を追加
 
-#### 3. ARN入力ミス
+#### 3. ARN 入力ミス
 
-**症状:** Lambda関数テストでARNエラー
+**症状:** Lambda 関数テストで ARN エラー
 
 **解決方法:**
+
 ```bash
 # ARNを再確認
 ./scripts/get-agentcore-arn.sh
@@ -331,6 +344,7 @@ export AGENTCORE_ARN="arn:aws:bedrock-agentcore:us-east-1:123456789012:runtime/a
 **症状:** 間違ったアカウントにデプロイされる
 
 **解決方法:**
+
 ```bash
 # 環境変数での統一的な指定
 export AWS_PROFILE=YOUR_PROFILE_NAME
@@ -345,34 +359,34 @@ export AWS_PROFILE=YOUR_PROFILE_NAME
 
 ### デプロイ関連
 
-| スクリプト | 用途 | 前提条件 | 使用例 |
-|------------|------|----------|--------|
-| `./scripts/deploy-agentcore.sh` | AgentCore のデプロイ | AWS SSO ログイン済み | `AWS_PROFILE=sandbox ./scripts/deploy-agentcore.sh` |
+| スクリプト                                  | 用途                             | 前提条件               | 使用例                                                          |
+| ------------------------------------------- | -------------------------------- | ---------------------- | --------------------------------------------------------------- |
+| `./scripts/deploy-agentcore.sh`             | AgentCore のデプロイ             | AWS SSO ログイン済み   | `AWS_PROFILE=sandbox ./scripts/deploy-agentcore.sh`             |
 | `./scripts/deploy-eventbridge-scheduler.sh` | EventBridge Scheduler のデプロイ | AgentCore デプロイ済み | `AWS_PROFILE=sandbox ./scripts/deploy-eventbridge-scheduler.sh` |
-| `./scripts/build-lambda.sh` | Lambda関数のビルド | Python 3.12+ | `./scripts/build-lambda.sh` |
+| `./scripts/build-lambda.sh`                 | Lambda 関数のビルド              | Python 3.12+           | `./scripts/build-lambda.sh`                                     |
 
 ### 確認・テスト関連
 
-| スクリプト | 用途 | 前提条件 | 使用例 |
-|------------|------|----------|--------|
-| `./scripts/get-agentcore-arn.sh` | AgentCore ARN確認 | AgentCore デプロイ済み | `AWS_PROFILE=sandbox ./scripts/get-agentcore-arn.sh` |
-| `./scripts/test-agentcore.sh` | AgentCore 動作確認 | AgentCore デプロイ済み | `AWS_PROFILE=sandbox ./scripts/test-agentcore.sh` |
-| `./scripts/test-lambda.sh` | Lambda関数テスト | Lambda デプロイ済み | `AWS_PROFILE=sandbox ./scripts/test-lambda.sh` |
+| スクリプト                         | 用途               | 前提条件               | 使用例                                                 |
+| ---------------------------------- | ------------------ | ---------------------- | ------------------------------------------------------ |
+| `./scripts/get-agentcore-arn.sh`   | AgentCore ARN 確認 | AgentCore デプロイ済み | `AWS_PROFILE=sandbox ./scripts/get-agentcore-arn.sh`   |
+| `./scripts/test-agentcore.sh`      | AgentCore 動作確認 | AgentCore デプロイ済み | `AWS_PROFILE=sandbox ./scripts/test-agentcore.sh`      |
+| `./scripts/test-lambda.sh`         | Lambda 関数テスト  | Lambda デプロイ済み    | `AWS_PROFILE=sandbox ./scripts/test-lambda.sh`         |
 | `./scripts/show-agentcore-logs.sh` | AgentCore ログ確認 | AgentCore デプロイ済み | `AWS_PROFILE=sandbox ./scripts/show-agentcore-logs.sh` |
 
 ### 削除・クリーンアップ関連
 
-| スクリプト | 用途 | 前提条件 | 使用例 |
-|------------|------|----------|--------|
+| スクリプト                              | 用途               | 前提条件                     | 使用例                                                      |
+| --------------------------------------- | ------------------ | ---------------------------- | ----------------------------------------------------------- |
 | `./scripts/cleanup-source-resources.sh` | 移行元リソース削除 | 移行完了・移行元アクセス可能 | `AWS_PROFILE=default ./scripts/cleanup-source-resources.sh` |
 
 ### 開発・品質管理関連
 
-| スクリプト | 用途 | 前提条件 | 使用例 |
-|------------|------|----------|--------|
-| `./scripts/setup-dev.sh` | 開発環境セットアップ | Python 3.12+, uv | `./scripts/setup-dev.sh` |
-| `./scripts/python-quality-check.sh` | Python品質チェック・テスト実行 | 開発環境セットアップ済み | `./scripts/python-quality-check.sh` |
-| `./scripts/infrastructure-quality-check.sh` | インフラ品質チェック | yamllint, cfn-lint | `./scripts/infrastructure-quality-check.sh` |
+| スクリプト                                  | 用途                            | 前提条件                 | 使用例                                      |
+| ------------------------------------------- | ------------------------------- | ------------------------ | ------------------------------------------- |
+| `./scripts/setup-dev.sh`                    | 開発環境セットアップ            | Python 3.12+, uv         | `./scripts/setup-dev.sh`                    |
+| `./scripts/python-quality-check.sh`         | Python 品質チェック・テスト実行 | 開発環境セットアップ済み | `./scripts/python-quality-check.sh`         |
+| `./scripts/infrastructure-quality-check.sh` | インフラ品質チェック            | yamllint, cfn-lint       | `./scripts/infrastructure-quality-check.sh` |
 
 ## 🔄 継続的な運用
 
@@ -410,21 +424,22 @@ aws sso login --profile $AWS_PROFILE
 - [ ] SSO ログイン・接続確認完了
 - [ ] bedrock-agentcore-starter-toolkit 最新版への更新完了
 - [ ] AgentCore デプロイ完了（`./scripts/deploy-agentcore.sh`）
-- [ ] AgentCore ARN確認完了（`./scripts/get-agentcore-arn.sh`）
+- [ ] AgentCore ARN 確認完了（`./scripts/get-agentcore-arn.sh`）
 - [ ] EventBridge Scheduler デプロイ完了（`./scripts/deploy-eventbridge-scheduler.sh`）
 - [ ] AgentCore 動作確認完了（`./scripts/test-agentcore.sh`）
-- [ ] Lambda関数テスト完了（`./scripts/test-lambda.sh`）
+- [ ] Lambda 関数テスト完了（`./scripts/test-lambda.sh`）
 - [ ] EventBridge Scheduler 実行テスト完了
 - [ ] ログ確認完了（`./scripts/show-agentcore-logs.sh`）
 - [ ] エラーがないことを確認完了
 
-## 📋 生成されるAWSリソース
+## 📋 生成される AWS リソース
 
 デプロイ完了後、以下のリソースが自動作成されます：
 
 ### AgentCore 関連
+
 - **ECR リポジトリ**: `bedrock-agentcore-agent_main`
-- **IAM ロール**: 
+- **IAM ロール**:
   - `AmazonBedrockAgentCoreSDKRuntime-us-east-1-xxx` (実行ロール)
   - `AmazonBedrockAgentCoreSDKCodeBuild-us-east-1-xxx` (ビルドロール)
 - **S3 バケット**: `bedrock-agentcore-codebuild-sources-{account-id}-us-east-1`
@@ -432,10 +447,11 @@ aws sso login --profile $AWS_PROFILE
 - **AgentCore Runtime**: `agent_main-xxx`
 
 ### Lambda + EventBridge Scheduler 関連
-- **Lambda関数**: `aws-exam-agent-trigger-development`
+
+- **Lambda 関数**: `aws-exam-agent-trigger-development`
 - **IAM ロール**:
-  - `LambdaTriggerFunctionRole-development` (Lambda実行ロール)
-  - `EventBridgeSchedulerExecutionRole-development` (Scheduler実行ロール)
+  - `LambdaTriggerFunctionRole-development` (Lambda 実行ロール)
+  - `EventBridgeSchedulerExecutionRole-development` (Scheduler 実行ロール)
 - **S3 バケット**: `aws-exam-agent-deployments-development-{account-id}`
 - **EventBridge Schedule**: `aws-exam-agent-daily-development`
 
@@ -446,12 +462,12 @@ aws sso login --profile $AWS_PROFILE
 ### 削除前の確認事項
 
 1. **移行先での動作確認完了**: 全ての機能が正常に動作することを確認
-2. **移行元アカウントへのアクセス**: 移行元アカウント用のAWSプロファイルが利用可能
+2. **移行元アカウントへのアクセス**: 移行元アカウント用の AWS プロファイルが利用可能
 3. **バックアップファイルの存在**: `app/agentcore/.bedrock_agentcore.yaml.backup` が存在することを確認
 
 ### 削除手順
 
-#### ステップ1: 移行元アカウントプロファイルの確認
+#### ステップ 1: 移行元アカウントプロファイルの確認
 
 ```bash
 # プロファイル一覧確認
@@ -464,7 +480,7 @@ for profile in $(aws configure list-profiles); do
 done
 ```
 
-#### ステップ2: 削除スクリプトの実行
+#### ステップ 2: 削除スクリプトの実行
 
 ```bash
 # 移行元アカウントのプロファイルを指定（例：default）
@@ -474,38 +490,40 @@ export AWS_PROFILE=default
 ./scripts/cleanup-source-resources.sh
 ```
 
-#### ステップ3: 削除内容の確認
+#### ステップ 3: 削除内容の確認
 
 削除スクリプトは以下の手順でリソースを削除します：
 
-1. **ECRリポジトリの強制削除**
-   - CloudFormation削除失敗を防ぐため事前実行
+1. **ECR リポジトリの強制削除**
+
+   - CloudFormation 削除失敗を防ぐため事前実行
    - 全コンテナイメージを含めて削除
 
-2. **CloudFormationスタックの削除**
-   - EventBridge Schedule、Lambda関数、IAMロールが自動削除
+2. **CloudFormation スタックの削除**
+
+   - EventBridge Schedule、Lambda 関数、IAM ロールが自動削除
 
 3. **残存リソースの個別削除**
-   - CodeBuildプロジェクト、S3バケット、IAMロールを個別削除
+   - CodeBuild プロジェクト、S3 バケット、IAM ロールを個別削除
 
 ### 削除されるリソース
 
-| リソースタイプ | リソース名例 | 削除方法 |
-|---------------|-------------|----------|
-| ECRリポジトリ | `aws-exam-agent-runtime-development` | 強制削除（イメージ含む） |
-| CloudFormationスタック | `aws-exam-agent-scheduler-development` | スタック削除 |
-| CloudFormationスタック | `aws-exam-agent-agentcore` | スタック削除 |
-| Lambda関数 | `aws-exam-agent-trigger-development` | 個別削除 |
-| CodeBuildプロジェクト | `bedrock-agentcore-agent_main-builder` | 個別削除 |
-| S3バケット | `aws-exam-agent-deployments-development-*` | オブジェクト削除後バケット削除 |
-| S3バケット | `bedrock-agentcore-codebuild-sources-*` | オブジェクト削除後バケット削除 |
-| IAMロール | `AmazonBedrockAgentCore*` | ポリシーデタッチ後削除 |
-| IAMロール | `LambdaTriggerFunctionRole*` | ポリシーデタッチ後削除 |
-| IAMロール | `EventBridgeSchedulerExecutionRole*` | ポリシーデタッチ後削除 |
+| リソースタイプ          | リソース名例                               | 削除方法                       |
+| ----------------------- | ------------------------------------------ | ------------------------------ |
+| ECR リポジトリ          | `aws-exam-agent-runtime-development`       | 強制削除（イメージ含む）       |
+| CloudFormation スタック | `aws-exam-agent-scheduler-development`     | スタック削除                   |
+| CloudFormation スタック | `aws-exam-agent-agentcore`                 | スタック削除                   |
+| Lambda 関数             | `aws-exam-agent-trigger-development`       | 個別削除                       |
+| CodeBuild プロジェクト  | `bedrock-agentcore-agent_main-builder`     | 個別削除                       |
+| S3 バケット             | `aws-exam-agent-deployments-development-*` | オブジェクト削除後バケット削除 |
+| S3 バケット             | `bedrock-agentcore-codebuild-sources-*`    | オブジェクト削除後バケット削除 |
+| IAM ロール              | `AmazonBedrockAgentCore*`                  | ポリシーデタッチ後削除         |
+| IAM ロール              | `LambdaTriggerFunctionRole*`               | ポリシーデタッチ後削除         |
+| IAM ロール              | `EventBridgeSchedulerExecutionRole*`       | ポリシーデタッチ後削除         |
 
 ### 削除後の確認と後処理
 
-#### ステップ1: 移行先での動作確認
+#### ステップ 1: 移行先での動作確認
 
 ```bash
 # 移行先での動作確認
@@ -514,7 +532,7 @@ export AWS_PROFILE=sandbox
 ./scripts/test-lambda.sh
 ```
 
-#### ステップ2: バックアップファイルの削除
+#### ステップ 2: バックアップファイルの削除
 
 移行元リソース削除が完了し、移行先での動作確認も済んだら、不要になったバックアップファイルを削除：
 
@@ -529,23 +547,25 @@ ls -la app/agentcore/ | grep backup || echo "バックアップファイルは�
 ```
 
 **削除するファイル:**
-- `.bedrock_agentcore.yaml.backup`: 移行元AgentCore設定
-- `Dockerfile.backup`: 移行元Dockerファイル
-- `.dockerignore.backup`: 移行元Docker ignore設定
 
-**注意:** 
+- `.bedrock_agentcore.yaml.backup`: 移行元 AgentCore 設定
+- `Dockerfile.backup`: 移行元 Docker ファイル
+- `.dockerignore.backup`: 移行元 Docker ignore 設定
+
+**注意:**
+
 - これらのファイルは移行元リソース削除時に必要でしたが、削除完了後は不要です
 - 削除スクリプト実行後に表示されるコマンドをコピーして実行してください
 
 ### トラブルシューティング
 
-#### CloudFormation削除失敗
+#### CloudFormation 削除失敗
 
-**症状**: ECRリポジトリにイメージが残っているためスタック削除が失敗
+**症状**: ECR リポジトリにイメージが残っているためスタック削除が失敗
 
-**対応**: 削除スクリプトがECRリポジトリを事前削除するため、通常は発生しません
+**対応**: 削除スクリプトが ECR リポジトリを事前削除するため、通常は発生しません
 
-#### IAMロール削除失敗
+#### IAM ロール削除失敗
 
 **症状**: ポリシーがアタッチされているためロール削除が失敗
 
@@ -557,14 +577,9 @@ ls -la app/agentcore/ | grep backup || echo "バックアップファイルは�
 
 **現象**: AgentCore でのモデル呼び出し時に AccessDeniedException が発生
 
-**原因**: 
+**原因**:
+
 - Service Control Policy (SCP) による制限
 - クロスリージョン推論による意図しないリージョンへのアクセス
 
-**対応**: 組織管理者にSCP制限の解除を依頼
-
-## 📞 サポート
-
-- **GitHub Issues**: バグ報告・機能要望
-- **作業記録**: [WORK_LOG.md](../WORK_LOG.md)
-- **設計判断記録**: [技術選択記録](../.kiro/specs/aws-exam-agent/design/09-decisions.md)
+**対応**: 組織管理者に SCP 制限の解除を依頼

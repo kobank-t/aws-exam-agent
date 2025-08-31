@@ -7,7 +7,7 @@ fileMatchPattern: "*.ts"
 
 ## 概要
 
-AWS Exam Coach プロジェクトにおける TypeScript コーディング規約です。Playwright E2E テスト専用として、学習重視のシンプルな規約を定義します。
+Cloud CoPassAgent プロジェクトにおける TypeScript コーディング規約です。Playwright E2E テスト専用として、学習重視のシンプルな規約を定義します。
 
 **Playwright MCP Server 統合**: プロジェクトでは `@playwright/mcp` を通じて Playwright 機能を MCP（Model Context Protocol）経由で利用可能です。これにより、AI エージェントがブラウザ自動化を直接実行できます。
 
