@@ -91,7 +91,9 @@ class Question(BaseModel):
     options: list[str] = Field(
         description='回答の選択肢。各選択肢は必ずMarkdown太字記法を使用して「**A.** 選択肢の内容」「**B.** 選択肢の内容」の形式で記載する。例: ["**A.** Amazon S3を使用してデータを保存する", "**B.** Amazon EBSを使用してデータを保存する"]'
     )
-    correct_answer: str = Field(description="正解の選択肢")
+    correct_answer: str = Field(
+        description='正解の選択肢のアルファベット（A、B、C、D等のみ）。選択肢の内容は含めず、ラベルのみを記載する。例: "B"'
+    )
     explanation: str = Field(description="正解の理由と他選択肢が不適切な理由")
     source: list[str] = Field(
         description="AWS Documentation MCP Serverで、妥当性検証に用いたAWS公式ドキュメントのURL"
