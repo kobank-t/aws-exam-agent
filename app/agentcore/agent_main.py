@@ -88,7 +88,9 @@ class Question(BaseModel):
     """単一問題のモデル"""
 
     question: str = Field(description="問題文")
-    options: list[str] = Field(description="回答の選択肢(A. xxxx, B. xxxx, …)")
+    options: list[str] = Field(
+        description='回答の選択肢。各選択肢は必ずMarkdown太字記法を使用して「**A.** 選択肢の内容」「**B.** 選択肢の内容」の形式で記載する。例: ["**A.** Amazon S3を使用してデータを保存する", "**B.** Amazon EBSを使用してデータを保存する"]'
+    )
     correct_answer: str = Field(description="正解の選択肢")
     explanation: str = Field(description="正解の理由と他選択肢が不適切な理由")
     source: list[str] = Field(
