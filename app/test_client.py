@@ -1,47 +1,47 @@
 import asyncio
 import logging
-import os
 
-import httpx
 from dotenv import load_dotenv
 
-from app.agentcore.agent_main import AgentOutput, Question
+from app.agentcore.agent_main import AgentOutput
+from app.agentcore.teams_client import TeamsClient
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-output = AgentOutput(
-    questions=[
-        Question(
-            question="ある企業は複数のリージョンにまたがるマルチリージョンアーキテクチャを運用しています。この企業は、プライマリリージョンで障害が発生した場合にビジネスクリティカルなアプリケーションを別のリージョンにフェイルオーバーする能力を確保したいと考えています。このアプリケーションはAmazon RDSのMySQL互換データベースに依存しており、リージョン間で一貫したデータを維持する必要があります。また、フェイルオーバー時のRPO（Recovery Point Objective）は1分未満、RTO（Recovery Time Objective）は数分以内という要件があります。コスト効率も考慮する必要があります。この要件を満たすソリューションとして最も適切なのはどれですか？",
-            options=[
-                "A. プライマリリージョンとセカンダリリージョンの両方でAmazon RDS for MySQLのマルチAZデプロイメントを設定し、AWS Database Migration Service (DMS) を使用して継続的レプリケーションを行う",
-                "B. Amazon RDS for MySQL Global Database を使用し、プライマリリージョンとセカンダリリージョン間でレプリケーションを設定する",
-                "C. Amazon Aurora Global Database を使用して、プライマリリージョンからセカンダリリージョンへの非同期レプリケーションを構成する",
-                "D. プライマリリージョンで Amazon RDS for MySQL を使用し、Amazon S3 クロスリージョンレプリケーションを使用してデータバックアップを複製し、障害時にセカンダリリージョンで新しいインスタンスを起動する",
-                "E. Amazon DynamoDB グローバルテーブルを使用して、すべてのリージョン間でデータを自動的に複製する",
-            ],
-            correct_answer="C",
-            explanation="この問題では、マルチリージョン環境での高可用性データベースソリューションが求められており、RPO 1分未満、RTO 数分以内という厳しい要件があります。\n\nC: Amazon Aurora Global Database は、プライマリリージョンからセカンダリリージョンへの非同期レプリケーションを提供し、典型的なレプリケーション遅延は1秒未満です。また、災害発生時には、セカンダリリージョンを数分以内にプライマリにプロモートすることができるため、RTO要件も満たします。Aurora Global Databaseは専用のインフラストラクチャを使用してレプリケーションを行い、プライマリDBインスタンスへの影響を最小限に抑えます。これは高性能でコスト効率の良いソリューションです。\n\nA: AWS DMSを使用したレプリケーションは可能ですが、Aurora Global Databaseほど効率的ではなく、設定と管理が複雑になります。また、RPO 1分未満の要件を一貫して満たすことが難しい場合があります。\n\nB: RDS for MySQL Global Database は存在しません。RDSの標準機能ではグローバルデータベースをサポートしていません。グローバルデータベース機能はAurora固有の機能です。\n\nD: S3クロスリージョンレプリケーションを使用したバックアップ戦略では、RPO 1分未満の要件を満たすことができません。また、障害発生時に新しいインスタンスを起動してバックアップから復元する必要があるため、RTOも数分以内という要件を満たすことができません。\n\nE: DynamoDB グローバルテーブルはNoSQLソリューションであり、MySQL互換のリレーショナルデータベースが必要とされている要件を満たしません。\n\nしたがって、要件を最もよく満たすのはC（Amazon Aurora Global Database）です。",
-            source=[
-                "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-global-database.html",
-                "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-global-database-disaster-recovery.html",
-            ],
-        )
-    ],
-)
+
+questions = [
+    {
+        "question": "大規模な金融サービス企業が、複数のAWSアカウントにまたがる数千のAmazon EC2インスタンスを管理しています。セキュリティチームは、すべてのEC2インスタンスが最新のセキュリティパッチで更新されていることを確認する必要があります。また、パッチ適用プロセスはコンプライアンス要件を満たすために完全に監査可能である必要があります。この要件を満たすための最も効率的で拡張性の高いソリューションは何ですか？",
+        "options": [
+            "**A.** 各AWSアカウントでAWS Systems Manager Patch Managerを設定し、AWS Organizationsを使用してすべてのアカウントにパッチベースラインを展開する。AWS Security HubとAWS Config統合を使用してパッチコンプライアンスを監視する。",
+            "**B.** カスタムスクリプトを作成し、AWS Lambda関数を使用して各EC2インスタンスにパッチを適用する。AWS Step Functionsを使用してパッチ適用プロセスを調整し、Amazon CloudWatchを使用して結果を記録する。",
+            "**C.** 各AWSアカウントでAmazon Inspector評価を設定し、EC2インスタンスの脆弱性をスキャンする。AWS Systems Manager Automationを使用して、検出された脆弱性に基づいてパッチを適用する。",
+            "**D.** 中央管理AWSアカウントにAWS Systems Manager Patch Managerを設定し、クロスアカウントのIAMロールを使用して他のアカウントのEC2インスタンスにパッチを適用する。Amazon EventBridgeを使用してパッチ適用ジョブをスケジュールし、AWS CloudTrailでアクティビティを監査する。",
+            "**E.** 各EC2インスタンスにカスタムエージェントをインストールし、中央の管理サーバーからパッチをプルして適用する。Amazon S3を使用してパッチファイルを保存し、Amazon DynamoDBを使用してパッチステータスを追跡する。",
+        ],
+        "correct_answer": "A",
+        "explanation": "この問題では、大規模で複雑な環境におけるEC2インスタンスのパッチ管理とコンプライアンス監視が求められています。最も効率的で拡張性の高いソリューションは、オプションAです。\n\n正解の理由：\n1. AWS Systems Manager Patch Managerは、大規模な環境でのパッチ管理に最適化されたサービスです。\n2. AWS Organizationsとの統合により、複数のAWSアカウントにわたってパッチベースラインを一元管理できます。\n3. AWS Security HubとAWS Config統合により、パッチコンプライアンスの包括的な可視性と監査機能が提供されます。\n\n他のオプションが最適でない理由：\nB: カスタムスクリプトとLambda関数の使用は、数千のインスタンスに対して拡張性が低く、管理が複雑になります。\n\nC: Amazon Inspectorは脆弱性スキャンに有用ですが、パッチ管理には最適化されていません。また、複数アカウントでの一元管理が難しくなります。\n\nD: 中央管理アカウントからのクロスアカウントパッチ適用は、セキュリティ上のリスクがあり、大規模環境では管理が複雑になる可能性があります。\n\nE: カスタムエージェントの使用は、管理オーバーヘッドが大きく、AWSのマネージドサービスを活用できていません。\n\nAWS Systems Manager Patch Managerを使用することで、パッチ管理プロセスを自動化し、大規模な環境でも効率的に運用できます。また、AWS Security HubとAWS Configの統合により、コンプライアンス要件を満たす監査可能なソリューションを実現できます。",
+        "source": [
+            "https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-patch.html",
+            "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_integrate_services_list.html",
+            "https://docs.aws.amazon.com/securityhub/latest/userguide/securityhub-standards-fsbp-controls.html#fsbp-ec2-8",
+        ],
+    }
+]
 
 
 async def main() -> None:
-    async with httpx.AsyncClient(timeout=30) as client:
-        response = await client.post(
-            url=os.getenv("POWER_AUTOMATE_WEBHOOK_URL", "dummy"),
-            content=output.model_dump_json(),
-            headers={"Content-Type": "application/json"},
+    teams_client = TeamsClient()
+    try:
+        await teams_client.send(
+            agent_output=AgentOutput.model_construct(questions=questions)
         )
 
-        logger.info(f"Teams投稿完了 (HTTP {response.status_code})")
+    except Exception as e:
+        # Teams投稿失敗でも問題生成結果は返す（処理継続）
+        logger.warning(f"Teams投稿に失敗しましたが、処理を継続します: {str(e)}")
 
 
 if __name__ == "__main__":
