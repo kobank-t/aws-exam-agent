@@ -214,7 +214,7 @@
 
   **サブタスク**:
 
-  - [ ] 7.1 Question モデルに新フィールド追加（learning_domain, primary_technologies, guide_reference）
+  - [x] 7.1 Question モデルに新フィールド追加（learning_domain, primary_technologies, guide_reference）
   - [ ] 7.2 試験ガイドファイル読み込み機能実装（data/exam_guides/{exam_type}.md）
   - [ ] 7.3 AgentInput.exam_type による動的ガイド選択ロジック実装
   - [ ] 7.4 実行時プロンプトに試験ガイド内容統合機能実装

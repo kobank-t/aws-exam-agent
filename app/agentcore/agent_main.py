@@ -99,6 +99,13 @@ class Question(BaseModel):
         description="AWS Documentation MCP Serverで、妥当性検証に用いたAWS公式ドキュメントのURL"
     )
 
+    # 新機能: 試験ガイド活用による問題分類表示
+    learning_domain: str = Field(description="試験ガイドで定義された学習分野分類")
+    primary_technologies: list[str] = Field(
+        description="問題で扱われる主要な技術・サービス"
+    )
+    guide_reference: str = Field(description="試験ガイドの具体的な項目参照")
+
 
 class AgentOutput(BaseModel):
     """エージェントのアウトプットモデル（複数問題対応）"""

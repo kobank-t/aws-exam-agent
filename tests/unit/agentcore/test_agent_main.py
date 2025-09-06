@@ -121,6 +121,10 @@ class TestQuestion:
             "correct_answer": "B",
             "explanation": "m5.largeが最適です。",
             "source": ["https://docs.aws.amazon.com/ec2/"],
+            # 新機能: 試験ガイド活用による問題分類表示
+            "learning_domain": "コンピューティング",
+            "primary_technologies": ["EC2", "インスタンスタイプ"],
+            "guide_reference": "ドメイン1: セキュリティの設計 - タスクステートメント1.1",
         }
 
         # When - Questionインスタンスを作成
@@ -132,12 +136,24 @@ class TestQuestion:
         assert question.correct_answer == "B"
         assert question.explanation == "m5.largeが最適です。"
         assert len(question.source) == 1
+        # 新機能フィールドの検証
+        assert question.learning_domain == "コンピューティング"
+        assert question.primary_technologies == ["EC2", "インスタンスタイプ"]
+        assert (
+            question.guide_reference
+            == "ドメイン1: セキュリティの設計 - タスクステートメント1.1"
+        )
 
         # 不変条件検証
         assert isinstance(question.question, str)
         assert isinstance(question.options, list)
         assert isinstance(question.correct_answer, str)
         assert isinstance(question.explanation, str)
+        assert isinstance(question.source, list)
+        # 新機能フィールドの型検証
+        assert isinstance(question.learning_domain, str)
+        assert isinstance(question.primary_technologies, list)
+        assert isinstance(question.guide_reference, str)
         assert isinstance(question.source, list)
         assert len(question.question) > 0
         assert len(question.options) >= 4  # 最低4つの選択肢
@@ -165,6 +181,10 @@ class TestAgentOutput:
             correct_answer="A",
             explanation="解説",
             source=["https://docs.aws.amazon.com/test/"],
+            # 新機能: 試験ガイド活用による問題分類表示
+            learning_domain="テスト分野",
+            primary_technologies=["テスト技術"],
+            guide_reference="テストガイド参照",
         )
 
         # When - AgentOutputインスタンスを作成
@@ -198,6 +218,10 @@ class TestAgentOutput:
                 correct_answer="A",
                 explanation=f"解説{i + 1}",
                 source=[f"https://docs.aws.amazon.com/test{i + 1}/"],
+                # 新機能: 試験ガイド活用による問題分類表示
+                learning_domain=f"テスト分野{i + 1}",
+                primary_technologies=[f"技術{i + 1}"],
+                guide_reference=f"ガイド参照{i + 1}",
             )
             for i in range(3)
         ]
@@ -227,6 +251,10 @@ class TestInvokeFunction:
             correct_answer="B",
             explanation=f"m5.largeが最適です。解説{index}",
             source=["https://docs.aws.amazon.com/ec2/"],
+            # 新機能: 試験ガイド活用による問題分類表示
+            learning_domain="コンピューティング",
+            primary_technologies=["EC2", "インスタンスタイプ"],
+            guide_reference="ドメイン1: セキュリティの設計 - タスクステートメント1.1",
         )
 
     @patch.dict(
@@ -568,6 +596,10 @@ class TestBusinessLogicContracts:
                     correct_answer="A",
                     explanation="解説",
                     source=[],
+                    # 新機能: 試験ガイド活用による問題分類表示
+                    learning_domain="ネットワークとコンテンツ配信",
+                    primary_technologies=["VPC", "CloudFront"],
+                    guide_reference="ドメイン2: ネットワーク設計",
                 )
             ]
         )
@@ -630,6 +662,10 @@ class TestBusinessLogicContracts:
                     correct_answer="A",
                     explanation="解説",
                     source=[],
+                    # 新機能: 試験ガイド活用による問題分類表示
+                    learning_domain="セキュリティ、アイデンティティ、コンプライアンス",
+                    primary_technologies=["IAM", "CloudTrail"],
+                    guide_reference="ドメイン1: セキュリティの設計",
                 )
             ]
         )
@@ -694,6 +730,10 @@ class TestDataIntegrityContracts:
                 correct_answer="A",
                 explanation=f"解説{i + 1}",
                 source=[f"https://docs.aws.amazon.com/test{i + 1}/"],
+                # 新機能: 試験ガイド活用による問題分類表示
+                learning_domain=f"テスト分野{i + 1}",
+                primary_technologies=[f"技術{i + 1}"],
+                guide_reference=f"ガイド参照{i + 1}",
             )
             for i in range(2)
         ]
@@ -756,6 +796,10 @@ class TestSystemInvariants:
                     correct_answer="A",
                     explanation="解説",
                     source=[],
+                    # 新機能: 試験ガイド活用による問題分類表示
+                    learning_domain="ログテスト分野",
+                    primary_technologies=["ログテスト技術"],
+                    guide_reference="ログテストガイド参照",
                 )
             ]
         )
@@ -793,6 +837,10 @@ class TestSystemInvariants:
                 correct_answer="A",
                 explanation="説明",
                 source=["https://example.com"],
+                # 新機能: 試験ガイド活用による問題分類表示
+                learning_domain="テスト分野",
+                primary_technologies=["テスト技術"],
+                guide_reference="テストガイド参照",
             )
 
     @patch.dict(
@@ -893,6 +941,10 @@ class TestIntegrationContracts:
                 correct_answer="A",
                 explanation=f"統合テスト解説{i + 1}",
                 source=[f"https://docs.aws.amazon.com/integration{i + 1}/"],
+                # 新機能: 試験ガイド活用による問題分類表示
+                learning_domain=f"統合テスト分野{i + 1}",
+                primary_technologies=[f"統合テスト技術{i + 1}"],
+                guide_reference=f"統合テストガイド参照{i + 1}",
             )
             for i in range(2)
         ]
