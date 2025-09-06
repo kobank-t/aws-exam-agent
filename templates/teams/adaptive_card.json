@@ -27,14 +27,14 @@
                         "body": [
                             {
                                 "type": "Container",
-                                "style": "Accent",
+                                "style": "Warning",
                                 "items": [
                                     {
                                         "type": "TextBlock",
                                         "text": "正解は @{items('Send_each_adaptive_card')?['correct_answer']} です",
                                         "size": "Large",
                                         "weight": "Bolder",
-                                        "color": "Good"
+                                        "color": "Attention"
                                     },
                                     {
                                         "type": "TextBlock",
