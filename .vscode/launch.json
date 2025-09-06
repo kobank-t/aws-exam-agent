@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "Python: Current File",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
@@ -13,7 +13,7 @@
     },
     {
       "name": "Python: Pytest",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "module": "pytest",
       "args": ["${workspaceFolder}/tests", "-v"],
@@ -24,13 +24,12 @@
     },
     {
       "name": "AgentCore: Local Test",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/app/agentcore/agent_main.py",
       "console": "integratedTerminal",
       "env": {
         "PYTHONPATH": "${workspaceFolder}",
-        "AWS_PROFILE": "default",
         "LOG_LEVEL": "DEBUG"
       }
     }

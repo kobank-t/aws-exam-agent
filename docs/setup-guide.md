@@ -43,6 +43,10 @@ echo $SECURITY_TOKEN
 
 # .envファイルの作成
 cat > .env << EOF
+# AWS 設定
+AWS_DEFAULT_REGION=us-east-1
+# AWS_PROFILE=sandbox  # 任意: 特定のプロファイルを使用する場合
+
 # Teams 連携（必須）
 POWER_AUTOMATE_WEBHOOK_URL=https://prod-XX.japaneast.logic.azure.com/workflows/YOUR-WORKFLOW-ID/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=YOUR-SIGNATURE
 
