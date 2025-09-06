@@ -126,32 +126,132 @@ graph LR
 ```python
 class Question:
     question: str           # 問題文
-    options: List[str]      # 選択肢（A-D以上）
-    correct_answer: str     # 正解（A, B, C, D...）
+    options: List[str]      # 選択肢（A-D以上、太字記法使用）
+    correct_answer: str     # 正解（A, B, C, D...のラベルのみ）
     explanation: str        # 詳細解説
-    service: str           # 対象AWSサービス
-    quality_score: float   # 品質スコア
-    reference_links: List[str]  # AWS公式ドキュメントリンク
+    source: List[str]       # AWS公式ドキュメントURL（MCP Server検証済み）
+
+    # 新機能: 試験ガイド活用による問題分類表示
+    learning_domain: str    # 学習分野分類（汎用的な命名）
+    primary_technologies: List[str]  # 主要技術要素リスト（最大3つ）
+    guide_reference: str    # 試験ガイドの項目参照（汎用的な命名）
+
+class AgentOutput:
+    questions: List[Question]  # 生成された問題のリスト（複数問題対応）
+
+class AgentInput:
+    exam_type: str          # 試験の種類（現在: "SAP"、新機能で"AWS-SAP-C02"等のファイル名ベースに変更予定）
+    category: List[str]     # 試験ガイド記載のカテゴリ（現状は限定的活用、新機能で自動判定に移行予定）
+    question_count: int     # 生成する問題数（1-5問）
 ```
 
-### Teams 投稿データ
+### Teams 投稿処理
 
 ```python
-class TeamsPost:
-    question_data: Question
-    post_time: datetime
-    channel_id: str
-    adaptive_card: dict    # Adaptive Card JSON
+# 実際の実装では、AgentOutputを直接Power Automate Webhookに送信
+# 専用のTeamsPostモデルは使用せず、シンプルな構成を採用
+
+class TeamsClient:
+    async def send(self, agent_output: AgentOutput) -> None:
+        # AgentOutputをそのままPower Automate Webhookに送信
+        # Power Automate側でAdaptive Card形式に変換・Teams投稿・Microsoft Lists登録を実行
 ```
 
 ## AI エンジン設計
 
 ### 問題生成プロセス
 
-1. **コンテキスト取得**: MCP Server から AWS 公式情報取得
-2. **問題生成**: Claude 3.5 Sonnet による Professional レベル問題作成
-3. **品質検証**: AWS 公式ドキュメント参照による正確性確認
-4. **構造化**: 問題・選択肢・解説の適切な構造化
+1. **試験ガイド読み込み**: `AgentInput.exam_type` に基づく動的ガイド選択
+2. **コンテキスト統合**: 試験ガイド + MCP Server からの AWS 公式情報統合
+3. **問題生成**: Claude 3.5 Sonnet による Professional レベル問題作成
+4. **分類情報生成**: 学習分野・主要技術・ガイド参照の自動判定
+5. **品質検証**: AWS 公式ドキュメント参照による正確性確認
+6. **構造化**: 問題・選択肢・解説・分類情報の適切な構造化
+
+### 試験ガイド統合設計
+
+#### 動的ガイド選択機能
+
+- **ファイル構造**: `data/exam_guides/{exam_type}.md`
+- **選択ロジック**: `AgentInput.exam_type` による動的選択
+- **フォールバック**: 存在しない場合はデフォルトガイド（AWS-SAP-C02.md）使用
+- **拡張性**: 他クラウドプロバイダー（Azure、GCP、OCI 等）対応可能
+- **既存フィールドの扱い**:
+  - `AgentInput.exam_type`: 現在"SAP"デフォルト → 新機能で"AWS-SAP-C02"デフォルトに変更（ファイル名と一致、他クラウド対応）
+  - `AgentInput.category`: 現状維持、将来的に試験ガイドからの自動判定に移行検討
+- **汎用性確保**: Azure（"AZ-104"）、GCP（"ACE"）、OCI（"1Z0-1085"）等の将来対応を考慮した命名規則
+
+#### 段階的実装アプローチ
+
+**基本実装: シンプルなファイル読み込み + プロンプト統合**
+
+- **狙い**: 最小限の実装で機能検証
+- **方法**: 試験ガイド全体をシステムプロンプトに含める
+- **実装**: ファイル読み込み → プロンプトコンテキスト統合
+- **課題**: トークン制限に引っかかる可能性
+
+**拡張実装: 必要に応じて圧縮機能追加**
+
+- **狙い**: トークン制限対応とコンテキスト最適化
+- **方法**: LLMLingua 等による試験ガイド圧縮
+- **効果**: コンテキストサイズを約 1/3 に削減
+- **実装**: 圧縮ライブラリ統合 → 動的圧縮処理
+
+**最適化実装: 動的コンテキスト選択で最適化**
+
+- **狙い**: トークン効率と問題品質の両立
+- **方法**: カテゴリに基づく関連セクションの動的抽出
+- **効果**: 必要な情報のみでコンテキストサイズを最小化
+- **実装**: セクション解析 → 関連度計算 → 動的選択
+
+#### 実装判断基準
+
+- **基本実装 → 拡張実装**: トークン制限エラーが発生した場合
+- **拡張実装 → 最適化実装**: より精密なコンテキスト制御が必要な場合
+- **各フェーズで機能検証**: 問題品質・分類精度・システム安定性を評価
+
+#### 分類情報生成ロジック
+
+```python
+# 学習分野判定
+learning_domain: str = "試験ガイドで定義されたコンテンツ分野から自動判定"
+
+# 主要技術要素抽出（最大3つ）
+primary_technologies: List[str] = [
+    "問題で扱われる主要な技術・サービス",
+    "クラウドプロバイダー非依存の汎用的命名",
+    "最大3つまでの重要度順"
+]
+
+# ガイド参照生成
+guide_reference: str = "試験ガイドの具体的な項目参照（形式は試験により異なる）"
+```
+
+#### プロンプト設計方針
+
+**システムプロンプト（固定）**:
+
+- 既存の問題生成品質要件を維持
+- 汎用的な役割定義・品質チェック項目
+- 分類情報生成の基本指示を追加
+
+**実行時プロンプト（動的）**:
+
+- 試験ガイド内容の動的統合（ファイル読み込み）
+- exam_type に基づく試験固有のコンテキスト提供
+- 分類情報（learning_domain, primary_technologies, guide_reference）の具体的生成指示
+
+**コンテキスト統合方式**:
+
+- 実行時プロンプトに試験ガイド内容を含める
+- MCP Server 情報との適切なバランス
+- トークン制限を考慮した段階的アプローチ
+
+**品質保証**:
+
+- 既存の技術的正確性要件を継続
+- 分類情報の一貫性・正確性を追加
+- 試験ガイドとの整合性確保
 
 ### MCP 統合
 
@@ -170,9 +270,11 @@ class TeamsPost:
 ### Adaptive Card 設計
 
 - **問題表示**: 問題文・選択肢の構造化表示
+- **学習分野表示**: タイトル部分に「[絵文字 分野名] 問題タイトル」形式で表示
 - **インタラクション**: 「回答を見る」ボタン
 - **段階的表示**: 回答・解説の段階的な情報提示
 - **参考資料**: AWS 公式ドキュメントリンク
+- **分類情報**: 主要技術要素・ガイド参照の表示（解説部分）
 
 ## エラーハンドリング
 
@@ -257,4 +359,5 @@ class TeamsPost:
 
 **作成日**: 2025 年 8 月 26 日  
 **基準**: requirements.md の実装済み MVP 要件に基づく統合設計書  
-**更新方針**: 要件変更時のみ更新、実装詳細は docs/ 配下のガイドを参照
+**更新方針**: 要件変更時のみ更新、実装詳細は docs/ 配下のガイドを参照  
+**最終更新**: 2025 年 9 月 6 日（試験ガイド活用による問題分類表示機能の設計追加）
