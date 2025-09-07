@@ -8,6 +8,7 @@ Cloud CoPassAgent - シンプル化版 AgentCore Runtime メインエージェ�
 
 import asyncio
 import logging
+from pathlib import Path
 from typing import Any
 
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
@@ -35,12 +36,55 @@ logger = logging.getLogger(__name__)
 
 # AWS認定試験の種類
 EXAM_TYPES = {
-    "SAP": {
+    "AWS-SAP": {
         "name": "AWS Certified Solutions Architect - Professional",
+        "guide_path": "exam_guides/AWS-SAP-C02.md",
         "guide_url": "https://d1.awsstatic.com/training-and-certification/docs-sa-pro/AWS-Certified-Solutions-Architect-Professional_Exam-Guide.pdf",
         "sample_url": "https://d1.awsstatic.com/training-and-certification/docs-sa-pro/AWS-Certified-Solutions-Architect-Professional_Sample-Questions.pdf",
-    }
+    },
 }
+
+
+def load_exam_guide(exam_type: str) -> str:
+    """試験ガイドファイルを読み込む
+
+    Args:
+        exam_type: 試験タイプ（例: "AWS-SAP"）
+
+    Returns:
+        str: 試験ガイドの内容
+
+    Raises:
+        FileNotFoundError: 指定された試験ガイドファイルが存在しない場合
+        RuntimeError: ファイル読み込みに失敗した場合
+    """
+    try:
+        # 現在のファイルのディレクトリを基準にパスを解決
+        current_file = Path(__file__)
+        base_dir = current_file.parent
+
+        # 試験タイプに基づいてガイドパスを決定
+        if exam_type in EXAM_TYPES:
+            guide_path = base_dir / EXAM_TYPES[exam_type]["guide_path"]
+        else:
+            # フォールバック: 試験タイプ名をそのままファイル名として使用
+            guide_path = base_dir / "exam_guides" / f"{exam_type}.md"
+
+        logger.info(f"試験ガイドファイルを読み込み中: {guide_path}")
+
+        if not guide_path.exists():
+            raise FileNotFoundError(f"試験ガイドファイルが見つかりません: {guide_path}")
+
+        with open(guide_path, encoding="utf-8") as f:
+            content = f.read()
+
+        logger.info(f"試験ガイドファイル読み込み完了: {len(content)}文字")
+        return content
+
+    except Exception as e:
+        logger.error(f"試験ガイドファイル読み込みエラー: {e}")
+        raise RuntimeError(f"試験ガイドファイルの読み込みに失敗しました: {e}") from e
+
 
 # Bedrock基盤モデル（SCP制限対応: ON_DEMAND対応モデルはus.プレフィックスなし）
 MODEL_ID = {
@@ -57,7 +101,7 @@ MODEL_ID = {
 class AgentInput(BaseModel):
     """インプットモデル"""
 
-    exam_type: str = Field(default="SAP", description="AWS認定試験の種類")
+    exam_type: str = Field(default="AWS-SAP", description="AWS認定試験の種類")
 
     category: list[str] = Field(
         default=[],
@@ -180,7 +224,16 @@ async def invoke(payload: dict[str, Any]) -> dict[str, Any]:
     try:
         input = AgentInput(**payload)
 
-        # 1回のプロンプトで複数問題を生成
+        # 試験ガイドファイルを読み込み
+        try:
+            exam_guide_content = load_exam_guide(input.exam_type)
+        except Exception as e:
+            logger.warning(
+                f"試験ガイド読み込みに失敗しました。基本機能で継続します: {e}"
+            )
+            exam_guide_content = ""
+
+        # 1回のプロンプトで複数問題を生成（試験ガイド統合）
         prompt = f"""
             以下の条件に沿って、{input.question_count}問の実践的な問題を作成してください。
 
@@ -189,11 +242,21 @@ async def invoke(payload: dict[str, Any]) -> dict[str, Any]:
             - **カテゴリ**: {input.category}（指定がある場合は、それを考慮してください）
             - **問題数**: {input.question_count}問
 
+            # 試験ガイド情報
+            {exam_guide_content if exam_guide_content else "試験ガイド情報は利用できません。一般的なAWS Professional レベルの問題を生成してください。"}
+
+            # 分類情報生成の指示
+            生成する各問題について、以下の分類情報も含めてください：
+            - **learning_domain**: 試験ガイドで定義された学習分野分類
+            - **primary_technologies**: 問題で扱われる主要な技術・サービス
+            - **guide_reference**: 試験ガイドの具体的な項目参照
+
             # 注意事項
             - 各問題は重複しない内容にしてください
             - 異なるAWSサービスや機能を扱ってください
+            - 試験ガイドの内容に基づいて、適切な学習分野と技術分類を行ってください
         """
-        logger.info(f"問題生成プロンプト: {prompt}")
+        logger.info("問題生成プロンプト（試験ガイド統合版）を作成しました")
 
         # エージェントが利用可能かチェック
         if agent is None:

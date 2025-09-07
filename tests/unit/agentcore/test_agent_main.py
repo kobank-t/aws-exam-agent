@@ -35,7 +35,7 @@ class TestAgentInput:
         input_model = AgentInput()
 
         # Then - 事後条件検証: デフォルト値が正しく設定される
-        assert input_model.exam_type == "SAP"
+        assert input_model.exam_type == "AWS-SAP"
         assert input_model.category == []
         assert input_model.question_count == 1
 
@@ -59,7 +59,7 @@ class TestAgentInput:
         """
         # Given - カスタム値での初期化条件
         custom_data: dict[str, Any] = {
-            "exam_type": "SAP",
+            "exam_type": "AWS-SAP",
             "category": ["コンピューティング", "ストレージ"],
             "question_count": 3,
         }
@@ -68,7 +68,7 @@ class TestAgentInput:
         input_model = AgentInput(**custom_data)
 
         # Then - 事後条件検証
-        assert input_model.exam_type == "SAP"
+        assert input_model.exam_type == "AWS-SAP"
         assert input_model.category == ["コンピューティング", "ストレージ"]
         assert input_model.question_count == 3
 
@@ -92,11 +92,11 @@ class TestAgentInput:
 
         # When & Then - ValidationErrorが発生することを検証
         with pytest.raises(ValidationError):
-            AgentInput(exam_type="SAP", category=[], question_count=0)
+            AgentInput(exam_type="AWS-SAP", category=[], question_count=0)
 
         # 上限テスト
         with pytest.raises(ValidationError):
-            AgentInput(exam_type="SAP", category=[], question_count=6)
+            AgentInput(exam_type="AWS-SAP", category=[], question_count=6)
 
 
 class TestQuestion:
@@ -284,7 +284,7 @@ class TestInvokeFunction:
         """
         # Given - 事前条件設定: 有効なペイロードとモック環境
         valid_payload: dict[str, Any] = {
-            "exam_type": "SAP",
+            "exam_type": "AWS-SAP",
             "category": ["コンピューティング"],
             "question_count": 1,
         }
@@ -349,7 +349,7 @@ class TestInvokeFunction:
         """
         # Given - 事前条件設定
         valid_payload: dict[str, Any] = {
-            "exam_type": "SAP",
+            "exam_type": "AWS-SAP",
             "category": ["コンピューティング", "ストレージ"],
             "question_count": 3,
         }
@@ -418,7 +418,7 @@ class TestInvokeFunction:
         """
         # Given - 事前条件設定
         valid_payload: dict[str, Any] = {
-            "exam_type": "SAP",
+            "exam_type": "AWS-SAP",
             "category": ["コンピューティング"],
             "question_count": 1,
         }
@@ -534,10 +534,10 @@ class TestConstants:
 
         # 不変条件検証
         assert isinstance(EXAM_TYPES, dict)
-        assert "SAP" in EXAM_TYPES
-        assert "name" in EXAM_TYPES["SAP"]
-        assert "guide_url" in EXAM_TYPES["SAP"]
-        assert "sample_url" in EXAM_TYPES["SAP"]
+        assert "AWS-SAP" in EXAM_TYPES
+        assert "name" in EXAM_TYPES["AWS-SAP"]
+        assert "guide_url" in EXAM_TYPES["AWS-SAP"]
+        assert "sample_url" in EXAM_TYPES["AWS-SAP"]
 
     def test_model_id_invariant(self) -> None:
         """
@@ -651,7 +651,7 @@ class TestBusinessLogicContracts:
         不変条件: 試験タイプが処理に反映される
         """
         # Given - 事前条件設定
-        payload: dict[str, Any] = {"exam_type": "SAP", "question_count": 1}
+        payload: dict[str, Any] = {"exam_type": "AWS-SAP", "question_count": 1}
 
         # エージェントモックの設定
         mock_result = AgentOutput(
@@ -891,7 +891,7 @@ class TestIntegrationContracts:
 
         # When - invoke関数を呼び出す
         payload = {
-            "exam_type": "SAP",
+            "exam_type": "AWS-SAP",
             "question_count": 1,
             "category": ["compute"],  # リスト形式に修正
         }
@@ -928,7 +928,7 @@ class TestIntegrationContracts:
         """
         # Given - 事前条件設定
         payload: dict[str, Any] = {
-            "exam_type": "SAP",
+            "exam_type": "AWS-SAP",
             "category": ["コンピューティング"],
             "question_count": 2,
         }
@@ -976,3 +976,141 @@ class TestIntegrationContracts:
         teams_call_args = mock_teams_client.send.call_args[0][0]
         assert hasattr(teams_call_args, "questions")
         assert len(teams_call_args.questions) == 2
+
+
+class TestLoadExamGuide:
+    """load_exam_guide 関数の契約検証"""
+
+    def test_valid_exam_type_sap_contract(self) -> None:
+        """
+        契約による設計: 有効な試験タイプ"AWS-SAP"での試験ガイド読み込み検証
+
+        事前条件: 試験タイプ"AWS-SAP"が指定される
+        事後条件: AWS-SAP-C02.mdファイルの内容が返される
+        不変条件: 返される内容は文字列で、空でない
+        """
+        from app.agentcore.agent_main import load_exam_guide
+
+        # Arrange - 事前条件設定
+        exam_type = "AWS-SAP"
+
+        # Act - 実行
+        result = load_exam_guide(exam_type)
+
+        # Assert - 事後条件検証
+        assert isinstance(result, str)
+        assert len(result) > 0
+        assert "AWS Certified Solutions Architect - Professional" in result
+
+        # 不変条件検証: ファイル内容の基本構造
+        assert "試験ガイド" in result or "Exam Guide" in result
+
+    def test_valid_exam_type_aws_sap_c02_contract(self) -> None:
+        """
+        契約による設計: 有効な試験タイプ"AWS-SAP-C02"での試験ガイド読み込み検証
+
+        事前条件: 試験タイプ"AWS-SAP-C02"が指定される
+        事後条件: AWS-SAP-C02.mdファイルの内容が返される
+        不変条件: 返される内容は文字列で、空でない
+        """
+        from app.agentcore.agent_main import load_exam_guide
+
+        # Arrange - 事前条件設定
+        exam_type = "AWS-SAP-C02"
+
+        # Act - 実行
+        result = load_exam_guide(exam_type)
+
+        # Assert - 事後条件検証
+        assert isinstance(result, str)
+        assert len(result) > 0
+        assert "AWS Certified Solutions Architect - Professional" in result
+
+        # 不変条件検証: ファイル内容の基本構造
+        assert "試験ガイド" in result or "Exam Guide" in result
+
+    def test_nonexistent_exam_type_precondition(self) -> None:
+        """
+        事前条件違反: 存在しない試験タイプでのエラーハンドリング検証
+
+        事前条件違反: 存在しない試験タイプが指定される
+        事後条件: RuntimeErrorが発生する
+        """
+        from app.agentcore.agent_main import load_exam_guide
+
+        # Arrange - 事前条件違反: 存在しないファイル
+        exam_type = "NONEXISTENT-EXAM"
+
+        # Act & Assert - 事前条件検証
+        with pytest.raises(
+            RuntimeError, match="試験ガイドファイルの読み込みに失敗しました"
+        ):
+            load_exam_guide(exam_type)
+
+    def test_file_content_structure_invariant(self) -> None:
+        """
+        不変条件: 読み込まれるファイル内容の構造検証
+
+        不変条件: ファイル内容が期待される構造を持つ
+        """
+        from app.agentcore.agent_main import load_exam_guide
+
+        # Arrange - 事前条件設定
+        exam_type = "AWS-SAP"
+
+        # Act - 実行
+        result = load_exam_guide(exam_type)
+
+        # Assert - 不変条件検証: ファイル内容の構造
+        assert isinstance(result, str)
+        assert len(result) > 1000  # 十分な内容があることを確認
+
+        # 試験ガイドの基本的な構造要素の確認
+        expected_sections = ["試験ガイド", "受験対象者", "試験内容"]
+
+        # 少なくとも一つの期待されるセクションが含まれていることを確認
+        assert any(section in result for section in expected_sections)
+
+    @patch("pathlib.Path.exists")
+    def test_file_not_found_precondition(self, mock_exists: MagicMock) -> None:
+        """
+        事前条件違反: ファイルが存在しない場合のエラーハンドリング検証
+
+        事前条件違反: 試験ガイドファイルが存在しない
+        事後条件: RuntimeErrorが発生する
+        """
+        from app.agentcore.agent_main import load_exam_guide
+
+        # Arrange - 事前条件違反: ファイルが存在しない
+        mock_exists.return_value = False
+        exam_type = "AWS-SAP"
+
+        # Act & Assert - 事前条件検証
+        with pytest.raises(
+            RuntimeError, match="試験ガイドファイルの読み込みに失敗しました"
+        ):
+            load_exam_guide(exam_type)
+
+    @patch("builtins.open")
+    @patch("pathlib.Path.exists")
+    def test_file_read_error_precondition(
+        self, mock_exists: MagicMock, mock_open: MagicMock
+    ) -> None:
+        """
+        事前条件違反: ファイル読み込みエラー時のエラーハンドリング検証
+
+        事前条件違反: ファイル読み込み時にIOErrorが発生
+        事後条件: RuntimeErrorが発生する
+        """
+        from app.agentcore.agent_main import load_exam_guide
+
+        # Arrange - 事前条件違反: ファイル読み込みエラー
+        mock_exists.return_value = True
+        mock_open.side_effect = OSError("ファイル読み込みエラー")
+        exam_type = "AWS-SAP"
+
+        # Act & Assert - 事前条件検証
+        with pytest.raises(
+            RuntimeError, match="試験ガイドファイルの読み込みに失敗しました"
+        ):
+            load_exam_guide(exam_type)
