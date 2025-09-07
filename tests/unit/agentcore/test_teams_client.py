@@ -88,7 +88,7 @@ class TestTeamsClient:
             # 新機能: 試験ガイド活用による問題分類表示
             learning_domain="テスト分野",
             primary_technologies=["テスト技術"],
-            guide_reference="テストガイド参照",
+            learning_insights="テストガイド参照",
         )
         agent_output = AgentOutput(questions=[test_question])
 
@@ -139,7 +139,7 @@ class TestTeamsClient:
             # 新機能: 試験ガイド活用による問題分類表示
             learning_domain="エラーテスト分野",
             primary_technologies=["エラーテスト技術"],
-            guide_reference="エラーテストガイド参照",
+            learning_insights="エラーテストガイド参照",
         )
         agent_output = AgentOutput(questions=[test_question])
 
@@ -191,7 +191,7 @@ class TestTeamsClient:
             # 新機能: 試験ガイド活用による問題分類表示
             learning_domain="タイムアウトテスト分野",
             primary_technologies=["タイムアウトテスト技術"],
-            guide_reference="タイムアウトテストガイド参照",
+            learning_insights="タイムアウトテストガイド参照",
         )
         agent_output = AgentOutput(questions=[test_question])
 
@@ -299,7 +299,7 @@ class TestTeamsClient:
             # 新機能: 試験ガイド活用による問題分類表示
             learning_domain="予期しないエラーテスト分野",
             primary_technologies=["予期しないエラーテスト技術"],
-            guide_reference="予期しないエラーテストガイド参照",
+            learning_insights="予期しないエラーテストガイド参照",
         )
         agent_output = AgentOutput(questions=[test_question])
 
@@ -344,7 +344,7 @@ class TestTeamsClient:
                 # 新機能: 試験ガイド活用による問題分類表示
                 learning_domain=f"テスト分野{i + 1}",
                 primary_technologies=[f"テスト技術{i + 1}"],
-                guide_reference=f"テストガイド参照{i + 1}",
+                learning_insights=f"テストガイド参照{i + 1}",
             )
             for i in range(2)
         ]

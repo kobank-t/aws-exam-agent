@@ -99,30 +99,12 @@ MODEL_ID = {
 
 
 class AgentInput(BaseModel):
-    """インプットモデル"""
+    """問題生成エージェントの入力パラメータ"""
 
-    exam_type: str = Field(default="AWS-SAP", description="AWS認定試験の種類")
-
-    category: list[str] = Field(
-        default=[],
-        description="試験ガイド記載のAWSサービスの主な機能に応じたカテゴリ",
-        examples=[
-            "分析",
-            "アプリケーション統合",
-            "クラウド財務管理",
-            "コンピューティング",
-            "コンテナ",
-            "データベース",
-            "デベロッパーツール",
-            "エンドユーザーコンピューティング",
-            "フロントエンドのウェブとモバイル",
-            "IoT機械学習",
-            "マネジメントとガバナンス",
-            "移行と転送",
-            "ネットワークとコンテンツ配信",
-            "セキュリティ、アイデンティティ、コンプライアンス",
-            "ストレージ",
-        ],
+    exam_type: str = Field(
+        default="AWS-SAP",
+        description="対象試験の種類（試験ガイドファイル名に対応）",
+        examples=["AWS-SAP", "AWS-DVA", "AZ-104", "GCP-ACE"],
     )
 
     question_count: int = Field(default=1, description="生成する問題数", ge=1, le=5)
@@ -144,11 +126,15 @@ class Question(BaseModel):
     )
 
     # 新機能: 試験ガイド活用による問題分類表示
-    learning_domain: str = Field(description="試験ガイドで定義された学習分野分類")
-    primary_technologies: list[str] = Field(
-        description="問題で扱われる主要な技術・サービス"
+    learning_domain: str = Field(
+        description='試験ガイドで定義された学習分野分類。例: "複雑な組織に対応するソリューションの設計", "セキュリティの設計", "信頼性とビジネス継続性の設計"。複数分野にまたがる場合は最も関連の深い分野を1つ選択する。'
     )
-    guide_reference: str = Field(description="試験ガイドの具体的な項目参照")
+    primary_technologies: list[str] = Field(
+        description='問題で扱われる主要なサービス・技術を2-4個リスト化。例: ["AWS Organizations", "AWS Control Tower"], ["Azure Active Directory", "Azure Policy"]。サービス名は正式名称を使用（略称ではなく）。'
+    )
+    learning_insights: str = Field(
+        description='試験ガイドに基づく学習戦略と試験対策ポイント。出題傾向、学習優先度、推奨学習順序、よくある間違い、実務経験による有利/不利、関連する他の試験項目、効果的な学習方法を含む。explanationとは異なり、問題解説ではなく試験合格のための学習支援に特化した情報。例: "【試験対策】出題頻度★★★、学習優先度最高。【よくある間違い】SCPは制限のみ、許可機能なし。【学習戦略】Organizations→Control Tower順で学習推奨。【実務経験差】エンタープライズ経験者有利。"'
+    )
 
 
 class AgentOutput(BaseModel):
@@ -238,23 +224,16 @@ async def invoke(payload: dict[str, Any]) -> dict[str, Any]:
             以下の条件に沿って、{input.question_count}問の実践的な問題を作成してください。
 
             # 生成条件
-            - **レベル**: {EXAM_TYPES[input.exam_type]["name"]}
-            - **カテゴリ**: {input.category}（指定がある場合は、それを考慮してください）
+            - **試験**: {EXAM_TYPES[input.exam_type]["name"]}
             - **問題数**: {input.question_count}問
 
             # 試験ガイド情報
-            {exam_guide_content if exam_guide_content else "試験ガイド情報は利用できません。一般的なAWS Professional レベルの問題を生成してください。"}
-
-            # 分類情報生成の指示
-            生成する各問題について、以下の分類情報も含めてください：
-            - **learning_domain**: 試験ガイドで定義された学習分野分類
-            - **primary_technologies**: 問題で扱われる主要な技術・サービス
-            - **guide_reference**: 試験ガイドの具体的な項目参照
+            {exam_guide_content if exam_guide_content else "試験ガイド情報は利用できません。指定された試験レベルに適した問題を生成してください。"}
 
             # 注意事項
             - 各問題は重複しない内容にしてください
-            - 異なるAWSサービスや機能を扱ってください
-            - 試験ガイドの内容に基づいて、適切な学習分野と技術分類を行ってください
+            - 異なるサービスや機能を扱ってください
+            - 試験ガイドの内容に基づいて適切な分類情報を設定してください
         """
         logger.info("問題生成プロンプト（試験ガイド統合版）を作成しました")
 

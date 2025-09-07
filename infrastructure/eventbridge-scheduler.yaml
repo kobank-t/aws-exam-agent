@@ -1,7 +1,7 @@
 ---
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: AWS Exam Agent - EventBridge Scheduler (Minimal Version)
+Description: Cloud CoPassAgent - EventBridge Scheduler (Minimal Version)
 
 Parameters:
   Environment:
@@ -142,7 +142,7 @@ Resources:
     Type: AWS::Scheduler::Schedule
     Properties:
       Name: !Sub aws-exam-agent-daily-${Environment}
-      Description: !Sub "AWS Exam Agent daily question generation (${ExamType}, ${QuestionCount} questions)"
+      Description: !Sub "Cloud CoPassAgent daily question generation (${ExamType}, ${QuestionCount} questions)"
       State: !Ref ScheduleState
       ScheduleExpression: !Ref ScheduleExpression
       ScheduleExpressionTimezone: !Ref ScheduleTimezone

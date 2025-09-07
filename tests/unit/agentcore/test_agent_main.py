@@ -36,12 +36,10 @@ class TestAgentInput:
 
         # Then - 事後条件検証: デフォルト値が正しく設定される
         assert input_model.exam_type == "AWS-SAP"
-        assert input_model.category == []
         assert input_model.question_count == 1
 
         # 不変条件検証: 型制約と値の整合性
         assert isinstance(input_model.exam_type, str)
-        assert isinstance(input_model.category, list)
         assert isinstance(input_model.question_count, int)
         assert input_model.question_count >= 1
 
@@ -60,7 +58,6 @@ class TestAgentInput:
         # Given - カスタム値での初期化条件
         custom_data: dict[str, Any] = {
             "exam_type": "AWS-SAP",
-            "category": ["コンピューティング", "ストレージ"],
             "question_count": 3,
         }
 
@@ -69,11 +66,9 @@ class TestAgentInput:
 
         # Then - 事後条件検証
         assert input_model.exam_type == "AWS-SAP"
-        assert input_model.category == ["コンピューティング", "ストレージ"]
         assert input_model.question_count == 3
 
         # 不変条件検証
-        assert len(input_model.category) == 2
         assert 1 <= input_model.question_count <= 5
 
     def test_question_count_validation_contract(self) -> None:
@@ -92,11 +87,11 @@ class TestAgentInput:
 
         # When & Then - ValidationErrorが発生することを検証
         with pytest.raises(ValidationError):
-            AgentInput(exam_type="AWS-SAP", category=[], question_count=0)
+            AgentInput(exam_type="AWS-SAP", question_count=0)
 
         # 上限テスト
         with pytest.raises(ValidationError):
-            AgentInput(exam_type="AWS-SAP", category=[], question_count=6)
+            AgentInput(exam_type="AWS-SAP", question_count=6)
 
 
 class TestQuestion:
@@ -124,7 +119,7 @@ class TestQuestion:
             # 新機能: 試験ガイド活用による問題分類表示
             "learning_domain": "コンピューティング",
             "primary_technologies": ["EC2", "インスタンスタイプ"],
-            "guide_reference": "ドメイン1: セキュリティの設計 - タスクステートメント1.1",
+            "learning_insights": "EC2インスタンスタイプ選択では、ワークロードの特性（CPU集約型、メモリ集約型等）を理解することが重要。実務では、コスト最適化とパフォーマンスのバランスを考慮した選択が求められる。",
         }
 
         # When - Questionインスタンスを作成
@@ -139,10 +134,7 @@ class TestQuestion:
         # 新機能フィールドの検証
         assert question.learning_domain == "コンピューティング"
         assert question.primary_technologies == ["EC2", "インスタンスタイプ"]
-        assert (
-            question.guide_reference
-            == "ドメイン1: セキュリティの設計 - タスクステートメント1.1"
-        )
+        assert "EC2インスタンスタイプ選択では" in question.learning_insights
 
         # 不変条件検証
         assert isinstance(question.question, str)
@@ -153,7 +145,7 @@ class TestQuestion:
         # 新機能フィールドの型検証
         assert isinstance(question.learning_domain, str)
         assert isinstance(question.primary_technologies, list)
-        assert isinstance(question.guide_reference, str)
+        assert isinstance(question.learning_insights, str)
         assert isinstance(question.source, list)
         assert len(question.question) > 0
         assert len(question.options) >= 4  # 最低4つの選択肢
@@ -184,7 +176,7 @@ class TestAgentOutput:
             # 新機能: 試験ガイド活用による問題分類表示
             learning_domain="テスト分野",
             primary_technologies=["テスト技術"],
-            guide_reference="テストガイド参照",
+            learning_insights="テスト分野の重要ポイントは基本概念の理解。実務では継続的な学習が重要。",
         )
 
         # When - AgentOutputインスタンスを作成
@@ -221,7 +213,7 @@ class TestAgentOutput:
                 # 新機能: 試験ガイド活用による問題分類表示
                 learning_domain=f"テスト分野{i + 1}",
                 primary_technologies=[f"技術{i + 1}"],
-                guide_reference=f"ガイド参照{i + 1}",
+                learning_insights=f"学習ポイント{i + 1}",
             )
             for i in range(3)
         ]
@@ -254,7 +246,7 @@ class TestInvokeFunction:
             # 新機能: 試験ガイド活用による問題分類表示
             learning_domain="コンピューティング",
             primary_technologies=["EC2", "インスタンスタイプ"],
-            guide_reference="ドメイン1: セキュリティの設計 - タスクステートメント1.1",
+            learning_insights="EC2インスタンスタイプ選択では、ワークロードの特性を理解することが重要。実務では、コスト最適化とパフォーマンスのバランスを考慮。",
         )
 
     @patch.dict(
@@ -285,7 +277,6 @@ class TestInvokeFunction:
         # Given - 事前条件設定: 有効なペイロードとモック環境
         valid_payload: dict[str, Any] = {
             "exam_type": "AWS-SAP",
-            "category": ["コンピューティング"],
             "question_count": 1,
         }
 
@@ -350,7 +341,6 @@ class TestInvokeFunction:
         # Given - 事前条件設定
         valid_payload: dict[str, Any] = {
             "exam_type": "AWS-SAP",
-            "category": ["コンピューティング", "ストレージ"],
             "question_count": 3,
         }
 
@@ -419,7 +409,6 @@ class TestInvokeFunction:
         # Given - 事前条件設定
         valid_payload: dict[str, Any] = {
             "exam_type": "AWS-SAP",
-            "category": ["コンピューティング"],
             "question_count": 1,
         }
 
@@ -564,26 +553,23 @@ class TestBusinessLogicContracts:
     )
     @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
-    async def test_category_specific_generation_contract(
+    async def test_exam_type_specific_generation_contract(
         self, mock_agent: MagicMock, mock_teams_client_class: MagicMock
     ) -> None:
         """
-        契約による設計: カテゴリ指定時の問題生成検証
+        契約による設計: 試験タイプ指定時の問題生成検証
 
-        Given: 特定カテゴリが指定されたペイロード
+        Given: 特定試験タイプが指定されたペイロード
         When: invoke関数を実行する
-        Then: プロンプトにカテゴリが含まれる
+        Then: プロンプトに試験タイプが含まれる
 
-        事前条件: 特定カテゴリが指定される
-        事後条件: プロンプトにカテゴリが含まれる
-        不変条件: 指定されたカテゴリが処理に反映される
+        事前条件: 特定試験タイプが指定される
+        事後条件: プロンプトに試験タイプが含まれる
+        不変条件: 指定された試験タイプが処理に反映される
         """
         # Given - 事前条件設定
         payload: dict[str, Any] = {
-            "category": [
-                "ネットワークとコンテンツ配信",
-                "セキュリティ、アイデンティティ、コンプライアンス",
-            ],
+            "exam_type": "AWS-SAP",
             "question_count": 1,
         }
 
@@ -591,15 +577,15 @@ class TestBusinessLogicContracts:
         mock_result = AgentOutput(
             questions=[
                 Question(
-                    question="ネットワークに関する問題",
+                    question="Solutions Architectに関する問題",
                     options=["A", "B", "C", "D"],
                     correct_answer="A",
                     explanation="解説",
                     source=[],
                     # 新機能: 試験ガイド活用による問題分類表示
-                    learning_domain="ネットワークとコンテンツ配信",
-                    primary_technologies=["VPC", "CloudFront"],
-                    guide_reference="ドメイン2: ネットワーク設計",
+                    learning_domain="複雑な組織に対応するソリューションの設計",
+                    primary_technologies=["AWS Organizations", "AWS Control Tower"],
+                    learning_insights="マルチアカウント戦略では、組織単位(OU)による階層管理とSCPによる権限制御が重要。実務では開発・本番環境の分離やコスト管理の観点から設計する。",
                 )
             ]
         )
@@ -607,11 +593,7 @@ class TestBusinessLogicContracts:
 
         # Teamsクライアントモックの設定
         mock_teams_client = MagicMock()
-        # mock_teams_response削除
-        # status設定削除
-        mock_teams_client.send = AsyncMock(
-            return_value=None
-        )  # 例外ベース: 成功時は何も返さない
+        mock_teams_client.send = AsyncMock(return_value=None)
         mock_teams_client_class.return_value = mock_teams_client
 
         # When - invoke関数を実行
@@ -621,11 +603,10 @@ class TestBusinessLogicContracts:
         assert "error" not in result
         assert "questions" in result
 
-        # 不変条件検証: プロンプトにカテゴリが含まれることを確認
+        # 不変条件検証: プロンプトに試験タイプが含まれることを確認
         call_args = mock_agent.structured_output.call_args
         prompt_arg = call_args.kwargs["prompt"]
-        assert "ネットワークとコンテンツ配信" in prompt_arg
-        assert "セキュリティ、アイデンティティ、コンプライアンス" in prompt_arg
+        assert "AWS Certified Solutions Architect - Professional" in prompt_arg
 
     @patch.dict(
         "os.environ",
@@ -665,7 +646,7 @@ class TestBusinessLogicContracts:
                     # 新機能: 試験ガイド活用による問題分類表示
                     learning_domain="セキュリティ、アイデンティティ、コンプライアンス",
                     primary_technologies=["IAM", "CloudTrail"],
-                    guide_reference="ドメイン1: セキュリティの設計",
+                    learning_insights="IAMセキュリティでは最小権限の原則が基本。CloudTrailによる監査ログ記録で、セキュリティインシデントの早期発見と原因究明が可能。実務では定期的な権限レビューが重要。",
                 )
             ]
         )
@@ -733,7 +714,7 @@ class TestDataIntegrityContracts:
                 # 新機能: 試験ガイド活用による問題分類表示
                 learning_domain=f"テスト分野{i + 1}",
                 primary_technologies=[f"技術{i + 1}"],
-                guide_reference=f"ガイド参照{i + 1}",
+                learning_insights=f"学習ポイント{i + 1}",
             )
             for i in range(2)
         ]
@@ -799,7 +780,7 @@ class TestSystemInvariants:
                     # 新機能: 試験ガイド活用による問題分類表示
                     learning_domain="ログテスト分野",
                     primary_technologies=["ログテスト技術"],
-                    guide_reference="ログテストガイド参照",
+                    learning_insights="ログテスト分野の学習ポイント。実務での応用と注意点を含む。",
                 )
             ]
         )
@@ -840,7 +821,7 @@ class TestSystemInvariants:
                 # 新機能: 試験ガイド活用による問題分類表示
                 learning_domain="テスト分野",
                 primary_technologies=["テスト技術"],
-                guide_reference="テストガイド参照",
+                learning_insights="テスト分野の学習ポイント。実務での応用と注意点を含む。",
             )
 
     @patch.dict(
@@ -893,7 +874,6 @@ class TestIntegrationContracts:
         payload = {
             "exam_type": "AWS-SAP",
             "question_count": 1,
-            "category": ["compute"],  # リスト形式に修正
         }
 
         # When - invoke関数を呼び出す
@@ -929,7 +909,6 @@ class TestIntegrationContracts:
         # Given - 事前条件設定
         payload: dict[str, Any] = {
             "exam_type": "AWS-SAP",
-            "category": ["コンピューティング"],
             "question_count": 2,
         }
 
@@ -944,7 +923,7 @@ class TestIntegrationContracts:
                 # 新機能: 試験ガイド活用による問題分類表示
                 learning_domain=f"統合テスト分野{i + 1}",
                 primary_technologies=[f"統合テスト技術{i + 1}"],
-                guide_reference=f"統合テストガイド参照{i + 1}",
+                learning_insights=f"統合テストガイド参照{i + 1}",
             )
             for i in range(2)
         ]
