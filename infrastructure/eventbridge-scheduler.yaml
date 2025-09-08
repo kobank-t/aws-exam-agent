@@ -26,13 +26,13 @@ Parameters:
 
   ExamType:
     Type: String
-    Default: "SAP"
+    Default: "AWS-SAP"
     Description: AWS certification exam type
     AllowedValues:
-      - "SAP"
-      - "SAA"
-      - "DVA"
-      - "SOA"
+      - "AWS-SAP"
+      - "AWS-SAA"
+      - "AWS-DVA"
+      - "AWS-SOA"
 
   QuestionCount:
     Type: Number

@@ -537,7 +537,7 @@ def test_successful_invocation_contract(self) -> None:
     # Given - 事前条件設定: 全ての必須パラメータを含む有効なイベント
     valid_event: dict[str, Any] = {
         "agentRuntimeArn": "arn:aws:bedrock-agentcore:us-east-1:123456789012:runtime/test-agent-xyz",
-        "exam_type": "SAP",
+        "exam_type": "AWS-SAP",
         "question_count": 1,
     }
     mock_context = Mock()

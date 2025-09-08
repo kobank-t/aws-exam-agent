@@ -51,9 +51,9 @@ echo "🧪 動作確認テスト実行..."
 
 # テスト: コンピューティングカテゴリ
 echo ""
-echo "テスト: コンピューティングカテゴリの問題生成"
+echo "テスト: AWS-SAP 問題生成"
 echo "----------------------------------------------"
-TEST_RESULT=$(agentcore invoke '{"exam_type": "SAP", "category": ["コンピューティング"]}' 2>&1)
+TEST_RESULT=$(agentcore invoke '{"exam_type": "AWS-SAP", "question_count": 1}' 2>&1)
 echo "$TEST_RESULT"
 
 # エラーチェック

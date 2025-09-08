@@ -311,7 +311,7 @@ aws scheduler create-schedule \
   --target '{
     "Arn": "arn:aws:scheduler:::aws-sdk:lambda:invoke",
     "RoleArn": "arn:aws:iam::ACCOUNT_ID:role/EventBridgeSchedulerExecutionRole-development",
-    "Input": "{\"FunctionName\": \"aws-exam-agent-trigger-development\", \"InvocationType\": \"Event\", \"Payload\": \"{\\\"agentRuntimeArn\\\":\\\"YOUR_AGENTCORE_ARN\\\",\\\"exam_type\\\":\\\"SAP\\\",\\\"question_count\\\":1}\"}"
+    "Input": "{\"FunctionName\": \"aws-exam-agent-trigger-development\", \"InvocationType\": \"Event\", \"Payload\": \"{\\\"agentRuntimeArn\\\":\\\"YOUR_AGENTCORE_ARN\\\",\\\"exam_type\\\":\\\"AWS-SAP\\\",\\\"question_count\\\":1}\"}"
   }' \
   --action-after-completion DELETE \
   --region us-east-1

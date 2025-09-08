@@ -123,7 +123,7 @@ cat > "$TEMP_PARAM_FILE" << EOF
   },
   {
     "ParameterKey": "ExamType",
-    "ParameterValue": "SAP"
+    "ParameterValue": "AWS-SAP"
   },
   {
     "ParameterKey": "QuestionCount",

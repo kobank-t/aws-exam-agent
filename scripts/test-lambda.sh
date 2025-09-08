@@ -72,7 +72,7 @@ fi
 echo "📋 使用するAgentCore ARN: $AGENTCORE_ARN"
 
 # テストペイロード作成（JSON形式）
-TEST_PAYLOAD_JSON="{\"agentRuntimeArn\":\"$AGENTCORE_ARN\",\"exam_type\":\"SAP\",\"question_count\":1}"
+TEST_PAYLOAD_JSON="{\"agentRuntimeArn\":\"$AGENTCORE_ARN\",\"exam_type\":\"AWS-SAP\",\"question_count\":1}"
 echo ""
 echo "🧪 Lambda関数テスト実行..."
 echo "📋 テストペイロード（JSON）: $TEST_PAYLOAD_JSON"

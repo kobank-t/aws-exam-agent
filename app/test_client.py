@@ -32,7 +32,7 @@ questions = [
             "AWS Organizations",
             "AWS IAM",
         ],
-        "learning_insights": "【試験対策】出題頻度★★★★☆、学習優先度最高。【よくある間違い】AWS OrganizationsとControl Towerの違いを混同しがち。【学習戦略】Control Tower → Organizations → IAM の順で学習を推奨。【実務経験差】大規模組織でのAWS管理経験者に有利。【関連項目】セキュリティ設計、コンプライアンス管理、マルチアカウントガバナンス。【効果的な学習方法】Control Towerのハンズオン実践とユースケース研究が有効。",
+        "learning_insights": "【試験対策】出題頻度★★★★☆、学習優先度最高。【よくある間違い】AWS OrganizationsとControl Towerの違いを混同しがち。【学習戦略】Control Tower → Organizations → IAM の順で学習を推奨。【実務経験差】大規模組織でのAWS管理経験者に有利。【関連項目】セキュリティ設計、コンプライアンス管理、マルチアカウントガバナンス。【効果的な学習方法】Control Tower経験者5-8時間\n\n【よくある間違い】\n・SCPは「許可」ではなく「制限」のみ（IAMポリシーとの混同注意）\n・Control Towerは既存アカウントの「修正」ではなく「新規作成」に特化\n・Security Hubは「検知」が主機能、「修復」は別サービスが必要\n\n【実務経験による差】\n・有利: エンタープライズでのマルチアカウント運用経験者\n・不利: 単一アカウントのみの経験者（概念理解に時間要）\n・補強方法: AWS Well-Architected「組織編」とControl Tower User Guideを熟読\n\n【関連出題項目】\n・ドメイン2: マルチリージョンでのDR戦略\n・ドメイン4: 組織レベルでのRI/SP最適化\n・複合問題として出題される可能性が高い分野",
     }
 ]
 

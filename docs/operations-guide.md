@@ -177,7 +177,7 @@ aws scheduler update-schedule \
   --target '{
     "Arn": "arn:aws:scheduler:::aws-sdk:lambda:invoke",
     "RoleArn": "arn:aws:iam::ACCOUNT_ID:role/EventBridgeSchedulerExecutionRole-development",
-    "Input": "{\"FunctionName\": \"aws-exam-agent-trigger-development\", \"InvocationType\": \"Event\", \"Payload\": \"{\\\"agentRuntimeArn\\\":\\\"YOUR_ARN\\\",\\\"exam_type\\\":\\\"SAP\\\",\\\"question_count\\\":2}\"}"
+    "Input": "{\"FunctionName\": \"aws-exam-agent-trigger-development\", \"InvocationType\": \"Event\", \"Payload\": \"{\\\"agentRuntimeArn\\\":\\\"YOUR_ARN\\\",\\\"exam_type\\\":\\\"AWS-SAP\\\",\\\"question_count\\\":2}\"}"
   }' \
   --profile $AWS_PROFILE
 ```
