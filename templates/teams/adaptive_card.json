@@ -8,9 +8,18 @@
     "body": [
         {
             "type": "TextBlock",
-            "text": "@{items('Send_each_adaptive_card')?['question']}",
-            "wrap": true,
+            "text": "🎯 **試験分野：** @{items('Send_each_adaptive_card')?['learning_domain']}",
+            "wrap": true
+        },
+        {
+            "type": "TextBlock",
+            "text": "❓ **問題**",
             "weight": "Bolder"
+        },
+        {
+            "type": "TextBlock",
+            "text": "@{items('Send_each_adaptive_card')?['question']}",
+            "wrap": true
         },
         {
             "type": "Container",
@@ -21,7 +30,7 @@
             "actions": [
                 {
                     "type": "Action.ShowCard",
-                    "title": "回答を見る",
+                    "title": "💡 解答・解説を見る",
                     "card": {
                         "type": "AdaptiveCard",
                         "body": [
@@ -31,14 +40,29 @@
                                 "items": [
                                     {
                                         "type": "TextBlock",
-                                        "text": "正解は @{items('Send_each_adaptive_card')?['correct_answer']} です",
+                                        "text": "✅ **正解は @{items('Send_each_adaptive_card')?['correct_answer']} です**",
                                         "size": "Large",
                                         "weight": "Bolder",
                                         "color": "Attention"
                                     },
                                     {
                                         "type": "TextBlock",
+                                        "text": "📝 **解説**",
+                                        "weight": "Bolder"
+                                    },
+                                    {
+                                        "type": "TextBlock",
                                         "text": "@{items('Send_each_adaptive_card')?['explanation']}",
+                                        "wrap": true
+                                    },
+                                    {
+                                        "type": "TextBlock",
+                                        "text": "🎓 **学習ポイント**",
+                                        "weight": "Bolder"
+                                    },
+                                    {
+                                        "type": "TextBlock",
+                                        "text": "@{items('Send_each_adaptive_card')?['learning_insights']}",
                                         "wrap": true
                                     }
                                 ]
@@ -50,13 +74,20 @@
         },
         {
             "type": "TextBlock",
-            "text": "参考リンク",
+            "text": "🔗 参考リンク",
             "size": "Small",
             "isSubtle": true
         },
         {
             "type": "Container",
             "items": @{outputs('Source').body}
+        }
+    ],
+    "actions": [
+        {
+            "type": "Action.OpenUrl",
+            "title": "📖 AWS SAP 試験ガイド",
+            "url": "https://d1.awsstatic.com/ja_JP/training-and-certification/docs-sa-pro/AWS-Certified-Solutions-Architect-Professional_Exam-Guide.pdf"
         }
     ]
 }
