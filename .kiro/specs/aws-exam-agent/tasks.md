@@ -327,7 +327,7 @@
 
   **サブタスク**:
 
-  - [ ] 11.1 AgentCore Memory クライアント実装
+  - [x] 11.1 AgentCore Memory クライアント実装
   - [ ] 11.2 分野履歴記録機能実装（record_domain_usage）
   - [ ] 11.3 分野履歴取得機能実装（get_recent_domains_from_memory）
   - [ ] 11.4 分散プロンプト生成機能実装（create_diversified_prompt）

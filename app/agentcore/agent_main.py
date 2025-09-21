@@ -22,9 +22,11 @@ from strands.tools.mcp import MCPClient
 # 環境検出による動的インポート（AgentCore vs ローカル環境対応）
 try:
     # AgentCore環境では相対インポートが必要
+    from domain_memory_client import DomainMemoryClient
     from teams_client import TeamsClient
 except ImportError:
     # ローカル環境（テスト・開発）では絶対インポートが必要
+    from app.agentcore.domain_memory_client import DomainMemoryClient
     from app.agentcore.teams_client import TeamsClient
 
 # ログ設定
@@ -42,6 +44,13 @@ EXAM_TYPES = {
         "guide_url": "https://d1.awsstatic.com/training-and-certification/docs-sa-pro/AWS-Certified-Solutions-Architect-Professional_Exam-Guide.pdf",
         "sample_url": "https://d1.awsstatic.com/training-and-certification/docs-sa-pro/AWS-Certified-Solutions-Architect-Professional_Sample-Questions.pdf",
     },
+}
+
+# AgentCore Memory 設定
+MEMORY_CONFIG = {
+    "memory_id": "mem-cloud-copass-agent",  # 実際のMemory IDに置き換える必要がある
+    "region_name": "us-east-1",
+    "enabled": True,  # Memory機能の有効/無効切り替え
 }
 
 
@@ -160,6 +169,7 @@ class AgentOutput(BaseModel):
 
 # シンプルで安全な初期化（テスト環境対応）
 agent: Agent | None = None
+memory_client: DomainMemoryClient | None = None
 
 try:
     # 本番環境での初期化
@@ -200,10 +210,22 @@ try:
         - **解説の充実性**: 学習に役立つ詳細な解説
         """,
         )
+
+        # Memory クライアントの初期化
+        if MEMORY_CONFIG["enabled"]:
+            memory_client = DomainMemoryClient(
+                memory_id=MEMORY_CONFIG["memory_id"],
+                region_name=MEMORY_CONFIG["region_name"],
+            )
+            logger.info("AgentCore Memory クライアント初期化完了")
+        else:
+            logger.info("AgentCore Memory 機能は無効化されています")
+
 except Exception as e:
     # テスト環境や開発環境での初期化失敗時
     logger.warning(f"MCP初期化に失敗しました（テスト環境の可能性）: {e}")
     agent = None
+    memory_client = None
 
 # AgentCore アプリケーションの初期化
 app = BedrockAgentCoreApp()

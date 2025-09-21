@@ -131,6 +131,7 @@ module = [
     "botocore.*",
     # AgentCore Runtime環境での相対インポート対応
     "teams_client",
+    "domain_memory_client",
     # テスト用ライブラリ (型スタブなし)
     "moto.*",
     "freezegun.*",
