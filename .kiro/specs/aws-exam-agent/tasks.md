@@ -304,8 +304,39 @@
 
   _Requirements: Requirement 5 (試験ガイド活用による問題分類表示機能) - 最適化実装（条件付き）_
 
+### Phase 4: ジャンル分散機能実装
+
+- [ ] 11. AgentCore Memory を活用したジャンル分散機能実装
+
+  **完了基準**:
+
+  - AgentCore Memory への分野履歴記録機能実装完了
+  - 最近使用された分野の取得機能実装完了
+  - プロンプトレベルでの除外指示機能実装完了
+  - 実際の問題生成で異なる分野からの問題生成確認
+  - `uv run pytest tests/unit/agentcore/ -v` で全テスト通過
+  - `uv run ruff check app/ tests/` でリンターエラー 0 件
+  - `uv run mypy app/ tests/` で型チェックエラー 0 件
+
+  **実装内容**:
+
+  - AgentCore Memory API（CreateEvent/ListEvents）の統合
+  - 学習分野履歴の記録・参照機能
+  - プロンプト生成時の除外指示ロジック
+  - 既存の問題生成フローへの統合
+
+  **サブタスク**:
+
+  - [ ] 11.1 AgentCore Memory クライアント実装
+  - [ ] 11.2 分野履歴記録機能実装（record_domain_usage）
+  - [ ] 11.3 分野履歴取得機能実装（get_recent_domains_from_memory）
+  - [ ] 11.4 分散プロンプト生成機能実装（create_diversified_prompt）
+  - [ ] 11.5 既存問題生成フローへの統合・動作確認
+
+  _Requirements: Requirement 6 (ジャンル分散機能)_
+
 ---
 
 **作成日**: 2025 年 8 月 3 日  
-**最終更新**: 2025 年 9 月 6 日  
-**ステータス**: 試験ガイド活用による問題分類表示機能のタスクリスト作成完了
+**最終更新**: 2025 年 9 月 21 日  
+**ステータス**: ジャンル分散機能のタスクリスト作成完了

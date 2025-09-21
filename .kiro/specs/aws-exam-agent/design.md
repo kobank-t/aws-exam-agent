@@ -285,6 +285,125 @@ learning_insights: str = "試験ガイドに基づく学習戦略と試験対策
 - **技術的正確性**: 最新の AWS 公式ドキュメント参照
 - **標準化**: Model Context Protocol による統一的なコンテキスト提供
 
+## ジャンル分散機能設計
+
+### 問題の背景
+
+現在の実装では、AI エージェントが試験ガイド全体を参照して問題を生成するため、特定のジャンル（例：「複雑な組織に対応するソリューションの設計」）に偏る傾向があります。これにより、試験ガイドの全領域をバランス良く学習できない問題が発生しています。
+
+### 設計方針
+
+- **AgentCore Memory 活用**: AWS マネージドサービスによる履歴管理
+- **プロンプトレベル制御**: 除外指示による分散実現
+- **短期メモリ活用**: 最近使用された学習分野の記録・参照
+- **汎用性**: 異なる試験ガイド構造に対応可能な設計
+
+### アーキテクチャ
+
+#### AgentCore Memory 統合
+
+```mermaid
+graph TB
+    A[問題生成開始] --> B[AgentCore Memory]
+    B --> C[最近の分野履歴取得]
+    C --> D[プロンプト生成]
+    D --> E[AI エージェント]
+    E --> F[問題生成]
+    F --> G[使用分野記録]
+    G --> B
+```
+
+#### メモリ管理設計
+
+**短期メモリ活用**:
+
+- **イベント記録**: 使用した学習分野情報を `CreateEvent` で記録
+- **履歴参照**: `ListEvents` で最近の分野使用履歴を取得
+- **自動管理**: AgentCore Memory による自動的な履歴管理
+
+**データ構造**:
+
+```python
+# CreateEvent API 呼び出し形式
+{
+    "memoryId": "mem-{memory_id}",  # AgentCore Memory ID
+    "actorId": "cloud-copass-agent",  # Cloud CoPassAgentサービスを識別
+    "sessionId": f"{exam_type}-generation",  # 試験タイプ別のセッション
+    "eventTimestamp": 1726920000000,  # Unix timestamp (milliseconds)
+    "payload": [
+        {
+            "Blob": {
+                "data": {
+                    "learning_domain": "複雑な組織に対応するソリューションの設計",
+                    "exam_type": "AWS-SAP",
+                    "generated_at": "2025-09-21T10:00:00Z"
+                }
+            }
+        }
+    ]
+}
+```
+
+#### プロンプト制御ロジック
+
+**除外指示ロジック**:
+
+```python
+async def create_diversified_prompt(exam_type: str, exam_guide: str) -> str:
+    """分散化されたプロンプトを生成"""
+
+    # 最近使用された分野を取得
+    recent_domains = await get_recent_domains_from_memory(exam_type, days=7)
+
+    # 除外指示を含むプロンプト生成
+    exclusion_instruction = ""
+    if recent_domains:
+        domain_list = ", ".join(recent_domains)
+        exclusion_instruction = f"""
+        【重要】最近使用された分野: {domain_list}
+        上記以外の分野から問題を生成してください。
+        """
+
+    return f"""
+    {exclusion_instruction}
+
+    以下の試験ガイドに基づいて問題を生成してください：
+    {exam_guide}
+    """
+
+async def get_recent_domains_from_memory(exam_type: str, days: int = 7) -> list[str]:
+    """最近使用された分野をメモリから取得"""
+
+    events = await agentcore_memory.list_events(
+        actor_id="cloud-copass-agent",
+        session_id=f"{exam_type}-generation",
+        max_results=10  # 最新10件を取得
+    )
+
+    recent_domains = []
+    for event in events:
+        if event.created_at > datetime.now() - timedelta(days=days):
+            payload = event.payload.get("data", {})
+            learning_domain = payload.get("learning_domain")
+            if learning_domain and learning_domain not in recent_domains:
+                recent_domains.append(learning_domain)
+
+    return recent_domains
+
+async def record_domain_usage(question: Question, exam_type: str) -> None:
+    """使用した分野をメモリに記録"""
+
+    await agentcore_memory.create_event(
+        actor_id="cloud-copass-agent",
+        session_id=f"{exam_type}-generation",
+        payload={
+            "learning_domain": question.learning_domain,  # 大分類のみ
+            "exam_type": exam_type,
+            "generated_at": datetime.now().isoformat()
+        }
+    )
+```
+
 ## Teams 統合設計
 
 ### Power Automate フロー
