@@ -69,9 +69,19 @@ if [ -z "$SECURITY_TOKEN" ]; then
     exit 1
 fi
 
+# .envファイルから AGENTCORE_MEMORY_ID を抽出
+MEMORY_ID=$(grep "^AGENTCORE_MEMORY_ID=" "$ENV_FILE" | cut -d'=' -f2-)
+if [ -z "$MEMORY_ID" ]; then
+    echo "❌ AGENTCORE_MEMORY_ID が .env ファイルに設定されていません"
+    echo "💡 .env ファイルに以下の形式で設定してください:"
+    echo "   AGENTCORE_MEMORY_ID=your-memory-id"
+    exit 1
+fi
+
 echo "✅ POWER_AUTOMATE_WEBHOOK_URL を .env から読み込みました"
 echo "✅ POWER_AUTOMATE_SECURITY_TOKEN を .env から読み込みました"
-ENV_ARGS="--env POWER_AUTOMATE_WEBHOOK_URL=$WEBHOOK_URL --env POWER_AUTOMATE_SECURITY_TOKEN=$SECURITY_TOKEN"
+echo "✅ AGENTCORE_MEMORY_ID を .env から読み込みました"
+ENV_ARGS="--env POWER_AUTOMATE_WEBHOOK_URL=$WEBHOOK_URL --env POWER_AUTOMATE_SECURITY_TOKEN=$SECURITY_TOKEN --env AGENTCORE_MEMORY_ID=$MEMORY_ID"
 
 # AgentCore ディレクトリに移動
 cd app/agentcore

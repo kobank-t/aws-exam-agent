@@ -3,6 +3,7 @@
 # 使用方法: 
 #   ./scripts/python-quality-check.sh <file>     # 単一ファイル
 #   ./scripts/python-quality-check.sh            # 全体チェック
+#   ./scripts/python-quality-check.sh --fast     # 高速テスト（開発時用）
 
 set -e
 
@@ -15,7 +16,26 @@ RUFF_TARGETS="app/ tests/"
 MYPY_TARGETS="app/ tests/"
 PYTEST_TARGETS="tests/"
 
-if [[ -n "$TARGET_FILE" ]]; then
+# 高速テスト用設定（重いagent_main.pyテストを除外）
+FAST_PYTEST_TARGETS="tests/unit/agentcore/test_domain_memory_client.py tests/unit/agentcore/test_teams_client.py tests/unit/trigger/test_lambda_function.py"
+
+if [[ "$TARGET_FILE" == "--fast" ]]; then
+    echo "🚀 Python品質チェック開始: 高速モード（開発時用）"
+    
+    # 高速モード（重いテストを除外）
+    echo "📝 Ruff チェック..."
+    uv run ruff check $RUFF_TARGETS
+    echo "✅ Ruff完了"
+    
+    echo "🔍 Mypy型チェック..."
+    uv run mypy $MYPY_TARGETS
+    echo "✅ Mypy完了"
+    
+    echo "🧪 高速テスト実行（agent_main.pyの重いテストを除外）..."
+    uv run pytest $FAST_PYTEST_TARGETS --cov=app --cov-report=term-missing
+    echo "✅ テスト完了"
+    
+elif [[ -n "$TARGET_FILE" ]]; then
     echo "🚀 Python品質チェック開始: $(basename "$TARGET_FILE")"
     
     # 単一ファイルモード
@@ -50,7 +70,7 @@ if [[ -n "$TARGET_FILE" ]]; then
     fi
     
 else
-    echo "🚀 Python品質チェック開始: 全体"
+    echo "🚀 Python品質チェック開始: 全体（CI/CD用）"
     
     # 全体チェックモード（CI用）
     echo "📝 Ruff チェック..."
@@ -61,7 +81,7 @@ else
     uv run mypy $MYPY_TARGETS
     echo "✅ Mypy完了"
     
-    echo "🧪 テスト実行..."
+    echo "🧪 全テスト実行..."
     uv run pytest $PYTEST_TARGETS
     echo "✅ テスト完了"
 fi

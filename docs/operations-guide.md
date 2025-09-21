@@ -104,6 +104,208 @@ aws logs filter-log-events \
   --profile $AWS_PROFILE 2>/dev/null || echo "EventBridge実行ログは別途CloudWatchコンソールで確認してください"
 ```
 
+## 🧠 AgentCore Memory 管理
+
+### Memory 管理スクリプト
+
+AgentCore Memory（ジャンル分散機能）の管理には専用スクリプトを使用します：
+
+```bash
+export AWS_PROFILE=YOUR_PROFILE_NAME
+./scripts/manage-agentcore-memory.sh <command>
+```
+
+#### 利用可能なコマンド
+
+| コマンド  | 説明                      | 使用例                                         |
+| --------- | ------------------------- | ---------------------------------------------- |
+| `show`    | Memory 内容を表示         | `./scripts/manage-agentcore-memory.sh show`    |
+| `analyze` | Memory 使用状況を詳細分析 | `./scripts/manage-agentcore-memory.sh analyze` |
+| `cleanup` | 最新イベント以外を削除    | `./scripts/manage-agentcore-memory.sh cleanup` |
+| `clear`   | 全イベントを削除          | `./scripts/manage-agentcore-memory.sh clear`   |
+| `help`    | ヘルプを表示              | `./scripts/manage-agentcore-memory.sh help`    |
+
+#### Memory 内容の確認
+
+```bash
+# 基本的な内容確認
+./scripts/manage-agentcore-memory.sh show
+```
+
+**出力例:**
+
+```
+📊 AgentCore Memory 内容
+=========================
+📋 基本情報:
+   Memory ID: CloudCoPassAgentMemory_1758470667-YvBRIT3DdL
+   Session ID: AWS-SAP
+   Actor ID: cloud-copass-agent
+   総イベント数: 5
+
+📈 学習分野別統計:
+┌─────────────────────────────────────────────────────────┬───────┐
+│ 学習分野                                                │ 回数  │
+├─────────────────────────────────────────────────────────┼───────┤
+│ コンピューティング                                      │     2 │
+│ ストレージ                                              │     2 │
+│ ネットワーキング                                        │     1 │
+└─────────────────────────────────────────────────────────┴───────┘
+
+⏰ 最新イベント（最新10件）:
+┌──────────────────────┬─────────────────────────────────────────────┐
+│ 日時                 │ 学習分野                                    │
+├──────────────────────┼─────────────────────────────────────────────┤
+│ 2025-09-22 09:00     │ ネットワーキング                            │
+│ 2025-09-21 18:00     │ ストレージ                                  │
+│ 2025-09-21 09:00     │ コンピューティング                          │
+└──────────────────────┴─────────────────────────────────────────────┘
+```
+
+#### ジャンル分散効果の分析
+
+```bash
+# 詳細分析の実行
+./scripts/manage-agentcore-memory.sh analyze
+```
+
+**出力例:**
+
+```
+📊 AgentCore Memory 詳細分析
+=============================
+📋 基本情報:
+   Memory ID: CloudCoPassAgentMemory_1758470667-YvBRIT3DdL
+   Session ID: AWS-SAP
+   総イベント数: 5
+
+🎯 ジャンル分散効果分析:
+   📋 総学習分野数: 3
+   📊 多様性比率: 0.60 (1.0が最高)
+   📋 最近5回の学習分野多様性: 3/5 分野
+   📊 使用頻度の偏り比率: 2.00 (最大/最小)
+   ✅ 分散効果: 良好（偏りが少ない）
+
+💡 推奨アクション:
+   📈 より多くの学習データ蓄積により、分散効果が向上します
+```
+
+#### Memory のメンテナンス
+
+##### 最新イベント以外の削除
+
+```bash
+# 最新のイベントのみを残して古いイベントを削除
+./scripts/manage-agentcore-memory.sh cleanup
+```
+
+**用途:**
+
+- Memory 容量の節約
+- 最新の学習傾向のみを保持
+- テスト後のクリーンアップ
+
+##### 全イベントの削除
+
+```bash
+# 全てのMemoryイベントを削除（初期化）
+./scripts/manage-agentcore-memory.sh clear
+```
+
+**用途:**
+
+- 完全な初期化
+- 新しい学習パターンでの開始
+- 問題のあるデータのリセット
+
+**⚠️ 注意事項:**
+
+- 削除操作は取り消せません
+- 削除前に確認プロンプトが表示されます
+- 削除後はジャンル分散機能が初期状態に戻ります
+
+### Memory 監視のベストプラクティス
+
+#### 日次確認
+
+```bash
+# 毎日の問題生成後にMemory状況を確認
+./scripts/manage-agentcore-memory.sh show
+```
+
+**確認ポイント:**
+
+- 新しい学習分野が記録されているか
+- 特定分野への偏りが発生していないか
+- 総イベント数が適切な範囲内か
+
+#### 週次分析
+
+```bash
+# 週次でジャンル分散効果を詳細分析
+./scripts/manage-agentcore-memory.sh analyze
+```
+
+**確認ポイント:**
+
+- 多様性比率が 0.7 以上を維持しているか
+- 偏り比率が 3.0 以下を維持しているか
+- 推奨アクションに従った改善が必要か
+
+#### 月次メンテナンス
+
+```bash
+# 月次で古いイベントをクリーンアップ
+./scripts/manage-agentcore-memory.sh cleanup
+```
+
+**メンテナンス理由:**
+
+- Memory 容量の最適化
+- 最新の学習傾向への集中
+- システムパフォーマンスの維持
+
+### トラブルシューティング
+
+#### Memory 機能が動作しない場合
+
+1. **Memory 設定の確認**
+
+   ```bash
+   # .envファイルでMemory IDが設定されているか確認
+   grep AGENTCORE_MEMORY_ID .env
+   ```
+
+2. **AWS 権限の確認**
+
+   ```bash
+   # AgentCore Memory APIへのアクセス権限確認
+   aws bedrock-agentcore list-events --memory-id CloudCoPassAgentMemory_1758470667-YvBRIT3DdL --session-id AWS-SAP --actor-id cloud-copass-agent --region us-east-1 --no-include-payloads --profile $AWS_PROFILE
+   ```
+
+3. **AgentCore ログの確認**
+   ```bash
+   # Memory関連のエラーログを確認
+   ./scripts/show-agentcore-logs.sh
+   # オプション 6（エラーログのみ）を選択し、"memory"で検索
+   ```
+
+#### Memory 容量の問題
+
+- **症状**: Memory 書き込みエラー
+- **対処**: 古いイベントの削除
+  ```bash
+  ./scripts/manage-agentcore-memory.sh cleanup
+  ```
+
+#### 分散効果が低い場合
+
+- **症状**: 偏り比率が 3.0 を超える
+- **対処**:
+  1. 問題生成頻度の調整
+  2. 試験ガイドの内容確認
+  3. プロンプト調整の検討
+
 ## 🔧 日常的なメンテナンス
 
 ### 定期的な確認項目
@@ -119,6 +321,9 @@ aws logs tail /aws/lambda/aws-exam-agent-trigger-development --since 24h --profi
 
 # 3. エラーの有無確認
 aws logs tail /aws/bedrock-agentcore/runtimes/agent_main-XXXXX-DEFAULT --since 24h --profile $AWS_PROFILE | grep -i error || echo "エラーなし"
+
+# 4. Memory状況確認（ジャンル分散機能）
+./scripts/manage-agentcore-memory.sh show
 ```
 
 #### 週次の確認
@@ -128,7 +333,10 @@ aws logs tail /aws/bedrock-agentcore/runtimes/agent_main-XXXXX-DEFAULT --since 2
 ./scripts/test-agentcore.sh
 ./scripts/test-lambda.sh
 
-# 2. リソース使用状況確認
+# 2. ジャンル分散効果の詳細分析
+./scripts/manage-agentcore-memory.sh analyze
+
+# 3. リソース使用状況確認
 aws cloudwatch get-metric-statistics \
   --namespace AWS/Lambda \
   --metric-name Duration \
@@ -146,7 +354,10 @@ aws cloudwatch get-metric-statistics \
 # 1. 依存ツールの更新確認
 pip list --outdated | grep bedrock-agentcore-starter-toolkit
 
-# 2. コスト確認
+# 2. Memory メンテナンス（古いイベントのクリーンアップ）
+./scripts/manage-agentcore-memory.sh cleanup
+
+# 3. コスト確認
 aws ce get-cost-and-usage \
   --time-period Start=$(date -d '1 month ago' +%Y-%m-%d),End=$(date +%Y-%m-%d) \
   --granularity MONTHLY \
@@ -405,4 +616,8 @@ aws s3 rm s3://aws-exam-agent-deployments-development-ACCOUNT-ID/lambda-packages
 
 - [デプロイガイド](./deployment-guide.md): 新規環境へのデプロイ
 - [トラブルシューティングガイド](./troubleshooting-guide.md): 問題解決手法
-- [環境変数リファレンス](./environment-variables-guide.md): 設定詳細
+- [テストガイド](./testing-guide.md): テスト実行と Memory 機能の検証
+- スクリプトリファレンス:
+  - `./scripts/manage-agentcore-memory.sh`: AgentCore Memory 管理
+  - `./scripts/test-agentcore.sh`: AgentCore 動作テスト
+  - `./scripts/show-agentcore-logs.sh`: ログ確認

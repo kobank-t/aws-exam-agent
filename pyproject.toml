@@ -98,6 +98,7 @@ addopts = [
 filterwarnings = [
     # botocore内部でdatetime.utcnow()の非推奨警告が発生する問題を抑制
     "ignore::DeprecationWarning:botocore.auth",
+    "ignore::DeprecationWarning:botocore.endpoint",
     "ignore::pytest.PytestCollectionWarning",
 ]
 markers = [

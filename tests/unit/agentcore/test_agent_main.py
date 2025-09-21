@@ -256,12 +256,14 @@ class TestInvokeFunction:
             "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
         },
     )
+    @patch("app.agentcore.agent_main.memory_client")
     @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
     async def test_single_question_generation_contract(
         self,
         mock_agent: MagicMock,
         mock_teams_client_class: MagicMock,
+        mock_memory_client: MagicMock,
     ) -> None:
         """
         契約による設計: 単一問題生成の包括的検証
@@ -283,6 +285,10 @@ class TestInvokeFunction:
         # エージェントモックの設定
         mock_result = AgentOutput(questions=[self._create_mock_question()])
         mock_agent.structured_output.return_value = mock_result
+
+        # Memory クライアントモックの設定
+        mock_memory_client.get_recent_domains = AsyncMock(return_value=[])
+        mock_memory_client.record_domain_usage = AsyncMock(return_value=None)
 
         # Teamsクライアントモックの設定
         mock_teams_client = MagicMock()
@@ -309,8 +315,14 @@ class TestInvokeFunction:
         assert isinstance(question["options"], list)
         assert len(question["options"]) >= 4
 
-        # エージェントとTeamsクライアントが正しく呼び出されたことを確認
+        # エージェント、Memory、Teamsクライアントが正しく呼び出されたことを確認
         mock_agent.structured_output.assert_called_once()
+        mock_memory_client.get_recent_domains.assert_called_once_with(
+            exam_type="AWS-SAP", days_back=7
+        )
+        mock_memory_client.record_domain_usage.assert_called_once_with(
+            learning_domain="コンピューティング", exam_type="AWS-SAP"
+        )
         mock_teams_client.send.assert_called_once()
 
     @patch.dict(
@@ -320,12 +332,14 @@ class TestInvokeFunction:
             "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
         },
     )
+    @patch("app.agentcore.agent_main.memory_client")
     @patch("app.agentcore.agent_main.TeamsClient")
     @patch("app.agentcore.agent_main.agent")
     async def test_multiple_questions_generation_contract(
         self,
         mock_agent: MagicMock,
         mock_teams_client_class: MagicMock,
+        mock_memory_client: MagicMock,
     ) -> None:
         """
         契約による設計: 複数問題生成の包括的検証
@@ -348,6 +362,10 @@ class TestInvokeFunction:
         mock_questions = [self._create_mock_question(i) for i in range(1, 4)]
         mock_result = AgentOutput(questions=mock_questions)
         mock_agent.structured_output.return_value = mock_result
+
+        # Memory クライアントモックの設定
+        mock_memory_client.get_recent_domains = AsyncMock(return_value=[])
+        mock_memory_client.record_domain_usage = AsyncMock(return_value=None)
 
         # Teamsクライアントモックの設定
         mock_teams_client = MagicMock()
@@ -379,8 +397,12 @@ class TestInvokeFunction:
         assert len(result["questions"]) == 3
         assert all(isinstance(q["options"], list) for q in result["questions"])
 
-        # エージェントとTeamsクライアントが正しく呼び出されたことを確認
+        # エージェント、Memory、Teamsクライアントが正しく呼び出されたことを確認
         mock_agent.structured_output.assert_called_once()
+        mock_memory_client.get_recent_domains.assert_called_once_with(
+            exam_type="AWS-SAP", days_back=7
+        )
+        assert mock_memory_client.record_domain_usage.call_count == 3  # 3問分
         mock_teams_client.send.assert_called_once()
 
     @patch.dict(
@@ -1093,3 +1115,467 @@ class TestLoadExamGuide:
             RuntimeError, match="試験ガイドファイルの読み込みに失敗しました"
         ):
             load_exam_guide(exam_type)
+
+
+class TestDomainMemoryIntegration:
+    """分野履歴記録機能の契約検証"""
+
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
+    @patch("app.agentcore.agent_main.memory_client")
+    @patch("app.agentcore.agent_main.TeamsClient")
+    @patch("app.agentcore.agent_main.agent")
+    async def test_domain_memory_recording_contract(
+        self,
+        mock_agent: MagicMock,
+        mock_teams_client_class: MagicMock,
+        mock_memory_client: MagicMock,
+    ) -> None:
+        """
+        契約による設計: 分野履歴記録機能の検証
+
+        Given: 有効なペイロードと正常なMemoryクライアント
+        When: invoke関数を実行する
+        Then: 学習分野がMemoryに記録される
+
+        事前条件: 有効なペイロード、正常なMemoryクライアント
+        事後条件: 学習分野がMemoryに記録される
+        不変条件: 各問題の学習分野が個別に記録される
+        """
+        # Given - 事前条件設定
+        valid_payload: dict[str, Any] = {
+            "exam_type": "AWS-SAP",
+            "question_count": 2,
+        }
+
+        # エージェントモックの設定（異なる学習分野の2問）
+        mock_questions = [
+            Question(
+                question="EC2に関する問題",
+                options=["A. t2.micro", "B. m5.large", "C. c5.xlarge", "D. r5.2xlarge"],
+                correct_answer="B",
+                explanation="m5.largeが最適です。",
+                source=["https://docs.aws.amazon.com/ec2/"],
+                learning_domain="コンピューティング",
+                primary_technologies=["EC2", "インスタンスタイプ"],
+                learning_insights="EC2インスタンスタイプ選択の重要ポイント",
+            ),
+            Question(
+                question="S3に関する問題",
+                options=["A. Standard", "B. IA", "C. Glacier", "D. Deep Archive"],
+                correct_answer="A",
+                explanation="Standardが最適です。",
+                source=["https://docs.aws.amazon.com/s3/"],
+                learning_domain="ストレージ",
+                primary_technologies=["S3", "ストレージクラス"],
+                learning_insights="S3ストレージクラス選択の重要ポイント",
+            ),
+        ]
+        mock_result = AgentOutput(questions=mock_questions)
+        mock_agent.structured_output.return_value = mock_result
+
+        # Memory クライアントモックの設定
+        mock_memory_client.record_domain_usage = AsyncMock(return_value=None)
+
+        # Teamsクライアントモックの設定
+        mock_teams_client = MagicMock()
+        mock_teams_client.send = AsyncMock(return_value=None)
+        mock_teams_client_class.return_value = mock_teams_client
+
+        # When - invoke関数を実行
+        result = await invoke(valid_payload)
+
+        # Then - 事後条件検証: 問題生成が成功
+        assert "questions" in result
+        assert len(result["questions"]) == 2
+        assert "error" not in result
+
+        # 不変条件検証: 各問題の学習分野が個別に記録される
+        assert mock_memory_client.record_domain_usage.call_count == 2
+
+        # 1問目の記録確認
+        first_call = mock_memory_client.record_domain_usage.call_args_list[0]
+        assert first_call.kwargs["learning_domain"] == "コンピューティング"
+        assert first_call.kwargs["exam_type"] == "AWS-SAP"
+
+        # 2問目の記録確認
+        second_call = mock_memory_client.record_domain_usage.call_args_list[1]
+        assert second_call.kwargs["learning_domain"] == "ストレージ"
+        assert second_call.kwargs["exam_type"] == "AWS-SAP"
+
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
+    @patch("app.agentcore.agent_main.memory_client")
+    @patch("app.agentcore.agent_main.TeamsClient")
+    @patch("app.agentcore.agent_main.agent")
+    async def test_memory_recording_failure_contract(
+        self,
+        mock_agent: MagicMock,
+        mock_teams_client_class: MagicMock,
+        mock_memory_client: MagicMock,
+    ) -> None:
+        """
+        契約による設計: Memory記録失敗時の処理検証
+
+        Given: 有効なペイロードとMemory記録失敗環境
+        When: invoke関数を実行する
+        Then: 問題生成は成功し、Memory記録失敗がログに記録される
+
+        事前条件: 有効なペイロード、Memory記録失敗
+        事後条件: 問題生成は成功、Memory記録失敗はログに記録
+        不変条件: Memory記録失敗でも処理は継続される
+        """
+        # Given - 事前条件設定
+        valid_payload: dict[str, Any] = {
+            "exam_type": "AWS-SAP",
+            "question_count": 1,
+        }
+
+        # エージェントモックの設定
+        mock_result = AgentOutput(
+            questions=[
+                Question(
+                    question="Memory失敗テスト問題",
+                    options=["A", "B", "C", "D"],
+                    correct_answer="A",
+                    explanation="解説",
+                    source=["https://docs.aws.amazon.com/test/"],
+                    learning_domain="テスト分野",
+                    primary_technologies=["テスト技術"],
+                    learning_insights="テスト学習ポイント",
+                )
+            ]
+        )
+        mock_agent.structured_output.return_value = mock_result
+
+        # Memory クライアントモック（失敗）の設定
+        mock_memory_client.record_domain_usage = AsyncMock(
+            side_effect=Exception("Memory記録失敗")
+        )
+
+        # Teamsクライアントモックの設定
+        mock_teams_client = MagicMock()
+        mock_teams_client.send = AsyncMock(return_value=None)
+        mock_teams_client_class.return_value = mock_teams_client
+
+        # When - invoke関数を実行
+        result = await invoke(valid_payload)
+
+        # Then - 事後条件検証: 問題生成は成功
+        assert "questions" in result
+        assert "error" not in result
+
+        # 不変条件検証: Memory記録失敗でも処理継続
+        assert isinstance(result["questions"], list)
+        assert len(result["questions"]) == 1
+        mock_memory_client.record_domain_usage.assert_called_once()
+
+    @patch("app.agentcore.agent_main.memory_client", None)
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
+    @patch("app.agentcore.agent_main.TeamsClient")
+    @patch("app.agentcore.agent_main.agent")
+    async def test_memory_client_disabled_contract(
+        self,
+        mock_agent: MagicMock,
+        mock_teams_client_class: MagicMock,
+    ) -> None:
+        """
+        契約による設計: Memoryクライアント無効時の処理検証
+
+        Given: 有効なペイロードとMemoryクライアント無効環境
+        When: invoke関数を実行する
+        Then: 問題生成は成功し、Memory記録はスキップされる
+
+        事前条件: 有効なペイロード、Memoryクライアント無効
+        事後条件: 問題生成は成功、Memory記録はスキップ
+        不変条件: Memoryクライアント無効でも処理は正常に動作
+        """
+        # Given - 事前条件設定
+        valid_payload: dict[str, Any] = {
+            "exam_type": "AWS-SAP",
+            "question_count": 1,
+        }
+
+        # エージェントモックの設定
+        mock_result = AgentOutput(
+            questions=[
+                Question(
+                    question="Memory無効テスト問題",
+                    options=["A", "B", "C", "D"],
+                    correct_answer="A",
+                    explanation="解説",
+                    source=["https://docs.aws.amazon.com/test/"],
+                    learning_domain="テスト分野",
+                    primary_technologies=["テスト技術"],
+                    learning_insights="テスト学習ポイント",
+                )
+            ]
+        )
+        mock_agent.structured_output.return_value = mock_result
+
+        # Teamsクライアントモックの設定
+        mock_teams_client = MagicMock()
+        mock_teams_client.send = AsyncMock(return_value=None)
+        mock_teams_client_class.return_value = mock_teams_client
+
+        # When - invoke関数を実行
+        result = await invoke(valid_payload)
+
+        # Then - 事後条件検証: 問題生成は成功
+        assert "questions" in result
+        assert "error" not in result
+
+        # 不変条件検証: Memoryクライアント無効でも正常動作
+        assert isinstance(result["questions"], list)
+        assert len(result["questions"]) == 1
+
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
+    @patch("app.agentcore.agent_main.memory_client")
+    @patch("app.agentcore.agent_main.TeamsClient")
+    @patch("app.agentcore.agent_main.agent")
+    async def test_recent_domains_retrieval_contract(
+        self,
+        mock_agent: MagicMock,
+        mock_teams_client_class: MagicMock,
+        mock_memory_client: MagicMock,
+    ) -> None:
+        """
+        契約による設計: 最近の分野取得機能の検証
+
+        Given: 有効なペイロードと最近の分野履歴があるMemoryクライアント
+        When: invoke関数を実行する
+        Then: 最近の分野が取得され、ジャンル分散指示がプロンプトに含まれる
+
+        事前条件: 有効なペイロード、最近の分野履歴がある
+        事後条件: 最近の分野が取得され、ジャンル分散指示がプロンプトに含まれる
+        不変条件: 分野取得失敗でも処理は継続される
+        """
+        # Given - 事前条件設定
+        valid_payload: dict[str, Any] = {
+            "exam_type": "AWS-SAP",
+            "question_count": 1,
+        }
+
+        # Memory クライアントモックの設定（最近の分野あり）
+        mock_memory_client.get_recent_domains = AsyncMock(
+            return_value=["コンピューティング", "ストレージ"]
+        )
+        mock_memory_client.record_domain_usage = AsyncMock(return_value=None)
+
+        # エージェントモックの設定
+        mock_result = AgentOutput(
+            questions=[
+                Question(
+                    question="ネットワーキングに関する問題",
+                    options=["A", "B", "C", "D"],
+                    correct_answer="A",
+                    explanation="解説",
+                    source=["https://docs.aws.amazon.com/test/"],
+                    learning_domain="ネットワーキング",  # 異なる分野
+                    primary_technologies=["VPC", "Route53"],
+                    learning_insights="ネットワーキング学習ポイント",
+                )
+            ]
+        )
+        mock_agent.structured_output.return_value = mock_result
+
+        # Teamsクライアントモックの設定
+        mock_teams_client = MagicMock()
+        mock_teams_client.send = AsyncMock(return_value=None)
+        mock_teams_client_class.return_value = mock_teams_client
+
+        # When - invoke関数を実行
+        result = await invoke(valid_payload)
+
+        # Then - 事後条件検証: 問題生成が成功
+        assert "questions" in result
+        assert "error" not in result
+
+        # 不変条件検証: 最近の分野取得が呼び出される
+        mock_memory_client.get_recent_domains.assert_called_once_with(
+            exam_type="AWS-SAP", days_back=7
+        )
+
+        # プロンプトにジャンル分散指示が含まれることを確認
+        call_args = mock_agent.structured_output.call_args
+        prompt_arg = call_args.kwargs["prompt"]
+        assert "ジャンル分散指示" in prompt_arg
+        assert "コンピューティング" in prompt_arg
+        assert "ストレージ" in prompt_arg
+        assert "使用頻度の低い分野を優先して問題を生成してください" in prompt_arg
+
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
+    @patch("app.agentcore.agent_main.memory_client")
+    @patch("app.agentcore.agent_main.TeamsClient")
+    @patch("app.agentcore.agent_main.agent")
+    async def test_recent_domains_retrieval_failure_contract(
+        self,
+        mock_agent: MagicMock,
+        mock_teams_client_class: MagicMock,
+        mock_memory_client: MagicMock,
+    ) -> None:
+        """
+        契約による設計: 最近の分野取得失敗時の処理検証
+
+        Given: 有効なペイロードと分野取得失敗環境
+        When: invoke関数を実行する
+        Then: 問題生成は成功し、分野取得失敗がログに記録される
+
+        事前条件: 有効なペイロード、分野取得失敗
+        事後条件: 問題生成は成功、分野取得失敗はログに記録
+        不変条件: 分野取得失敗でも処理は継続される
+        """
+        # Given - 事前条件設定
+        valid_payload: dict[str, Any] = {
+            "exam_type": "AWS-SAP",
+            "question_count": 1,
+        }
+
+        # Memory クライアントモック（分野取得失敗）の設定
+        mock_memory_client.get_recent_domains = AsyncMock(
+            side_effect=Exception("分野取得失敗")
+        )
+        mock_memory_client.record_domain_usage = AsyncMock(return_value=None)
+
+        # エージェントモックの設定
+        mock_result = AgentOutput(
+            questions=[
+                Question(
+                    question="分野取得失敗テスト問題",
+                    options=["A", "B", "C", "D"],
+                    correct_answer="A",
+                    explanation="解説",
+                    source=["https://docs.aws.amazon.com/test/"],
+                    learning_domain="テスト分野",
+                    primary_technologies=["テスト技術"],
+                    learning_insights="テスト学習ポイント",
+                )
+            ]
+        )
+        mock_agent.structured_output.return_value = mock_result
+
+        # Teamsクライアントモックの設定
+        mock_teams_client = MagicMock()
+        mock_teams_client.send = AsyncMock(return_value=None)
+        mock_teams_client_class.return_value = mock_teams_client
+
+        # When - invoke関数を実行
+        result = await invoke(valid_payload)
+
+        # Then - 事後条件検証: 問題生成は成功
+        assert "questions" in result
+        assert "error" not in result
+
+        # 不変条件検証: 分野取得失敗でも処理継続
+        mock_memory_client.get_recent_domains.assert_called_once()
+        assert isinstance(result["questions"], list)
+        assert len(result["questions"]) == 1
+
+        # プロンプトにジャンル分散指示が含まれないことを確認
+        call_args = mock_agent.structured_output.call_args
+        prompt_arg = call_args.kwargs["prompt"]
+        assert "ジャンル分散指示" not in prompt_arg
+
+    @patch.dict(
+        "os.environ",
+        {
+            "POWER_AUTOMATE_WEBHOOK_URL": "https://test.webhook.url",
+            "POWER_AUTOMATE_SECURITY_TOKEN": "test-security-token",
+        },
+    )
+    @patch("app.agentcore.agent_main.memory_client")
+    @patch("app.agentcore.agent_main.TeamsClient")
+    @patch("app.agentcore.agent_main.agent")
+    async def test_no_recent_domains_contract(
+        self,
+        mock_agent: MagicMock,
+        mock_teams_client_class: MagicMock,
+        mock_memory_client: MagicMock,
+    ) -> None:
+        """
+        契約による設計: 最近の分野履歴なしの処理検証
+
+        Given: 有効なペイロードと最近の分野履歴なし
+        When: invoke関数を実行する
+        Then: 問題生成は成功し、ジャンル分散指示は含まれない
+
+        事前条件: 有効なペイロード、最近の分野履歴なし
+        事後条件: 問題生成は成功、ジャンル分散指示は含まれない
+        不変条件: 分野履歴なしでも正常に処理される
+        """
+        # Given - 事前条件設定
+        valid_payload: dict[str, Any] = {
+            "exam_type": "AWS-SAP",
+            "question_count": 1,
+        }
+
+        # Memory クライアントモックの設定（最近の分野なし）
+        mock_memory_client.get_recent_domains = AsyncMock(return_value=[])
+        mock_memory_client.record_domain_usage = AsyncMock(return_value=None)
+
+        # エージェントモックの設定
+        mock_result = AgentOutput(
+            questions=[
+                Question(
+                    question="分野履歴なしテスト問題",
+                    options=["A", "B", "C", "D"],
+                    correct_answer="A",
+                    explanation="解説",
+                    source=["https://docs.aws.amazon.com/test/"],
+                    learning_domain="テスト分野",
+                    primary_technologies=["テスト技術"],
+                    learning_insights="テスト学習ポイント",
+                )
+            ]
+        )
+        mock_agent.structured_output.return_value = mock_result
+
+        # Teamsクライアントモックの設定
+        mock_teams_client = MagicMock()
+        mock_teams_client.send = AsyncMock(return_value=None)
+        mock_teams_client_class.return_value = mock_teams_client
+
+        # When - invoke関数を実行
+        result = await invoke(valid_payload)
+
+        # Then - 事後条件検証: 問題生成は成功
+        assert "questions" in result
+        assert "error" not in result
+
+        # 不変条件検証: 分野履歴なしでも正常処理
+        mock_memory_client.get_recent_domains.assert_called_once()
+        assert isinstance(result["questions"], list)
+        assert len(result["questions"]) == 1
+
+        # プロンプトにジャンル分散指示が含まれないことを確認
+        call_args = mock_agent.structured_output.call_args
+        prompt_arg = call_args.kwargs["prompt"]
+        assert "ジャンル分散指示" not in prompt_arg

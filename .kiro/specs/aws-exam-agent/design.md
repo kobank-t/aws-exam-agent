@@ -285,17 +285,26 @@ learning_insights: str = "試験ガイドに基づく学習戦略と試験対策
 - **技術的正確性**: 最新の AWS 公式ドキュメント参照
 - **標準化**: Model Context Protocol による統一的なコンテキスト提供
 
-## ジャンル分散機能設計
+## ジャンル分散機能設計（実装完了）
 
 ### 問題の背景
 
-現在の実装では、AI エージェントが試験ガイド全体を参照して問題を生成するため、特定のジャンル（例：「複雑な組織に対応するソリューションの設計」）に偏る傾向があります。これにより、試験ガイドの全領域をバランス良く学習できない問題が発生しています。
+従来の実装では、AI エージェントが試験ガイド全体を参照して問題を生成するため、特定のジャンル（例：「複雑な組織に対応するソリューションの設計」）に偏る傾向がありました。これにより、試験ガイドの全領域をバランス良く学習できない問題が発生していました。
+
+### 実装完了機能
+
+**✅ 完了した機能**:
+
+- AgentCore Memory による学習分野履歴管理
+- プロンプトレベルでの分散指示生成
+- 最近使用分野の自動取得・除外指示
+- Memory 管理スクリプト（`scripts/manage-agentcore-memory.sh`）
 
 ### 設計方針
 
 - **AgentCore Memory 活用**: AWS マネージドサービスによる履歴管理
 - **プロンプトレベル制御**: 除外指示による分散実現
-- **短期メモリ活用**: 最近使用された学習分野の記録・参照
+- **短期メモリ活用**: 最近使用された学習分野の記録・参照（7 日間）
 - **汎用性**: 異なる試験ガイド構造に対応可能な設計
 
 ### アーキテクチャ
@@ -321,88 +330,192 @@ graph TB
 - **履歴参照**: `ListEvents` で最近の分野使用履歴を取得
 - **自動管理**: AgentCore Memory による自動的な履歴管理
 
-**データ構造**:
+#### Namespace 設計ポリシー
 
-```python
-# CreateEvent API 呼び出し形式
-{
-    "memoryId": "mem-{memory_id}",  # AgentCore Memory ID
-    "actorId": "cloud-copass-agent",  # Cloud CoPassAgentサービスを識別
-    "sessionId": f"{exam_type}-generation",  # 試験タイプ別のセッション
-    "eventTimestamp": 1726920000000,  # Unix timestamp (milliseconds)
-    "payload": [
-        {
-            "Blob": {
-                "data": {
-                    "learning_domain": "複雑な組織に対応するソリューションの設計",
-                    "exam_type": "AWS-SAP",
-                    "generated_at": "2025-09-21T10:00:00Z"
-                }
-            }
-        }
-    ]
-}
+**基本原則**:
+
+- **階層構造**: AgentCore Memory の公式推奨に従った `/` 区切りの階層構造
+- **機能明確化**: namespace 名から記録内容が明確に理解できる命名
+- **段階的拡張**: 現在の実装から将来の拡張まで対応可能な設計
+- **データモデル一貫性**: `Question` モデルのフィールド名と一貫した命名
+
+**AgentCore Memory の公式構造**:
+
+```
+/strategy/{strategyId}/actor/{actorId}/session/{sessionId}
 ```
 
-#### プロンプト制御ロジック
-
-**除外指示ロジック**:
+**Memory 作成時の namespace template**:
 
 ```python
-async def create_diversified_prompt(exam_type: str, exam_guide: str) -> str:
-    """分散化されたプロンプトを生成"""
+"namespaces": ["{sessionId}"]  # session_idをそのまま使用
+```
 
-    # 最近使用された分野を取得
-    recent_domains = await get_recent_domains_from_memory(exam_type, days=7)
+**実際の namespace 例**:
 
-    # 除外指示を含むプロンプト生成
-    exclusion_instruction = ""
+```
+/strategy/semantic-12345/actor/cloud-copass-agent/session/learning-domains/AWS-SAP
+```
+
+**現在の実装**:
+
+```python
+actor_id = "cloud-copass-agent"
+session_id = f"learning-domains/{exam_type}"  # learning-domains/AWS-SAP
+```
+
+**設計の整合性**:
+
+- Memory 作成時: `{sessionId}` template
+- 実装時: `session_id = "learning-domains/AWS-SAP"`
+- 結果: `/session/learning-domains/AWS-SAP` (重複なし、意図通り)
+
+**将来の拡張パターン**:
+
+```python
+# 問題統計分析機能追加時
+session_id = "question-analytics/{exam_type}"  # question-analytics/AWS-SAP
+
+# ユーザー進捗管理機能追加時
+session_id = "user-progress/{user_id}/{exam_type}"  # user-progress/user123/AWS-SAP
+```
+
+**環境管理**:
+
+- **Memory ID**: 環境変数 `AGENTCORE_MEMORY_ID` で管理
+- **設定管理**: `.env` ファイルによる環境変数管理
+
+**実装済みデータ構造**:
+
+```python
+# DomainMemoryClient 実装
+class DomainMemoryClient:
+    def __init__(self, memory_id: str, region_name: str):
+        self.memory_client = MemoryClient(region_name=region_name)
+        self.memory_id = memory_id
+        self.actor_id = "cloud-copass-agent"
+
+    async def record_domain_usage(self, learning_domain: str, exam_type: str) -> None:
+        """学習分野の使用履歴を記録"""
+        session_id = f"{exam_type}"  # "AWS-SAP"
+        messages = [("user", learning_domain)]
+
+        await self.memory_client.create_event(
+            memory_id=self.memory_id,
+            actor_id=self.actor_id,
+            session_id=session_id,
+            messages=messages
+        )
+
+    async def get_recent_domains(self, exam_type: str, days_back: int = 7) -> List[str]:
+        """最近使用された学習分野を取得（重複除去済み）"""
+        session_id = f"{exam_type}"
+        cutoff_time = datetime.now() - timedelta(days=days_back)
+
+        events = await self.memory_client.list_events(
+            memory_id=self.memory_id,
+            actor_id=self.actor_id,
+            session_id=session_id,
+            start_time=cutoff_time
+        )
+
+        # payloadから学習分野を抽出・重複除去
+        domains = []
+        for event in events:
+            for message in event.payload:
+                if message.conversational.role == "USER":
+                    domains.append(message.conversational.content.text)
+
+        return list(dict.fromkeys(domains))  # 順序保持で重複除去
+```
+
+#### 実装済みプロンプト制御ロジック
+
+**統計ベース分散指示アプローチ**:
+
+```python
+# agent_main.py での実装
+async def invoke(payload: dict[str, Any]) -> dict[str, Any]:
+    # 最近使用された分野を取得（ジャンル分散機能）
+    recent_domains = []
+    if memory_client is not None:
+        try:
+            recent_domains = await memory_client.get_recent_domains(
+                exam_type=input.exam_type, days_back=7
+            )
+        except Exception as e:
+            logger.warning(f"最近の分野取得に失敗（処理継続）: {e}")
+
+    # ジャンル分散指示の作成
+    diversity_instruction = ""
     if recent_domains:
-        domain_list = ", ".join(recent_domains)
-        exclusion_instruction = f"""
-        【重要】最近使用された分野: {domain_list}
-        上記以外の分野から問題を生成してください。
+        from collections import Counter
+        domain_counts = Counter(recent_domains)
+        most_used_domains = [
+            domain for domain, count in domain_counts.most_common(2)
+        ]
+
+        diversity_instruction = f"""
+        # ジャンル分散指示（偏り防止）
+        - 最近使用された学習分野の使用状況: {dict(domain_counts)}
+        - 特に使用頻度の高い分野: {", ".join(most_used_domains) if most_used_domains else "なし"}
+        - 学習効果を高めるため、使用頻度の低い分野を優先して問題を生成してください
+        - 全ての学習分野をバランス良く出題することを重視してください
+        - 適切な問題が作成できる範囲で、多様性を最優先してください
         """
 
-    return f"""
-    {exclusion_instruction}
-
-    以下の試験ガイドに基づいて問題を生成してください：
-    {exam_guide}
-    """
-
-async def get_recent_domains_from_memory(exam_type: str, days: int = 7) -> list[str]:
-    """最近使用された分野をメモリから取得"""
-
-    events = await agentcore_memory.list_events(
-        actor_id="cloud-copass-agent",
-        session_id=f"{exam_type}-generation",
-        max_results=10  # 最新10件を取得
-    )
-
-    recent_domains = []
-    for event in events:
-        if event.created_at > datetime.now() - timedelta(days=days):
-            payload = event.payload.get("data", {})
-            learning_domain = payload.get("learning_domain")
-            if learning_domain and learning_domain not in recent_domains:
-                recent_domains.append(learning_domain)
-
-    return recent_domains
-
-async def record_domain_usage(question: Question, exam_type: str) -> None:
-    """使用した分野をメモリに記録"""
-
-    await agentcore_memory.create_event(
-        actor_id="cloud-copass-agent",
-        session_id=f"{exam_type}-generation",
-        payload={
-            "learning_domain": question.learning_domain,  # 大分類のみ
-            "exam_type": exam_type,
-            "generated_at": datetime.now().isoformat()
-        }
-    )
+    # 問題生成後の分野履歴記録
+    if memory_client is not None:
+        try:
+            for question in agent_output.questions:
+                await memory_client.record_domain_usage(
+                    learning_domain=question.learning_domain,
+                    exam_type=input.exam_type,
+                )
+        except Exception as e:
+            logger.warning(f"分野履歴記録に失敗（処理継続）: {e}")
 ```
+
+**設計方針**:
+
+- **シンプル性**: learning_domain レベルでの分散制御に特化
+- **段階的改善**: まず大分類レベルでの効果を検証
+- **品質優先**: 分散よりも問題品質を優先する安全弁を設置
+- **将来拡張**: 必要に応じて技術要素レベルの制御を追加可能
+
+### Memory 管理機能（実装完了）
+
+**管理スクリプト**: `scripts/manage-agentcore-memory.sh`
+
+```bash
+# Memory内容確認
+./scripts/manage-agentcore-memory.sh show
+
+# 詳細分析（ジャンル分散効果測定）
+./scripts/manage-agentcore-memory.sh analyze
+
+# 最新イベント以外削除
+./scripts/manage-agentcore-memory.sh cleanup
+
+# 全イベント削除（初期化）
+./scripts/manage-agentcore-memory.sh clear
+```
+
+**分析機能**:
+
+- 学習分野別使用統計
+- 多様性比率計算（1.0 が最高）
+- 使用頻度の偏り比率（最大/最小）
+- 分散効果評価（良好/普通/要改善）
+- 推奨アクション提示
+
+**運用統合**:
+
+- 日次確認: Memory 状況確認
+- 週次分析: ジャンル分散効果測定
+- 月次メンテナンス: 古いイベントクリーンアップ
+
+詳細な運用方法は [運用ガイド](../../../docs/operations-guide.md#-agentcore-memory-管理) を参照。
 
 ## Teams 統合設計
 
@@ -525,4 +638,4 @@ AWS Control Tower, AWS Organizations, AWS IAM
 **作成日**: 2025 年 8 月 26 日  
 **基準**: requirements.md の実装済み MVP 要件に基づく統合設計書  
 **更新方針**: 要件変更時のみ更新、実装詳細は docs/ 配下のガイドを参照  
-**最終更新**: 2025 年 9 月 7 日（学習戦略支援機能強化・learning_insights フィールド設計変更）
+**最終更新**: 2025 年 9 月 22 日（ジャンル分散機能実装完了・Memory 管理機能追加）

@@ -306,7 +306,7 @@
 
 ### Phase 4: ジャンル分散機能実装
 
-- [ ] 11. AgentCore Memory を活用したジャンル分散機能実装
+- [x] 11. AgentCore Memory を活用したジャンル分散機能実装
 
   **完了基準**:
 
@@ -328,10 +328,10 @@
   **サブタスク**:
 
   - [x] 11.1 AgentCore Memory クライアント実装
-  - [ ] 11.2 分野履歴記録機能実装（record_domain_usage）
-  - [ ] 11.3 分野履歴取得機能実装（get_recent_domains_from_memory）
-  - [ ] 11.4 分散プロンプト生成機能実装（create_diversified_prompt）
-  - [ ] 11.5 既存問題生成フローへの統合・動作確認
+  - [x] 11.2 分野履歴記録機能実装（record_domain_usage）
+  - [x] 11.3 分野履歴取得機能実装（get_recent_domains_from_memory）
+  - [x] 11.4 分散プロンプト生成機能実装（create_diversified_prompt）
+  - [x] 11.5 既存問題生成フローへの統合・動作確認
 
   _Requirements: Requirement 6 (ジャンル分散機能)_
 

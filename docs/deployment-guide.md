@@ -26,6 +26,7 @@ EventBridge Scheduler → Lambda Function → AgentCore Runtime → Bedrock Mode
 | ------------------------------- | ------------------------------------------ | ------------------------------------------------------------------ |
 | `POWER_AUTOMATE_WEBHOOK_URL`    | Teams 連携用 Webhook URL                   | `https://prod-XX.japaneast.logic.azure.com/workflows/...`          |
 | `POWER_AUTOMATE_SECURITY_TOKEN` | Webhook URL 漏洩対策用セキュリティトークン | `cef26f0de574983a475345f2e3518abbd6472d102b5254384ef6912931f8a68f` |
+| `AGENTCORE_MEMORY_ID`           | ジャンル分散機能用 AgentCore Memory ID     | `CloudCoPassAgentMemory_1758470667-YvBRIT3DdL`                     |
 
 ### 環境変数の設定
 
@@ -44,6 +45,9 @@ POWER_AUTOMATE_WEBHOOK_URL=https://prod-XX.japaneast.logic.azure.com/workflows/Y
 
 # セキュリティトークン（必須）
 POWER_AUTOMATE_SECURITY_TOKEN=$SECURITY_TOKEN
+
+# AgentCore Memory ID（ジャンル分散機能用）
+AGENTCORE_MEMORY_ID=CloudCoPassAgentMemory_XXXXXXXXX-XXXXXXXXXX
 EOF
 ```
 
@@ -208,13 +212,15 @@ echo "生成されたセキュリティトークン: $SECURITY_TOKEN"
 cat > .env << EOF
 POWER_AUTOMATE_WEBHOOK_URL=https://prod-XX.japaneast.logic.azure.com/workflows/YOUR-WORKFLOW-ID/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=YOUR-SIGNATURE
 POWER_AUTOMATE_SECURITY_TOKEN=$SECURITY_TOKEN
+AGENTCORE_MEMORY_ID=CloudCoPassAgentMemory_XXXXXXXXX-XXXXXXXXXX
 EOF
 ```
 
 **⚠️ 重要**:
 
-- `POWER_AUTOMATE_WEBHOOK_URL`と`POWER_AUTOMATE_SECURITY_TOKEN`の両方が設定されていない場合、デプロイは失敗します
+- `POWER_AUTOMATE_WEBHOOK_URL`、`POWER_AUTOMATE_SECURITY_TOKEN`、`AGENTCORE_MEMORY_ID`の全てが設定されていない場合、デプロイは失敗します
 - セキュリティトークンは Webhook URL 漏洩対策として必須です
+- AgentCore Memory ID はジャンル分散機能に必要です（事前に `uv run python scripts/create_agentcore_memory.py` で作成）
 - 生成されたセキュリティトークンは後で Power Automate フローの設定で使用します
 
 #### 3.4 AgentCore のデプロイ実行
@@ -235,7 +241,28 @@ export AWS_PROFILE=YOUR_PROFILE_NAME
 - CodeBuild プロジェクト: ARM64 コンテナビルド
 - AgentCore Runtime
 
-#### 3.4 AgentCore 動作確認
+#### 3.5 AgentCore Memory 権限の追加（ジャンル分散機能用）
+
+AgentCore がジャンル分散機能を使用するために、Memory アクセス権限を追加します：
+
+```bash
+# Memory権限を追加
+export AWS_PROFILE=YOUR_PROFILE_NAME
+./scripts/setup-memory-permissions.sh
+```
+
+**追加される権限:**
+
+- `bedrock-agentcore:ListEvents` - 学習分野履歴の取得
+- `bedrock-agentcore:CreateEvent` - 学習分野履歴の記録
+
+**対象リソース:**
+
+- AgentCore Memory ID（`.env`ファイルの`AGENTCORE_MEMORY_ID`で指定）
+
+**⚠️ 重要**: この手順は AgentCore デプロイ後に実行してください。Memory ID が `.env` ファイルに設定されていない場合はスクリプトが失敗します。
+
+#### 3.6 AgentCore 動作確認
 
 ```bash
 # AgentCore 動作確認テスト
@@ -429,6 +456,7 @@ export AWS_PROFILE=YOUR_PROFILE_NAME
 | スクリプト                                  | 用途                             | 前提条件               | 使用例                                                          |
 | ------------------------------------------- | -------------------------------- | ---------------------- | --------------------------------------------------------------- |
 | `./scripts/deploy-agentcore.sh`             | AgentCore のデプロイ             | AWS SSO ログイン済み   | `AWS_PROFILE=sandbox ./scripts/deploy-agentcore.sh`             |
+| `./scripts/setup-memory-permissions.sh`     | AgentCore Memory 権限追加        | AgentCore デプロイ済み | `AWS_PROFILE=sandbox ./scripts/setup-memory-permissions.sh`     |
 | `./scripts/deploy-eventbridge-scheduler.sh` | EventBridge Scheduler のデプロイ | AgentCore デプロイ済み | `AWS_PROFILE=sandbox ./scripts/deploy-eventbridge-scheduler.sh` |
 | `./scripts/build-lambda.sh`                 | Lambda 関数のビルド              | Python 3.12+           | `./scripts/build-lambda.sh`                                     |
 
@@ -467,6 +495,9 @@ aws sso login --profile $AWS_PROFILE
 # 2. AgentCore コード修正後のデプロイ
 ./scripts/deploy-agentcore.sh
 
+# 2.1. Memory権限の確認・追加（必要に応じて）
+./scripts/setup-memory-permissions.sh
+
 # 3. Lambda関数修正後のデプロイ
 ./scripts/deploy-eventbridge-scheduler.sh
 
@@ -491,6 +522,7 @@ aws sso login --profile $AWS_PROFILE
 - [ ] SSO ログイン・接続確認完了
 - [ ] bedrock-agentcore-starter-toolkit 最新版への更新完了
 - [ ] AgentCore デプロイ完了（`./scripts/deploy-agentcore.sh`）
+- [ ] AgentCore Memory 権限追加完了（`./scripts/setup-memory-permissions.sh`）
 - [ ] AgentCore ARN 確認完了（`./scripts/get-agentcore-arn.sh`）
 - [ ] EventBridge Scheduler デプロイ完了（`./scripts/deploy-eventbridge-scheduler.sh`）
 - [ ] AgentCore 動作確認完了（`./scripts/test-agentcore.sh`）

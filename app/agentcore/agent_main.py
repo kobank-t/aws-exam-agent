@@ -8,16 +8,21 @@ Cloud CoPassAgent - シンプル化版 AgentCore Runtime メインエージェ�
 
 import asyncio
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from botocore.config import Config
+from dotenv import load_dotenv
 from mcp import StdioServerParameters, stdio_client
 from pydantic import BaseModel, Field
 from strands import Agent
 from strands.models import BedrockModel
 from strands.tools.mcp import MCPClient
+
+# .env ファイルの読み込み
+load_dotenv()
 
 # 環境検出による動的インポート（AgentCore vs ローカル環境対応）
 try:
@@ -46,12 +51,19 @@ EXAM_TYPES = {
     },
 }
 
+
 # AgentCore Memory 設定
-MEMORY_CONFIG = {
-    "memory_id": "mem-cloud-copass-agent",  # 実際のMemory IDに置き換える必要がある
-    "region_name": "us-east-1",
-    "enabled": True,  # Memory機能の有効/無効切り替え
-}
+def get_memory_config() -> dict[str, Any]:
+    """環境変数から Memory 設定を取得"""
+    memory_id = os.getenv("AGENTCORE_MEMORY_ID")
+    return {
+        "memory_id": memory_id,
+        "region_name": os.getenv("AWS_REGION", "us-east-1"),
+        "enabled": bool(memory_id),  # Memory IDが設定されている場合のみ有効
+    }
+
+
+MEMORY_CONFIG = get_memory_config()
 
 
 def load_exam_guide(exam_type: str) -> str:
@@ -256,7 +268,40 @@ async def invoke(payload: dict[str, Any]) -> dict[str, Any]:
             )
             exam_guide_content = ""
 
-        # 1回のプロンプトで複数問題を生成（試験ガイド統合）
+        # 最近使用された分野を取得（ジャンル分散機能）
+        recent_domains = []
+        if memory_client is not None:
+            try:
+                recent_domains = await memory_client.get_recent_domains(
+                    exam_type=input.exam_type, days_back=7
+                )
+                logger.info(f"最近使用された分野を取得: {recent_domains}")
+            except Exception as e:
+                logger.warning(f"最近の分野取得に失敗（処理継続）: {e}")
+        else:
+            logger.info("Memory クライアントが無効のため、分野取得をスキップします")
+
+        # ジャンル分散指示の作成
+        diversity_instruction = ""
+        if recent_domains:
+            # 使用頻度を分析
+            from collections import Counter
+
+            domain_counts = Counter(recent_domains)
+            most_used_domains = [
+                domain for domain, count in domain_counts.most_common(2)
+            ]
+
+            diversity_instruction = f"""
+            # ジャンル分散指示（偏り防止）
+            - 最近使用された学習分野の使用状況: {dict(domain_counts)}
+            - 特に使用頻度の高い分野: {", ".join(most_used_domains) if most_used_domains else "なし"}
+            - 学習効果を高めるため、使用頻度の低い分野を優先して問題を生成してください
+            - 全ての学習分野をバランス良く出題することを重視してください
+            - 適切な問題が作成できる範囲で、多様性を最優先してください
+            """
+
+        # 1回のプロンプトで複数問題を生成（試験ガイド統合 + ジャンル分散）
         prompt = f"""
             以下の条件に沿って、{input.question_count}問の実践的な問題を作成してください。
 
@@ -267,12 +312,16 @@ async def invoke(payload: dict[str, Any]) -> dict[str, Any]:
             # 試験ガイド情報
             {exam_guide_content if exam_guide_content else "試験ガイド情報は利用できません。指定された試験レベルに適した問題を生成してください。"}
 
+            {diversity_instruction}
+
             # 注意事項
             - 各問題は重複しない内容にしてください
             - 異なるサービスや機能を扱ってください
             - 試験ガイドの内容に基づいて適切な分類情報を設定してください
         """
-        logger.info("問題生成プロンプト（試験ガイド統合版）を作成しました")
+        logger.info(
+            "問題生成プロンプト（試験ガイド統合 + ジャンル分散版）を作成しました"
+        )
 
         # エージェントが利用可能かチェック
         if agent is None:
@@ -284,6 +333,26 @@ async def invoke(payload: dict[str, Any]) -> dict[str, Any]:
             prompt=prompt,
         )
         logger.info(f"問題生成結果: {agent_output.model_dump_json()}")
+
+        # 分野履歴記録（Memory への記録）
+        if memory_client is not None:
+            try:
+                # 生成された各問題の学習分野を記録
+                for question in agent_output.questions:
+                    await memory_client.record_domain_usage(
+                        learning_domain=question.learning_domain,
+                        exam_type=input.exam_type,
+                    )
+                logger.info(
+                    f"分野履歴記録完了: {len(agent_output.questions)}問の学習分野を記録"
+                )
+            except Exception as e:
+                # Memory記録失敗でも処理継続
+                logger.warning(
+                    f"分野履歴記録に失敗しましたが、処理を継続します: {str(e)}"
+                )
+        else:
+            logger.info("Memory クライアントが無効のため、分野履歴記録をスキップします")
 
         # Teams投稿
         teams_client = TeamsClient()
