@@ -32,6 +32,7 @@ dev-dependencies = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
+    "pytest-env>=1.1.0",
     
     # リンター・フォーマッター
     "ruff>=0.1.0",
@@ -94,6 +95,9 @@ addopts = [
     "--cov=app",
     "--cov-report=term-missing",
     "--cov-report=html",
+]
+env = [
+    "DISABLE_MEMORY = true",  # テスト実行時はMemory機能を無効化
 ]
 filterwarnings = [
     # botocore内部でdatetime.utcnow()の非推奨警告が発生する問題を抑制

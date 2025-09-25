@@ -9,6 +9,7 @@ Cloud CoPassAgent - シンプル化版 AgentCore Runtime メインエージェ�
 import asyncio
 import logging
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -56,10 +57,18 @@ EXAM_TYPES = {
 def get_memory_config() -> dict[str, Any]:
     """環境変数から Memory 設定を取得"""
     memory_id = os.getenv("AGENTCORE_MEMORY_ID")
+
+    # テスト環境での Memory 無効化
+    is_test_env = (
+        os.getenv("PYTEST_CURRENT_TEST") is not None
+        or os.getenv("DISABLE_MEMORY", "false").lower() == "true"
+        or "pytest" in sys.modules
+    )
+
     return {
         "memory_id": memory_id,
         "region_name": os.getenv("AWS_REGION", "us-east-1"),
-        "enabled": bool(memory_id),  # Memory IDが設定されている場合のみ有効
+        "enabled": bool(memory_id) and not is_test_env,  # テスト環境では無効化
     }
 
 
