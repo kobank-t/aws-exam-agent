@@ -318,7 +318,7 @@ class TestInvokeFunction:
         # エージェント、Memory、Teamsクライアントが正しく呼び出されたことを確認
         mock_agent.structured_output.assert_called_once()
         mock_memory_client.get_recent_domains.assert_called_once_with(
-            exam_type="AWS-SAP", days_back=7
+            exam_type="AWS-SAP"
         )
         mock_memory_client.record_domain_usage.assert_called_once_with(
             learning_domain="コンピューティング", exam_type="AWS-SAP"
@@ -400,7 +400,7 @@ class TestInvokeFunction:
         # エージェント、Memory、Teamsクライアントが正しく呼び出されたことを確認
         mock_agent.structured_output.assert_called_once()
         mock_memory_client.get_recent_domains.assert_called_once_with(
-            exam_type="AWS-SAP", days_back=7
+            exam_type="AWS-SAP"
         )
         assert mock_memory_client.record_domain_usage.call_count == 3  # 3問分
         mock_teams_client.send.assert_called_once()
@@ -1415,7 +1415,7 @@ class TestDomainMemoryIntegration:
 
         # 不変条件検証: 最近の分野取得が呼び出される
         mock_memory_client.get_recent_domains.assert_called_once_with(
-            exam_type="AWS-SAP", days_back=7
+            exam_type="AWS-SAP"
         )
 
         # プロンプトにジャンル分散指示が含まれることを確認

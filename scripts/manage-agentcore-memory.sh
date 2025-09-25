@@ -2,12 +2,15 @@
 
 # AgentCore Memory 管理スクリプト
 # メモリの確認・削除・分析を行います
+# Memory設定: 30日間自動削除（eventExpiryDuration=30）
 
 set -e
 
 # 設定
 REGION="us-east-1"
-MEMORY_ID="CloudCoPassAgentMemory_1758470667-YvBRIT3DdL"
+# .envファイルから新しいMemory IDを読み込み
+source .env 2>/dev/null || true
+MEMORY_ID="${AGENTCORE_MEMORY_ID:-CloudCoPassAgentMemory_1758807000-VM286QEJaJ}"
 SESSION_ID="AWS-SAP"
 ACTOR_ID="cloud-copass-agent"
 

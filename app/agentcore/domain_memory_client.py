@@ -6,12 +6,20 @@ bedrock_agentcore.memory.MemoryClient を活用したシンプルな実装。
 """
 
 import logging
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 from bedrock_agentcore.memory import MemoryClient
 
 logger = logging.getLogger(__name__)
+
+# Memory設定定数
+# 30日間の履歴を十分カバーする件数設定
+# - Memory自動削除: 30日経過後（eventExpiryDuration=30）
+# - 想定使用頻度: 毎日1回実行 = 最大30件
+# - 将来拡張対応: 1日複数回実行や複数問題生成にも対応
+# - API制限考慮: AgentCore Memory API最大100件まで取得可能
+DEFAULT_MAX_RESULTS = 50
 
 
 class DomainMemoryClient:
@@ -76,24 +84,29 @@ class DomainMemoryClient:
             raise
 
     async def list_events(
-        self, actor_id: str, session_id: str, max_results: int = 10, days_back: int = 7
+        self, actor_id: str, session_id: str, max_results: int = DEFAULT_MAX_RESULTS
     ) -> list[dict[str, Any]]:
         """Memory からイベントを一覧取得
 
         Args:
             actor_id: アクター識別子
             session_id: セッション識別子
-            max_results: 最大取得件数（デフォルト: 10）
-            days_back: 何日前まで取得するか（デフォルト: 7日）
+            max_results: 最大取得件数（デフォルト: DEFAULT_MAX_RESULTS、30日間の履歴を十分カバー）
 
         Returns:
-            イベントのリスト
+            イベントのリスト（Memory設定により30日以内のイベントのみ）
 
         Raises:
             Exception: API 呼び出しに失敗した場合
+
+        Note:
+            Memory作成時にeventExpiryDuration=30を設定しているため、
+            30日経過後のイベントはAWS側で自動削除される。
+            クライアント側でのフィルタリング処理は不要。
         """
         try:
             # bedrock_agentcore.memory.MemoryClient の list_events を使用
+            # Memory設定により30日以内のイベントのみ取得される
             events = self.client.list_events(
                 memory_id=self.memory_id,
                 actor_id=actor_id,
@@ -102,72 +115,36 @@ class DomainMemoryClient:
                 include_payload=True,
             )
 
-            # 指定日数以内のイベントのみフィルタリング
-            cutoff_date = datetime.now() - timedelta(days=days_back)
-            recent_events = []
-
-            for event in events:
-                # eventTimestamp の形式を確認して適切に処理
-                event_time = event.get("eventTimestamp")
-                if isinstance(event_time, datetime):
-                    # タイムゾーン付きの場合はUTCに変換してからnaiveに変換
-                    if event_time.tzinfo is not None:
-                        event_time_naive = event_time.astimezone(UTC).replace(
-                            tzinfo=None
-                        )
-                    else:
-                        event_time_naive = event_time
-                    if event_time_naive > cutoff_date:
-                        recent_events.append(event)
-                elif isinstance(event_time, str):
-                    # ISO 8601 文字列の場合（例: "2025-09-22 09:12:24+09:00"）
-                    try:
-                        event_datetime = datetime.fromisoformat(event_time)
-                        # UTCに変換してからタイムゾーン情報を除去
-                        event_datetime_utc = event_datetime.astimezone(UTC).replace(
-                            tzinfo=None
-                        )
-                        if event_datetime_utc > cutoff_date:
-                            recent_events.append(event)
-                    except ValueError:
-                        # パース失敗時はスキップ
-                        continue
-                elif isinstance(event_time, int | float):
-                    # Unix timestamp の場合
-                    event_datetime = datetime.fromtimestamp(event_time)
-                    if event_datetime > cutoff_date:
-                        recent_events.append(event)
-
             logger.info(
-                f"Memory イベント取得成功: session_id={session_id}, 件数={len(recent_events)}"
+                f"Memory イベント取得成功: session_id={session_id}, 件数={len(events)}"
             )
-            return recent_events
+            return events
 
         except Exception as e:
             logger.error(f"Memory イベント取得失敗: {e}")
             raise
 
-    async def get_recent_domains(self, exam_type: str, days_back: int = 7) -> list[str]:
+    async def get_recent_domains(self, exam_type: str) -> list[str]:
         """最近使用された学習分野を取得
 
         Args:
             exam_type: 試験タイプ
-            days_back: 何日前まで取得するか（デフォルト: 7日）
 
         Returns:
-            最近使用された学習分野のリスト（重複なし）
+            最近使用された学習分野のリスト（重複なし、30日以内）
+
+        Note:
+            Memory設定により30日経過後のイベントは自動削除されるため、
+            取得されるイベントは全て30日以内のものとなる。
         """
         try:
             actor_id = "cloud-copass-agent"
-            session_id = (
-                exam_type  # AWS-SAP → 実際のnamespace: learning-domains/AWS-SAP
-            )
+            session_id = exam_type
 
             events = await self.list_events(
                 actor_id=actor_id,
                 session_id=session_id,
-                max_results=10,
-                days_back=days_back,
+                max_results=DEFAULT_MAX_RESULTS,
             )
 
             # 学習分野を抽出（重複除去）
@@ -202,19 +179,14 @@ class DomainMemoryClient:
         """
         try:
             actor_id = "cloud-copass-agent"
-            session_id = (
-                exam_type  # AWS-SAP → 実際のnamespace: learning-domains/AWS-SAP
-            )
+            session_id = exam_type
 
             await self.create_event(
                 actor_id=actor_id,
                 session_id=session_id,
                 learning_domain=learning_domain,
             )
-
-            logger.info(
-                f"Memory イベント作成成功: session_id={session_id}, domain={learning_domain}"
-            )
+            # ログは create_event メソッド内で出力されるため、ここでは不要
 
         except Exception as e:
             logger.warning(f"学習分野使用記録に失敗（処理継続）: {e}")

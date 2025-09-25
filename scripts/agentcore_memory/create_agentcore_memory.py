@@ -2,7 +2,7 @@
 """
 AgentCore Memory リソース作成スクリプト
 
-AWS Bedrock AgentCore Memory を作成し、ジャンル分散機能用の設定を行います。
+AWS Bedrock AgentCore Memory を作成します（短期記憶のみ使用）。
 作成された Memory ID を .env ファイルに自動登録します。
 """
 
@@ -10,7 +10,6 @@ import time
 from pathlib import Path
 
 from bedrock_agentcore.memory import MemoryClient
-from bedrock_agentcore.memory.constants import StrategyType
 from dotenv import load_dotenv
 
 # .env ファイルの読み込み（AWS_PROFILE=sandbox設定を反映）
@@ -23,37 +22,27 @@ def create_memory_resource() -> str:
     # Memory Client の初期化
     client = MemoryClient(region_name="us-east-1")
 
-    # Memory Strategies の定義（ジャンル分散機能用）
-    strategies = [
-        {
-            # 学習分野の記録用（ジャンル分散機能で使用）
-            StrategyType.SEMANTIC.value: {
-                "name": "LearningDomainTracker",
-                "description": "クラウド認定試験の学習分野を記録・追跡してジャンル分散を実現",
-                "namespaces": [
-                    "learning-domains/{sessionId}",  # Short-Term Memory利用のためシンプル構成
-                ],
-            }
-        }
-    ]
+    # 長期記憶（strategies）は使用しない - 短期記憶のみでシンプルに運用
+    # 将来必要になった場合に追加可能
 
     print("🚀 AgentCore Memory 作成中...")
     print("📝 設定内容:")
-    print("   - Semantic Strategy: クラウド認定試験の学習分野記録・追跡")
-    print("   - Namespace Template: learning-domains/{sessionId}")
-    print("   - 用途: Short-Term Memory による問題生成偏り解消")
+    print("   - Event Expiry Duration: 30日間（AWS側で自動削除）")
+    print("   - Memory Type: 短期記憶のみ（長期記憶は未使用）")
+    print("   - 用途: 問題生成の学習分野偏り解消")
     print("   - 実装: sessionId = exam_type (例: AWS-SAP)")
-    print("   - 実際の namespace: learning-domains/AWS-SAP")
+    print("   - 利点: シンプルな構成、クライアント側フィルタリング不要")
 
     # タイムスタンプ付きの名前を生成
     timestamp = int(time.time())
     memory_name = f"CloudCoPassAgentMemory_{timestamp}"
 
-    # Memory リソース作成
+    # Memory リソース作成（30日間自動削除設定、短期記憶のみ）
     memory = client.create_memory(
         name=memory_name,
-        strategies=strategies,
-        description="Cloud CoPassAgent用メモリ（クラウド認定試験のジャンル分散機能対応）",
+        description="Cloud CoPassAgent用メモリ（30日間自動削除、短期記憶のみ）",
+        event_expiry_days=30,  # 30日間で自動削除
+        # strategies は指定しない（短期記憶のみ使用）
     )
 
     memory_id: str = memory["id"]
@@ -102,10 +91,7 @@ if __name__ == "__main__":
     # .env ファイルに Memory ID を登録
     update_env_file(memory_id)
 
-    print("\n📝 次のステップ:")
-    print("1. agent_main.py の MEMORY_CONFIG を環境変数から読み込むように修正")
-    print("2. Memory 機能を有効化（enabled: True）")
-
-    print("\n📋 次のステップ:")
-    print(f"1. agent_main.py の MEMORY_CONFIG['memory_id'] を '{memory_id}' に更新")
+    print("\n� 次次のステップ:")
+    print(f"1. .env ファイルの AGENTCORE_MEMORY_ID が '{memory_id}' に設定されました")
     print("2. uv run python app/agentcore/agent_main.py --test で動作確認")
+    print("3. 必要に応じて長期記憶機能を将来追加可能")

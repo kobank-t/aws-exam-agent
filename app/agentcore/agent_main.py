@@ -278,13 +278,14 @@ async def invoke(payload: dict[str, Any]) -> dict[str, Any]:
             exam_guide_content = ""
 
         # 最近使用された分野を取得（ジャンル分散機能）
+        # Memory設定により30日以内のイベントのみ自動取得される
         recent_domains = []
         if memory_client is not None:
             try:
                 recent_domains = await memory_client.get_recent_domains(
-                    exam_type=input.exam_type, days_back=7
+                    exam_type=input.exam_type
                 )
-                logger.info(f"最近使用された分野を取得: {recent_domains}")
+                logger.info(f"最近使用された分野を取得（30日以内）: {recent_domains}")
             except Exception as e:
                 logger.warning(f"最近の分野取得に失敗（処理継続）: {e}")
         else:

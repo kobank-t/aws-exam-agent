@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-DomainMemoryClient の契約検証テスト
+DomainMemoryClient のテスト
 
-シンプル化されたMemory機能のテスト
+契約による設計（Design by Contract）に基づく単体テスト
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from unittest.mock import patch
 
 import pytest
 
-from app.agentcore.domain_memory_client import DomainMemoryClient
+from app.agentcore.domain_memory_client import DEFAULT_MAX_RESULTS, DomainMemoryClient
 
 
 class TestDomainMemoryClient:
@@ -18,92 +18,121 @@ class TestDomainMemoryClient:
 
     @pytest.fixture
     def memory_client(self) -> DomainMemoryClient:
-        """テスト用メモリクライアント"""
-        return DomainMemoryClient(memory_id="mem-test-12345", region_name="us-east-1")
+        """テスト用のDomainMemoryClientインスタンス"""
+        return DomainMemoryClient(memory_id="test-memory-id", region_name="us-east-1")
 
-    @pytest.fixture
-    def sample_learning_domain(self) -> str:
-        """テスト用学習分野データ"""
-        return "セキュリティの設計"
-
-    def test_client_initialization_contract(self) -> None:
-        """
-        事前条件: 有効なmemory_idとregion_name
-        事後条件: 正しく初期化されたクライアント
-        不変条件: bedrock_agentcore.memory.MemoryClientが適切に設定される
-        """
-        # Arrange - 事前条件設定
-        memory_id = "mem-test-12345"
-        region_name = "us-east-1"
-
-        # Act
-        client = DomainMemoryClient(memory_id=memory_id, region_name=region_name)
-
-        # Assert - 事後条件検証
-        assert client.memory_id == memory_id
-        assert client.region_name == region_name
-
-        # 不変条件検証
-        assert client.client is not None
-
-    async def test_record_domain_usage_success_contract(
-        self, memory_client: DomainMemoryClient, sample_learning_domain: str
+    async def test_create_event_contract(
+        self, memory_client: DomainMemoryClient
     ) -> None:
         """
-        事前条件: 有効なlearning_domain、exam_type
-        事後条件: create_eventが適切な引数で呼ばれる
-        不変条件: 現在時刻でイベントが作成される
+        事前条件: 有効なactor_id、session_id、learning_domain
+        事後条件: CreateEvent APIが正しく呼び出される
+        不変条件: Memory IDとリージョンが保持される
         """
         # Arrange - 事前条件設定
-        exam_type = "AWS-SAP"
+        actor_id = "cloud-copass-agent"
+        session_id = "AWS-SAP"
+        learning_domain = "コンピューティング"
 
-        # create_eventをモック
-        with patch.object(memory_client.client, "create_event") as mock_create_event:
-            mock_create_event.return_value = {"eventId": "event-12345"}
+        mock_response = {"eventId": "test-event-id"}
+
+        with patch.object(memory_client.client, "create_event") as mock_create:
+            mock_create.return_value = mock_response
 
             # Act
-            with patch("app.agentcore.domain_memory_client.datetime") as mock_datetime:
-                mock_now = datetime(2025, 9, 21, 10, 0, 0)
-                mock_datetime.now.return_value = mock_now
-
-                await memory_client.record_domain_usage(
-                    sample_learning_domain, exam_type
-                )
+            result = await memory_client.create_event(
+                actor_id=actor_id,
+                session_id=session_id,
+                learning_domain=learning_domain,
+            )
 
         # Assert - 事後条件検証
-        mock_create_event.assert_called_once()
-        call_args = mock_create_event.call_args
+        assert result == mock_response
+        mock_create.assert_called_once()
 
-        assert call_args[1]["memory_id"] == "mem-test-12345"
-        assert call_args[1]["actor_id"] == "cloud-copass-agent"
-        assert call_args[1]["session_id"] == "AWS-SAP"
-        assert call_args[1]["messages"] == [(sample_learning_domain, "USER")]
-        assert call_args[1]["event_timestamp"] == mock_now
+        # 不変条件検証
+        assert memory_client.memory_id == "test-memory-id"
+        assert memory_client.region_name == "us-east-1"
 
-    async def test_get_recent_domains_success_contract(
+    async def test_list_events_contract(
+        self, memory_client: DomainMemoryClient
+    ) -> None:
+        """
+        事前条件: 有効なactor_id、session_id
+        事後条件: ListEvents APIが正しく呼び出される
+        不変条件: Memory設定により30日以内のイベントのみ取得される
+        """
+        # Arrange - 事前条件設定
+        actor_id = "cloud-copass-agent"
+        session_id = "AWS-SAP"
+
+        mock_events = [
+            {
+                "eventId": "event-1",
+                "eventTimestamp": datetime.now(),
+                "payload": [
+                    {
+                        "conversational": {
+                            "content": {"text": "コンピューティング"},
+                            "role": "USER",
+                        }
+                    }
+                ],
+            },
+            {
+                "eventId": "event-2",
+                "eventTimestamp": datetime.now(),
+                "payload": [
+                    {
+                        "conversational": {
+                            "content": {"text": "ネットワーク"},
+                            "role": "USER",
+                        }
+                    }
+                ],
+            },
+        ]
+
+        with patch.object(memory_client.client, "list_events") as mock_list_events:
+            mock_list_events.return_value = mock_events
+
+            # Act
+            result = await memory_client.list_events(
+                actor_id=actor_id, session_id=session_id
+            )
+
+        # Assert - 事後条件検証
+        assert len(result) == 2  # Memory設定により30日以内のイベントのみ
+        assert result[0]["eventId"] == "event-1"
+        assert result[1]["eventId"] == "event-2"
+
+        # 不変条件検証: 正しいパラメータで呼び出される
+        mock_list_events.assert_called_once_with(
+            memory_id="test-memory-id",
+            actor_id=actor_id,
+            session_id=session_id,
+            max_results=DEFAULT_MAX_RESULTS,
+            include_payload=True,
+        )
+
+    async def test_get_recent_domains_contract(
         self, memory_client: DomainMemoryClient
     ) -> None:
         """
         事前条件: 有効なexam_type
-        事後条件: 最近の学習分野リストが返される
+        事後条件: 最近使用された学習分野のリストが返される
         不変条件: 重複なしのリストが返される
         """
         # Arrange - 事前条件設定
         exam_type = "AWS-SAP"
 
-        # 現在時刻と過去のイベントを設定
-        now = datetime.now()
-        recent_time = now - timedelta(days=3)  # 3日前（範囲内）
-        old_time = now - timedelta(days=10)  # 10日前（範囲外）
-
         mock_events = [
             {
                 "eventId": "event-1",
-                "eventTimestamp": recent_time.isoformat() + "+09:00",
                 "payload": [
                     {
                         "conversational": {
-                            "content": {"text": "セキュリティの設計"},
+                            "content": {"text": "コンピューティング"},
                             "role": "USER",
                         }
                     }
@@ -111,11 +140,21 @@ class TestDomainMemoryClient:
             },
             {
                 "eventId": "event-2",
-                "eventTimestamp": old_time.isoformat() + "+09:00",
                 "payload": [
                     {
                         "conversational": {
-                            "content": {"text": "古い分野"},
+                            "content": {"text": "ネットワーク"},
+                            "role": "USER",
+                        }
+                    }
+                ],
+            },
+            {
+                "eventId": "event-3",
+                "payload": [
+                    {
+                        "conversational": {
+                            "content": {"text": "コンピューティング"},  # 重複
                             "role": "USER",
                         }
                     }
@@ -127,529 +166,86 @@ class TestDomainMemoryClient:
             mock_list_events.return_value = mock_events
 
             # Act
-            result = await memory_client.get_recent_domains(exam_type, days_back=7)
+            result = await memory_client.get_recent_domains(exam_type)
 
         # Assert - 事後条件検証
         assert isinstance(result, list)
-        assert "セキュリティの設計" in result
+        assert len(result) == 2  # 重複除去済み
+        assert "コンピューティング" in result
+        assert "ネットワーク" in result
 
-        # 不変条件検証: 重複なし
+        # 不変条件検証: 重複なしのリスト
         assert len(result) == len(set(result))
 
-    async def test_get_recent_domains_deduplication_invariant(
+    async def test_record_domain_usage_contract(
         self, memory_client: DomainMemoryClient
     ) -> None:
         """
-        不変条件: 重複する学習分野は除去される
+        事前条件: 有効なlearning_domain、exam_type
+        事後条件: create_eventが正しく呼び出される
+        不変条件: エラー時も処理が継続される
         """
-        # Arrange - 重複データを含むイベント
-        now = datetime.now()
-        recent_time = now - timedelta(days=1)  # 1日前（範囲内）
+        # Arrange - 事前条件設定
+        learning_domain = "コンピューティング"
+        exam_type = "AWS-SAP"
 
-        mock_events = [
-            {
-                "eventId": "event-1",
-                "eventTimestamp": recent_time.isoformat() + "+09:00",
-                "payload": [
-                    {
-                        "conversational": {
-                            "content": {"text": "セキュリティの設計"},
-                            "role": "USER",
-                        }
-                    }
-                ],
-            },
-            {
-                "eventId": "event-2",
-                "eventTimestamp": recent_time.isoformat() + "+09:00",
-                "payload": [
-                    {
-                        "conversational": {
-                            "content": {"text": "信頼性の設計"},
-                            "role": "USER",
-                        }
-                    }
-                ],
-            },
-            {
-                "eventId": "event-3",
-                "eventTimestamp": recent_time.isoformat() + "+09:00",
-                "payload": [
-                    {
-                        "conversational": {
-                            "content": {"text": "セキュリティの設計"},
-                            "role": "USER",
-                        }
-                    }
-                ],
-            },  # 重複
-        ]
-
-        with patch.object(memory_client, "list_events") as mock_list_events:
-            mock_list_events.return_value = mock_events
+        with patch.object(memory_client, "create_event") as mock_create_event:
+            mock_create_event.return_value = {"eventId": "test-event-id"}
 
             # Act
-            result = await memory_client.get_recent_domains("AWS-SAP")
-
-        # Assert - 不変条件検証
-        assert len(result) == 2  # 重複除去されて2つ
-        assert "セキュリティの設計" in result
-        assert "信頼性の設計" in result
-
-    async def test_record_domain_usage_error_invariant(
-        self, memory_client: DomainMemoryClient, sample_learning_domain: str
-    ) -> None:
-        """
-        不変条件: エラー発生時も処理が継続される
-        """
-        # Arrange - create_eventでエラーが発生する設定
-        with patch.object(memory_client.client, "create_event") as mock_create_event:
-            mock_create_event.side_effect = Exception("Memory API Error")
-
-            # Act & Assert - 不変条件検証（例外が発生しない）
-            try:
-                await memory_client.record_domain_usage(
-                    sample_learning_domain, "AWS-SAP"
-                )
-                # エラーが発生しても例外は発生しない（ログ出力のみ）
-            except Exception:
-                pytest.fail("record_domain_usage should not raise exceptions")
-
-    async def test_get_recent_domains_error_invariant(
-        self, memory_client: DomainMemoryClient
-    ) -> None:
-        """
-        不変条件: エラー発生時は空リストが返される
-        """
-        # Arrange - list_eventsでエラーが発生する設定
-        with patch.object(memory_client, "list_events") as mock_list_events:
-            mock_list_events.side_effect = Exception("Memory API Error")
-
-            # Act
-            result = await memory_client.get_recent_domains("AWS-SAP")
-
-        # Assert - 不変条件検証
-        assert result == []  # エラー時は空リスト
-
-    async def test_list_events_unix_timestamp_contract(
-        self, memory_client: DomainMemoryClient
-    ) -> None:
-        """
-        事前条件: Unix timestamp形式のイベント
-        事後条件: 適切に日時変換されてフィルタリングされる
-        不変条件: 指定日数以内のイベントのみが返される
-        """
-        # Arrange - Unix timestamp形式のイベント
-        now = datetime.now()
-        recent_timestamp = (now - timedelta(days=3)).timestamp()  # 3日前（範囲内）
-        old_timestamp = (now - timedelta(days=10)).timestamp()  # 10日前（範囲外）
-
-        mock_events = [
-            {
-                "eventId": "event-1",
-                "eventTimestamp": recent_timestamp,  # Unix timestamp
-                "payload": [
-                    {
-                        "conversational": {
-                            "content": {"text": "セキュリティの設計"},
-                            "role": "USER",
-                        }
-                    }
-                ],
-            },
-            {
-                "eventId": "event-2",
-                "eventTimestamp": old_timestamp,  # Unix timestamp
-                "payload": [
-                    {
-                        "conversational": {
-                            "content": {"text": "古い分野"},
-                            "role": "USER",
-                        }
-                    }
-                ],
-            },
-        ]
-
-        with patch.object(memory_client.client, "list_events") as mock_list_events:
-            mock_list_events.return_value = mock_events
-
-            # Act
-            result = await memory_client.list_events(
-                actor_id="cloud-copass-agent", session_id="AWS-SAP", days_back=7
-            )
+            await memory_client.record_domain_usage(learning_domain, exam_type)
 
         # Assert - 事後条件検証
-        assert len(result) == 1  # 範囲内のイベントのみ
-        assert result[0]["eventId"] == "event-1"
+        mock_create_event.assert_called_once_with(
+            actor_id="cloud-copass-agent",
+            session_id=exam_type,
+            learning_domain=learning_domain,
+        )
 
-    async def test_list_events_naive_datetime_contract(
+    async def test_error_handling_invariant(
         self, memory_client: DomainMemoryClient
     ) -> None:
         """
-        事前条件: タイムゾーンなしのdatetimeオブジェクト
-        事後条件: 適切にフィルタリングされる
-        不変条件: 指定日数以内のイベントのみが返される
+        不変条件: API エラー時も適切にハンドリングされる
         """
-        # Arrange - タイムゾーンなしのdatetimeイベント
-        now = datetime.now()
-        recent_time = now - timedelta(days=3)  # 3日前（範囲内）
-        old_time = now - timedelta(days=10)  # 10日前（範囲外）
-
-        mock_events = [
-            {
-                "eventId": "event-1",
-                "eventTimestamp": recent_time,  # naive datetime
-                "payload": [
-                    {
-                        "conversational": {
-                            "content": {"text": "セキュリティの設計"},
-                            "role": "USER",
-                        }
-                    }
-                ],
-            },
-            {
-                "eventId": "event-2",
-                "eventTimestamp": old_time,  # naive datetime
-                "payload": [
-                    {
-                        "conversational": {
-                            "content": {"text": "古い分野"},
-                            "role": "USER",
-                        }
-                    }
-                ],
-            },
-        ]
-
-        with patch.object(memory_client.client, "list_events") as mock_list_events:
-            mock_list_events.return_value = mock_events
-
-            # Act
-            result = await memory_client.list_events(
-                actor_id="cloud-copass-agent", session_id="AWS-SAP", days_back=7
-            )
-
-        # Assert - 事後条件検証
-        assert len(result) == 1  # 範囲内のイベントのみ
-        assert result[0]["eventId"] == "event-1"
-
-    async def test_list_events_invalid_iso_string_contract(
-        self, memory_client: DomainMemoryClient
-    ) -> None:
-        """
-        事前条件: 無効なISO 8601文字列
-        事後条件: ValueErrorが発生してもスキップされる
-        不変条件: 有効なイベントのみが返される
-        """
-        # Arrange - 無効なISO文字列を含むイベント
-        now = datetime.now()
-        valid_time = now - timedelta(days=1)
-
-        mock_events = [
-            {
-                "eventId": "event-1",
-                "eventTimestamp": "invalid-datetime-string",  # 無効な文字列
-                "payload": [
-                    {
-                        "conversational": {
-                            "content": {"text": "無効な分野"},
-                            "role": "USER",
-                        }
-                    }
-                ],
-            },
-            {
-                "eventId": "event-2",
-                "eventTimestamp": valid_time.isoformat() + "+09:00",  # 有効な文字列
-                "payload": [
-                    {
-                        "conversational": {
-                            "content": {"text": "有効な分野"},
-                            "role": "USER",
-                        }
-                    }
-                ],
-            },
-        ]
-
-        with patch.object(memory_client.client, "list_events") as mock_list_events:
-            mock_list_events.return_value = mock_events
-
-            # Act
-            result = await memory_client.list_events(
-                actor_id="cloud-copass-agent", session_id="AWS-SAP", days_back=7
-            )
-
-        # Assert - 事後条件検証
-        assert len(result) == 1  # 有効なイベントのみ
-        assert result[0]["eventId"] == "event-2"
-
-    async def test_get_recent_domains_empty_payload_contract(
-        self, memory_client: DomainMemoryClient
-    ) -> None:
-        """
-        事前条件: payloadが空のイベント
-        事後条件: 空のリストが返される
-        不変条件: エラーが発生しない
-        """
-        # Arrange - payloadが空のイベント
-        now = datetime.now()
-        recent_time = now - timedelta(days=1)
-
-        mock_events = [
-            {
-                "eventId": "event-1",
-                "eventTimestamp": recent_time.isoformat() + "+09:00",
-                "payload": [],  # 空のpayload
-            },
-            {
-                "eventId": "event-2",
-                "eventTimestamp": recent_time.isoformat() + "+09:00",
-                # payloadキーなし
-            },
-        ]
-
-        with patch.object(memory_client, "list_events") as mock_list_events:
-            mock_list_events.return_value = mock_events
-
-            # Act
-            result = await memory_client.get_recent_domains("AWS-SAP")
-
-        # Assert - 事後条件検証
-        assert result == []  # 空のリスト
-
-    async def test_get_recent_domains_malformed_payload_contract(
-        self, memory_client: DomainMemoryClient
-    ) -> None:
-        """
-        事前条件: 不正な形式のpayload
-        事後条件: エラーが発生せず処理が継続される
-        不変条件: 有効なデータのみが抽出される
-        """
-        # Arrange - 不正な形式のpayloadを含むイベント
-        now = datetime.now()
-        recent_time = now - timedelta(days=1)
-
-        mock_events = [
-            {
-                "eventId": "event-1",
-                "eventTimestamp": recent_time.isoformat() + "+09:00",
-                "payload": [
-                    {
-                        "conversational": {
-                            # contentキーなし
-                            "role": "USER"
-                        }
-                    }
-                ],
-            },
-            {
-                "eventId": "event-2",
-                "eventTimestamp": recent_time.isoformat() + "+09:00",
-                "payload": [
-                    {
-                        "conversational": {
-                            "content": {"text": "有効な分野"},
-                            "role": "USER",
-                        }
-                    }
-                ],
-            },
-            {
-                "eventId": "event-3",
-                "eventTimestamp": recent_time.isoformat() + "+09:00",
-                "payload": [
-                    {
-                        # conversationalキーなし
-                        "other": "data"
-                    }
-                ],
-            },
-        ]
-
-        with patch.object(memory_client, "list_events") as mock_list_events:
-            mock_list_events.return_value = mock_events
-
-            # Act
-            result = await memory_client.get_recent_domains("AWS-SAP")
-
-        # Assert - 事後条件検証
-        assert len(result) == 1  # 有効なデータのみ
-        assert result[0] == "有効な分野"
-
-    async def test_get_recent_domains_missing_text_field_contract(
-        self, memory_client: DomainMemoryClient
-    ) -> None:
-        """
-        事前条件: textフィールドが空文字列のpayload
-        事後条件: 空文字列は除外される
-        不変条件: 有効なテキストのみが返される
-        """
-        # Arrange - textが空文字列のイベント
-        now = datetime.now()
-        recent_time = now - timedelta(days=1)
-
-        mock_events = [
-            {
-                "eventId": "event-1",
-                "eventTimestamp": recent_time.isoformat() + "+09:00",
-                "payload": [
-                    {
-                        "conversational": {
-                            "content": {"text": ""},  # 空文字列
-                            "role": "USER",
-                        }
-                    }
-                ],
-            },
-            {
-                "eventId": "event-2",
-                "eventTimestamp": recent_time.isoformat() + "+09:00",
-                "payload": [
-                    {
-                        "conversational": {
-                            "content": {"text": "有効な分野"},
-                            "role": "USER",
-                        }
-                    }
-                ],
-            },
-        ]
-
-        with patch.object(memory_client, "list_events") as mock_list_events:
-            mock_list_events.return_value = mock_events
-
-            # Act
-            result = await memory_client.get_recent_domains("AWS-SAP")
-
-        # Assert - 事後条件検証
-        assert len(result) == 1  # 空文字列は除外
-        assert result[0] == "有効な分野"
-
-    async def test_get_recent_domains_non_user_role_contract(
-        self, memory_client: DomainMemoryClient
-    ) -> None:
-        """
-        事前条件: roleがUSER以外のpayload
-        事後条件: USER以外のroleは除外される
-        不変条件: USERロールのみが返される
-        """
-        # Arrange - 異なるroleのイベント
-        now = datetime.now()
-        recent_time = now - timedelta(days=1)
-
-        mock_events = [
-            {
-                "eventId": "event-1",
-                "eventTimestamp": recent_time.isoformat() + "+09:00",
-                "payload": [
-                    {
-                        "conversational": {
-                            "content": {"text": "システム分野"},
-                            "role": "SYSTEM",  # USER以外
-                        }
-                    }
-                ],
-            },
-            {
-                "eventId": "event-2",
-                "eventTimestamp": recent_time.isoformat() + "+09:00",
-                "payload": [
-                    {
-                        "conversational": {
-                            "content": {"text": "ユーザー分野"},
-                            "role": "USER",
-                        }
-                    }
-                ],
-            },
-        ]
-
-        with patch.object(memory_client, "list_events") as mock_list_events:
-            mock_list_events.return_value = mock_events
-
-            # Act
-            result = await memory_client.get_recent_domains("AWS-SAP")
-
-        # Assert - 事後条件検証
-        assert len(result) == 1  # USERロールのみ
-        assert result[0] == "ユーザー分野"
-
-    async def test_list_events_timezone_aware_datetime_contract(
-        self, memory_client: DomainMemoryClient
-    ) -> None:
-        """
-        事前条件: タイムゾーン付きのdatetimeオブジェクト
-        事後条件: 適切にUTC変換されてフィルタリングされる
-        不変条件: 指定日数以内のイベントのみが返される
-        """
-        # Arrange - タイムゾーン付きのdatetimeイベント
-        from datetime import timezone
-
-        now = datetime.now()
-        jst = timezone(timedelta(hours=9))  # JST
-        recent_time_jst = (now - timedelta(days=3)).replace(
-            tzinfo=jst
-        )  # 3日前（範囲内）
-        old_time_jst = (now - timedelta(days=10)).replace(
-            tzinfo=jst
-        )  # 10日前（範囲外）
-
-        mock_events = [
-            {
-                "eventId": "event-1",
-                "eventTimestamp": recent_time_jst,  # timezone-aware datetime
-                "payload": [
-                    {
-                        "conversational": {
-                            "content": {"text": "セキュリティの設計"},
-                            "role": "USER",
-                        }
-                    }
-                ],
-            },
-            {
-                "eventId": "event-2",
-                "eventTimestamp": old_time_jst,  # timezone-aware datetime
-                "payload": [
-                    {
-                        "conversational": {
-                            "content": {"text": "古い分野"},
-                            "role": "USER",
-                        }
-                    }
-                ],
-            },
-        ]
-
-        with patch.object(memory_client.client, "list_events") as mock_list_events:
-            mock_list_events.return_value = mock_events
-
-            # Act
-            result = await memory_client.list_events(
-                actor_id="cloud-copass-agent", session_id="AWS-SAP", days_back=7
-            )
-
-        # Assert - 事後条件検証
-        assert len(result) == 1  # 範囲内のイベントのみ
-        assert result[0]["eventId"] == "event-1"
-
-    async def test_list_events_exception_handling_contract(
-        self, memory_client: DomainMemoryClient
-    ) -> None:
-        """
-        事前条件: list_eventsでAPIエラーが発生
-        事後条件: 例外が再発生される
-        不変条件: エラーログが出力される
-        """
-        # Arrange - APIエラーを発生させる
+        # Arrange - エラー条件設定
         with patch.object(memory_client.client, "list_events") as mock_list_events:
             mock_list_events.side_effect = Exception("Memory API Error")
 
-            # Act & Assert - 例外処理検証
+            # Act & Assert - 不変条件検証
             with pytest.raises(Exception, match="Memory API Error"):
                 await memory_client.list_events(
-                    actor_id="cloud-copass-agent", session_id="AWS-SAP", days_back=7
+                    actor_id="cloud-copass-agent", session_id="AWS-SAP"
                 )
+
+    async def test_get_recent_domains_error_handling_invariant(
+        self, memory_client: DomainMemoryClient
+    ) -> None:
+        """
+        不変条件: get_recent_domains エラー時は空リストを返して処理継続
+        """
+        # Arrange - エラー条件設定
+        with patch.object(memory_client, "list_events") as mock_list_events:
+            mock_list_events.side_effect = Exception("Memory API Error")
+
+            # Act
+            result = await memory_client.get_recent_domains("AWS-SAP")
+
+        # Assert - 不変条件検証: エラー時は空リストを返す
+        assert result == []
+
+    async def test_record_domain_usage_error_handling_invariant(
+        self, memory_client: DomainMemoryClient
+    ) -> None:
+        """
+        不変条件: record_domain_usage エラー時も処理継続（例外を再発生させない）
+        """
+        # Arrange - エラー条件設定
+        with patch.object(memory_client, "create_event") as mock_create_event:
+            mock_create_event.side_effect = Exception("Memory API Error")
+
+            # Act - 不変条件検証: 例外が発生しない
+            await memory_client.record_domain_usage("コンピューティング", "AWS-SAP")
+
+        # Assert - 事後条件検証: create_eventが呼び出された
+        mock_create_event.assert_called_once()

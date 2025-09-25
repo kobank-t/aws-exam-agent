@@ -59,11 +59,25 @@ EOF
 
 > **詳細**: [環境変数ガイド](environment-variables-guide.md)
 
-### 4. 動作確認
+### 4. AgentCore Memory セットアップ
+
+```bash
+# Memory リソース作成
+python scripts/agentcore_memory/manage.py create
+
+# Memory リソース確認
+python scripts/agentcore_memory/manage.py list
+```
+
+### 5. 動作確認
 
 ```bash
 # ローカル実行テスト
 uv run python app/agentcore/agent_main.py --test
+
+# Memory 内容確認
+export AWS_PROFILE=sandbox
+python scripts/agentcore_memory/manage.py show
 
 # 品質チェック
 ./scripts/python-quality-check.sh

@@ -108,14 +108,32 @@ aws logs filter-log-events \
 
 ### Memory 管理スクリプト
 
-AgentCore Memory（ジャンル分散機能）の管理には専用スクリプトを使用します：
+AgentCore Memory（ジャンル分散機能）の管理には以下のスクリプトを使用します：
+
+#### 統合管理スクリプト（推奨）
+
+```bash
+# Memory リソース管理
+python scripts/agentcore_memory/manage.py <command>
+```
+
+| コマンド     | 説明                      | 使用例                                                 |
+| ------------ | ------------------------- | ------------------------------------------------------ |
+| `create`     | Memory リソース作成       | `python scripts/agentcore_memory/manage.py create`     |
+| `list`       | Memory リソース一覧表示   | `python scripts/agentcore_memory/manage.py list`       |
+| `delete-old` | 古い Memory リソース削除  | `python scripts/agentcore_memory/manage.py delete-old` |
+| `show`       | Memory 内容を表示         | `python scripts/agentcore_memory/manage.py show`       |
+| `analyze`    | Memory 使用状況を詳細分析 | `python scripts/agentcore_memory/manage.py analyze`    |
+| `cleanup`    | 最新イベント以外を削除    | `python scripts/agentcore_memory/manage.py cleanup`    |
+| `clear`      | 全イベントを削除          | `python scripts/agentcore_memory/manage.py clear`      |
+| `help`       | ヘルプを表示              | `python scripts/agentcore_memory/manage.py help`       |
+
+#### bash 版管理スクリプト
 
 ```bash
 export AWS_PROFILE=YOUR_PROFILE_NAME
 ./scripts/manage-agentcore-memory.sh <command>
 ```
-
-#### 利用可能なコマンド
 
 | コマンド  | 説明                      | 使用例                                         |
 | --------- | ------------------------- | ---------------------------------------------- |
@@ -618,6 +636,7 @@ aws s3 rm s3://aws-exam-agent-deployments-development-ACCOUNT-ID/lambda-packages
 - [トラブルシューティングガイド](./troubleshooting-guide.md): 問題解決手法
 - [テストガイド](./testing-guide.md): テスト実行と Memory 機能の検証
 - スクリプトリファレンス:
-  - `./scripts/manage-agentcore-memory.sh`: AgentCore Memory 管理
+  - `scripts/agentcore_memory/manage.py`: AgentCore Memory 統合管理（推奨）
+  - `./scripts/manage-agentcore-memory.sh`: AgentCore Memory 管理（bash 版）
   - `./scripts/test-agentcore.sh`: AgentCore 動作テスト
   - `./scripts/show-agentcore-logs.sh`: ログ確認
