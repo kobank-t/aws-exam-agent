@@ -285,6 +285,369 @@ learning_insights: str = "試験ガイドに基づく学習戦略と試験対策
 - **技術的正確性**: 最新の AWS 公式ドキュメント参照
 - **標準化**: Model Context Protocol による統一的なコンテキスト提供
 
+### 品質評価基準管理
+
+#### 統合リソース管理（改善）
+
+**設計方針**: 命名ルールによる集約管理
+
+```
+app/agentcore/exam_resources/
+├── AWS-SAP-C02-guide.md     # AWS SAP試験ガイド
+├── AWS-SAP-C02-samples.md   # AWS SAP公式サンプル問題
+├── AZ-104-guide.md          # Azure試験ガイド（将来）
+├── AZ-104-samples.md        # Azure公式サンプル問題（将来）
+├── GCP-ACE-guide.md         # GCP試験ガイド（将来）
+└── GCP-ACE-samples.md       # GCP公式サンプル問題（将来）
+```
+
+**命名ルール**:
+
+- 試験ガイド: `{exam_type}-guide.md`
+- サンプル問題: `{exam_type}-samples.md`
+
+**サンプル問題活用範囲**: 品質評価のみ（問題生成時は使用しない）
+
+**活用目的**:
+
+- 構造的品質評価: 問題文・選択肢・解説の構造パターン参照
+- 難易度適合性評価: Professional レベルの複雑度基準
+- 出題傾向評価: 実際の試験に近い出題スタイル確認
+
+**サンプル問題ファイル構造**:
+
+```markdown
+# AWS-SAP-C02-samples.md
+
+## Sample Question 1
+
+**Question:**
+A company needs to implement a disaster recovery solution...
+
+**Options:**
+A. Use AWS CloudFormation...
+B. Implement AWS Config...
+C. Deploy Amazon RDS...
+D. Configure AWS Systems Manager...
+
+**Correct Answer:** A
+
+**Explanation:**
+AWS CloudFormation provides...
+
+---
+
+## Sample Question 2
+
+...
+```
+
+**EXAM_TYPES 設定の最適化**:
+
+```python
+# 最小限の設定（不要な項目を削除）
+EXAM_TYPES = {
+    "AWS-SAP-C02": {
+        "name": "AWS Certified Solutions Architect - Professional",
+    },
+    "AZ-104": {
+        "name": "Microsoft Azure Administrator",
+    },
+    "GCP-ACE": {
+        "name": "Google Cloud Associate Cloud Engineer",
+    },
+}
+# 削除項目: guide_path, guide_url, sample_url（命名ルールで自動化）
+```
+
+**リソース読み込み関数**:
+
+```python
+def load_exam_guide(exam_type: str) -> str:
+    """試験ガイドファイルを読み込む（命名ルール活用）"""
+    current_file = Path(__file__)
+    base_dir = current_file.parent
+    # 命名ルールに基づく自動パス生成
+    guide_path = base_dir / "exam_resources" / f"{exam_type}-guide.md"
+    # 実装詳細...
+
+def load_sample_questions(exam_type: str) -> str:
+    """サンプル問題ファイルを読み込む（命名ルール活用）"""
+    current_file = Path(__file__)
+    base_dir = current_file.parent
+    # 命名ルールに基づく自動パス生成
+    sample_path = base_dir / "exam_resources" / f"{exam_type}-samples.md"
+    # 実装詳細...
+```
+
+## 問題品質評価・改善システム設計（新機能）
+
+### 品質評価の課題と解決アプローチ
+
+**課題**: 実際の試験問題が手元にない中での品質評価
+
+**解決アプローチ**:
+
+1. **公式基準活用**: 試験ガイド・サンプル問題を品質基準として活用
+2. **多軸評価システム**: 技術的正確性・難易度・構造・準拠性の 4 軸評価
+3. **エージェント自律評価**: Strands Agents カスタムツールによる品質判定
+4. **継続的改善**: エージェントによる自律的品質改善サイクル
+
+### 設計方針の転換
+
+#### **従来アプローチ（ロジック分岐）**
+
+- 品質評価エンジンによる分岐処理
+- 固定的な閾値判定
+- プログラマティックな改善ロジック
+
+#### **新アプローチ（エージェント自律）**
+
+- Strands Agents カスタムツールによる品質評価
+- エージェントの自律的判断による改善
+- 状況に応じた柔軟な品質管理
+
+### アーキテクチャ設計
+
+#### エージェント自律型品質管理フロー
+
+```mermaid
+sequenceDiagram
+    participant ES as EventBridge Scheduler
+    participant L as Lambda Function
+    participant A as Agent (Strands)
+    participant QT as 品質評価ツール
+    participant IT as 改善ツール
+    participant MCP as MCP Server
+    participant TC as Teams Client
+
+    ES->>L: 定期実行トリガー
+    L->>A: エージェント起動
+
+    A->>A: 問題生成実行
+    A->>QT: evaluate_question_quality 実行
+    QT->>MCP: 公式ドキュメント検証
+    MCP-->>QT: 技術的正確性データ
+    QT-->>A: 品質スコア返却
+
+    A->>A: 品質判定（自律的判断）
+
+    alt 品質基準達成
+        A->>TC: Teams投稿実行
+        TC-->>A: 投稿完了
+    else 品質改善必要
+        A->>IT: improve_question_quality 実行
+        IT-->>A: 改善された問題返却
+        A->>A: 改善問題で再評価（再帰的）
+    end
+
+    AC-->>L: 処理完了
+    L-->>ES: 実行完了
+```
+
+#### 品質評価フロー概要
+
+```mermaid
+graph TB
+    A[問題生成] --> B[品質評価エンジン]
+    B --> C{品質スコア判定}
+    C -->|閾値以上| D[Teams投稿]
+    C -->|閾値未満| E[改善提案生成]
+    E --> F[自動再生成]
+    F --> A
+    D --> G[品質データ記録]
+    G --> H[品質分析・レポート]
+
+    I[AWS公式サンプル] --> B
+    J[試験ガイド] --> B
+    K[MCP検証] --> B
+```
+
+#### 品質評価エンジン設計
+
+**品質評価カスタムツール**:
+
+```python
+from strands import tool
+from typing import Dict, List
+
+@tool
+async def evaluate_question_quality(
+    question: str,
+    options: List[str],
+    correct_answer: str,
+    explanation: str,
+    learning_domain: str,
+    exam_type: str = "professional"
+) -> Dict[str, float]:
+    """試験問題の品質を4軸で評価する
+
+    Returns:
+        品質スコア辞書 (technical_accuracy, difficulty_level,
+        structural_quality, guideline_compliance, overall_score)
+    """
+    # 評価基準の読み込み
+    exam_guide = load_exam_guide(exam_type)
+    sample_questions = load_sample_questions(exam_type)
+
+    # 4軸評価ロジック実装
+    # - MCP統合による公式ドキュメント検証
+    # - 試験ガイド準拠性チェック
+    # - サンプル問題との構造・難易度比較
+    # - LLMによる総合品質判定
+```
+
+**品質改善カスタムツール**:
+
+```python
+@tool
+async def improve_question_quality(
+    question: str,
+    quality_feedback: str,
+    improvement_suggestions: List[str],
+    exam_type: str = "professional"
+) -> Dict[str, any]:
+    """品質フィードバックに基づいて問題を改善する
+
+    Returns:
+        改善された問題データ
+    """
+    # 改善提案に基づく問題の自動改善
+    # - 技術的正確性の向上
+    # - 選択肢の妥当性強化
+    # - 解説の充実化
+```
+
+**評価軸設計**:
+
+1. **技術的正確性評価** (40%重み):
+
+   - MCP 統合による公式ドキュメント検証
+   - 技術用語・概念の正確性チェック
+   - サービス仕様との整合性確認
+
+2. **難易度適合性評価** (30%重み):
+
+   - Professional レベルの複雑度分析
+   - 複数サービス統合シナリオの評価
+   - ビジネス要件の複雑性評価
+
+3. **構造的品質評価** (20%重み):
+
+   - 問題文の明確性・論理性
+   - 選択肢の妥当性（説得力のある不正解）
+   - 解説の充実度・教育効果
+
+4. **試験ガイド準拠評価** (10%重み):
+   - 出題傾向との一致度
+   - 分野バランスの適切性
+   - 学習目標との整合性
+
+### 品質データ管理設計
+
+#### AgentCore Memory 活用
+
+**品質履歴管理**:
+
+```python
+# Memory namespace 設計
+session_id = f"quality-metrics/{exam_type}"  # quality-metrics/AWS-SAP
+
+# 品質データ構造
+quality_event = {
+    "question_id": "unique_id",
+    "timestamp": "2025-01-01T12:00:00Z",
+    "scores": {
+        "technical": 85.0,
+        "difficulty": 78.0,
+        "structural": 92.0,
+        "compliance": 88.0,
+        "overall": 84.2
+    },
+    "metadata": {
+        "learning_domain": "複雑な組織に対応するソリューションの設計",
+        "regeneration_count": 0,
+        "improvement_suggestions": ["技術用語の精度向上", "選択肢の妥当性強化"]
+    }
+}
+```
+
+#### 品質分析・レポート機能
+
+**分析機能**:
+
+- 品質傾向の時系列分析
+- 分野別品質分布の可視化
+- 改善効果の定量測定
+- 品質低下要因の特定
+
+**レポート生成**:
+
+- 週次品質サマリー
+- 月次改善レポート
+- 品質ダッシュボード
+- アラート・通知機能
+
+### 継続的改善メカニズム
+
+#### 自動品質改善サイクル
+
+1. **品質監視**: リアルタイム品質スコア監視
+2. **問題検出**: 閾値を下回る低品質問題の自動検出
+3. **原因分析**: 品質低下要因の自動特定
+4. **改善実行**: 改善提案に基づく自動再生成
+5. **効果測定**: 改善効果の定量評価
+
+#### 品質基準の動的調整
+
+**適応的閾値管理**:
+
+- 品質データ蓄積に基づく閾値最適化
+- 分野別品質基準の個別調整
+- 季節性・トレンドを考慮した基準更新
+
+**A/B テスト機能**:
+
+- 異なる生成手法の品質比較
+- プロンプト改善効果の測定
+- 最適な生成パラメータの特定
+
+### 実装方針
+
+#### 段階的実装アプローチ
+
+**Phase 1: 基本品質評価**
+
+- 4 軸評価システムの実装
+- 基本的な品質スコア算出
+- 閾値による自動再生成
+
+**Phase 2: 品質データ管理**
+
+- AgentCore Memory 統合
+- 品質履歴の蓄積・分析
+- 基本レポート機能
+
+**Phase 3: 高度な改善機能**
+
+- 動的閾値調整
+- A/B テスト機能
+- 高度な分析・可視化
+
+#### 品質保証戦略
+
+**検証方法**:
+
+- AWS 公式サンプル問題との比較テスト
+- 品質評価の一貫性検証
+- 改善効果の定量測定
+
+**監視・運用**:
+
+- 品質メトリクスの継続監視
+- 品質低下時のアラート
+- 定期的な品質レビュー
+
 ## ジャンル分散機能設計（実装完了）
 
 ### 問題の背景
