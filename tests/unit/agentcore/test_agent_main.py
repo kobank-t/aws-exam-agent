@@ -1006,43 +1006,20 @@ class TestLoadExamGuide:
         # 不変条件検証: ファイル内容の基本構造
         assert "試験ガイド" in result or "Exam Guide" in result
 
-    def test_valid_exam_type_aws_sap_c02_contract(self) -> None:
+    def test_fallback_exam_type_contract(self) -> None:
         """
-        契約による設計: 有効な試験タイプ"AWS-SAP-C02"での試験ガイド読み込み検証
+        契約による設計: フォールバック機能での試験ガイド読み込み検証
 
-        事前条件: 試験タイプ"AWS-SAP-C02"が指定される
-        事後条件: AWS-SAP-C02.mdファイルの内容が返される
-        不変条件: 返される内容は文字列で、空でない
-        """
-        from app.agentcore.agent_main import load_exam_guide
-
-        # Arrange - 事前条件設定
-        exam_type = "AWS-SAP-C02"
-
-        # Act - 実行
-        result = load_exam_guide(exam_type)
-
-        # Assert - 事後条件検証
-        assert isinstance(result, str)
-        assert len(result) > 0
-        assert "AWS Certified Solutions Architect - Professional" in result
-
-        # 不変条件検証: ファイル内容の基本構造
-        assert "試験ガイド" in result or "Exam Guide" in result
-
-    def test_nonexistent_exam_type_precondition(self) -> None:
-        """
-        事前条件違反: 存在しない試験タイプでのエラーハンドリング検証
-
-        事前条件違反: 存在しない試験タイプが指定される
-        事後条件: RuntimeErrorが発生する
+        事前条件: EXAM_TYPESに存在しない試験タイプが指定される
+        事後条件: 統一命名ルールに基づくファイルパスで読み込みが試行される
+        不変条件: 適切なエラーハンドリングが行われる
         """
         from app.agentcore.agent_main import load_exam_guide
 
-        # Arrange - 事前条件違反: 存在しないファイル
+        # Arrange - 事前条件設定: 存在しない試験タイプ
         exam_type = "NONEXISTENT-EXAM"
 
-        # Act & Assert - 事前条件検証
+        # Act & Assert - フォールバック機能の検証
         with pytest.raises(
             RuntimeError, match="試験ガイドファイルの読み込みに失敗しました"
         ):
@@ -1115,6 +1092,98 @@ class TestLoadExamGuide:
             RuntimeError, match="試験ガイドファイルの読み込みに失敗しました"
         ):
             load_exam_guide(exam_type)
+
+
+class TestLoadSampleQuestions:
+    """load_sample_questions 関数の契約検証"""
+
+    def test_valid_exam_type_sap_contract(self) -> None:
+        """
+        契約による設計: 有効な試験タイプ"AWS-SAP"でのサンプル問題読み込み検証
+
+        事前条件: 試験タイプ"AWS-SAP"が指定される
+        事後条件: AWS-SAP-samples.mdファイルの内容が返される
+        不変条件: 返される内容は文字列で、空でない
+        """
+        from app.agentcore.agent_main import load_sample_questions
+
+        # Arrange - 事前条件設定
+        exam_type = "AWS-SAP"
+
+        # Act - 実行
+        result = load_sample_questions(exam_type)
+
+        # Assert - 事後条件検証
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+        # 不変条件検証: ファイル内容の基本構造
+        assert "AWS Certified Solutions Architect - Professional" in result
+        assert "サンプル問題" in result
+
+    def test_nonexistent_exam_type_precondition(self) -> None:
+        """
+        事前条件違反: 存在しない試験タイプでのサンプル問題読み込み
+
+        事前条件違反: 存在しない試験タイプが指定される
+        事後条件: RuntimeErrorが発生する
+        """
+        from app.agentcore.agent_main import load_sample_questions
+
+        # Arrange - 事前条件違反: 存在しないファイル
+        exam_type = "NONEXISTENT-EXAM"
+
+        # Act & Assert - 事前条件検証
+        with pytest.raises(
+            RuntimeError, match="サンプル問題ファイルの読み込みに失敗しました"
+        ):
+            load_sample_questions(exam_type)
+
+    def test_file_content_structure_invariant(self) -> None:
+        """
+        不変条件: サンプル問題ファイル内容の構造検証
+
+        事前条件: 有効な試験タイプが指定される
+        不変条件: ファイル内容が期待される構造を持つ
+        """
+        from app.agentcore.agent_main import load_sample_questions
+
+        # Arrange - 事前条件設定
+        exam_type = "AWS-SAP"
+
+        # Act - 実行
+        result = load_sample_questions(exam_type)
+
+        # Assert - 不変条件検証: ファイル内容の構造
+        assert isinstance(result, str)
+        assert len(result) > 100  # 最小限の内容があることを確認
+
+        # 基本的な構造要素の存在確認
+        assert "# AWS Certified Solutions Architect - Professional" in result
+        assert "サンプル問題" in result
+
+        # ファイル形式の確認（Markdown形式）
+        assert result.startswith("#")  # Markdownヘッダーで開始
+
+    @patch("builtins.open")
+    def test_file_read_error_precondition(self, mock_open: MagicMock) -> None:
+        """
+        事前条件違反: ファイル読み込みエラー時の例外処理検証
+
+        事前条件違反: ファイル読み込み時にIOErrorが発生
+        事後条件: RuntimeErrorが発生する
+        """
+        from app.agentcore.agent_main import load_sample_questions
+
+        # Arrange - 事前条件違反: ファイル読み込みエラー
+        mock_open.side_effect = OSError("ファイル読み込みエラー")
+        exam_type = "AWS-SAP"
+
+        # Act & Assert - 事前条件検証
+        with pytest.raises(
+            RuntimeError, match="サンプル問題ファイルの読み込みに失敗しました"
+        ):
+            load_sample_questions(exam_type)
 
 
 class TestDomainMemoryIntegration:

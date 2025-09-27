@@ -51,7 +51,7 @@ htmlcov/
 docs/
 *.md
 !README.md
-!exam_guides/*.md
+!exam_resources/*.md
 
 # CI/CD
 .github/

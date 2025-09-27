@@ -46,9 +46,6 @@ logger = logging.getLogger(__name__)
 EXAM_TYPES = {
     "AWS-SAP": {
         "name": "AWS Certified Solutions Architect - Professional",
-        "guide_path": "exam_guides/AWS-SAP-C02.md",
-        "guide_url": "https://d1.awsstatic.com/training-and-certification/docs-sa-pro/AWS-Certified-Solutions-Architect-Professional_Exam-Guide.pdf",
-        "sample_url": "https://d1.awsstatic.com/training-and-certification/docs-sa-pro/AWS-Certified-Solutions-Architect-Professional_Sample-Questions.pdf",
     },
 }
 
@@ -93,12 +90,8 @@ def load_exam_guide(exam_type: str) -> str:
         current_file = Path(__file__)
         base_dir = current_file.parent
 
-        # 試験タイプに基づいてガイドパスを決定
-        if exam_type in EXAM_TYPES:
-            guide_path = base_dir / EXAM_TYPES[exam_type]["guide_path"]
-        else:
-            # フォールバック: 試験タイプ名をそのままファイル名として使用
-            guide_path = base_dir / "exam_guides" / f"{exam_type}.md"
+        # 統一命名ルールに基づくパス生成
+        guide_path = base_dir / "exam_resources" / f"{exam_type}-guide.md"
 
         logger.info(f"試験ガイドファイルを読み込み中: {guide_path}")
 
@@ -114,6 +107,45 @@ def load_exam_guide(exam_type: str) -> str:
     except Exception as e:
         logger.error(f"試験ガイドファイル読み込みエラー: {e}")
         raise RuntimeError(f"試験ガイドファイルの読み込みに失敗しました: {e}") from e
+
+
+def load_sample_questions(exam_type: str = "AWS-SAP") -> str:
+    """
+    指定された試験タイプのサンプル問題を読み込む
+
+    Args:
+        exam_type: 試験タイプ（例: "AWS-SAP"）
+
+    Returns:
+        サンプル問題の内容
+
+    Raises:
+        RuntimeError: ファイル読み込みに失敗した場合
+    """
+    try:
+        # 現在のファイルのディレクトリを基準にパスを解決
+        current_file = Path(__file__)
+        base_dir = current_file.parent
+
+        # 統一命名ルールに基づくパス生成
+        sample_path = base_dir / "exam_resources" / f"{exam_type}-samples.md"
+
+        logger.info(f"サンプル問題ファイルを読み込み中: {sample_path}")
+
+        if not sample_path.exists():
+            raise FileNotFoundError(
+                f"サンプル問題ファイルが見つかりません: {sample_path}"
+            )
+
+        with open(sample_path, encoding="utf-8") as f:
+            content = f.read()
+
+        logger.info(f"サンプル問題ファイル読み込み完了: {len(content)}文字")
+        return content
+
+    except Exception as e:
+        logger.error(f"サンプル問題ファイル読み込みエラー: {e}")
+        raise RuntimeError(f"サンプル問題ファイルの読み込みに失敗しました: {e}") from e
 
 
 # Bedrock基盤モデル（SCP制限対応: ON_DEMAND対応モデルはus.プレフィックスなし）
