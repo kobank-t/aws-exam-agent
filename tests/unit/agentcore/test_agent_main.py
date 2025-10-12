@@ -547,8 +547,10 @@ class TestConstants:
         assert isinstance(EXAM_TYPES, dict)
         assert "AWS-SAP" in EXAM_TYPES
         assert "name" in EXAM_TYPES["AWS-SAP"]
-        assert "guide_url" in EXAM_TYPES["AWS-SAP"]
-        assert "sample_url" in EXAM_TYPES["AWS-SAP"]
+
+        # 簡素化後の構造: nameフィールドのみ保持
+        assert isinstance(EXAM_TYPES["AWS-SAP"]["name"], str)
+        assert len(EXAM_TYPES["AWS-SAP"]["name"]) > 0
 
     def test_model_id_invariant(self) -> None:
         """
