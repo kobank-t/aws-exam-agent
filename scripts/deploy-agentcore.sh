@@ -78,10 +78,30 @@ if [ -z "$MEMORY_ID" ]; then
     exit 1
 fi
 
+# .envファイルから BEDROCK_MODEL_ID を抽出
+BEDROCK_MODEL_ID=$(grep "^BEDROCK_MODEL_ID=" "$ENV_FILE" | cut -d'=' -f2-)
+if [ -z "$BEDROCK_MODEL_ID" ]; then
+    echo "❌ BEDROCK_MODEL_ID が .env ファイルに設定されていません"
+    echo "💡 .env ファイルに以下の形式で設定してください:"
+    echo "   BEDROCK_MODEL_ID=jp.anthropic.claude-sonnet-4-5-20250929-v1:0"
+    exit 1
+fi
+
+# .envファイルから BEDROCK_REGION を抽出
+BEDROCK_REGION=$(grep "^BEDROCK_REGION=" "$ENV_FILE" | cut -d'=' -f2-)
+if [ -z "$BEDROCK_REGION" ]; then
+    echo "❌ BEDROCK_REGION が .env ファイルに設定されていません"
+    echo "💡 .env ファイルに以下の形式で設定してください:"
+    echo "   BEDROCK_REGION=ap-northeast-1"
+    exit 1
+fi
+
 echo "✅ POWER_AUTOMATE_WEBHOOK_URL を .env から読み込みました"
 echo "✅ POWER_AUTOMATE_SECURITY_TOKEN を .env から読み込みました"
 echo "✅ AGENTCORE_MEMORY_ID を .env から読み込みました"
-ENV_ARGS="--env POWER_AUTOMATE_WEBHOOK_URL=$WEBHOOK_URL --env POWER_AUTOMATE_SECURITY_TOKEN=$SECURITY_TOKEN --env AGENTCORE_MEMORY_ID=$MEMORY_ID"
+echo "✅ BEDROCK_MODEL_ID を .env から読み込みました"
+echo "✅ BEDROCK_REGION を .env から読み込みました"
+ENV_ARGS="--env POWER_AUTOMATE_WEBHOOK_URL=$WEBHOOK_URL --env POWER_AUTOMATE_SECURITY_TOKEN=$SECURITY_TOKEN --env AGENTCORE_MEMORY_ID=$MEMORY_ID --env BEDROCK_MODEL_ID=$BEDROCK_MODEL_ID --env BEDROCK_REGION=$BEDROCK_REGION"
 
 # AgentCore ディレクトリに移動
 cd app/agentcore

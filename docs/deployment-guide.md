@@ -24,6 +24,8 @@ EventBridge Scheduler → Lambda Function → AgentCore Runtime → Bedrock Mode
 
 | 変数名                          | 説明                                       | 例                                                                 |
 | ------------------------------- | ------------------------------------------ | ------------------------------------------------------------------ |
+| `BEDROCK_MODEL_ID`              | 使用する Bedrock モデル ID                 | `jp.anthropic.claude-sonnet-4-5-20250929-v1:0`                     |
+| `BEDROCK_REGION`                | Bedrock モデル呼び出しのリージョン         | `ap-northeast-1`                                                   |
 | `POWER_AUTOMATE_WEBHOOK_URL`    | Teams 連携用 Webhook URL                   | `https://prod-XX.japaneast.logic.azure.com/workflows/...`          |
 | `POWER_AUTOMATE_SECURITY_TOKEN` | Webhook URL 漏洩対策用セキュリティトークン | `cef26f0de574983a475345f2e3518abbd6472d102b5254384ef6912931f8a68f` |
 | `AGENTCORE_MEMORY_ID`           | ジャンル分散機能用 AgentCore Memory ID     | `CloudCoPassAgentMemory_1758470667-YvBRIT3DdL`                     |
@@ -40,6 +42,10 @@ echo $SECURITY_TOKEN
 
 # .envファイルの作成
 cat > .env << EOF
+# Bedrock モデル設定
+BEDROCK_MODEL_ID=jp.anthropic.claude-sonnet-4-5-20250929-v1:0
+BEDROCK_REGION=ap-northeast-1
+
 # Teams 連携（必須）
 POWER_AUTOMATE_WEBHOOK_URL=https://prod-XX.japaneast.logic.azure.com/workflows/YOUR-WORKFLOW-ID/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=YOUR-SIGNATURE
 
@@ -50,6 +56,13 @@ POWER_AUTOMATE_SECURITY_TOKEN=$SECURITY_TOKEN
 AGENTCORE_MEMORY_ID=CloudCoPassAgentMemory_XXXXXXXXX-XXXXXXXXXX
 EOF
 ```
+
+**Bedrock モデル設定の選択肢**:
+
+- `jp.anthropic.claude-sonnet-4-5-20250929-v1:0`: Claude Sonnet 4.5（JP Cross-Region、日本国内限定）
+- `us.anthropic.claude-sonnet-4-5-20250929-v1:0`: Claude Sonnet 4.5（US Cross-Region）
+- `global.anthropic.claude-sonnet-4-5-20250929-v1:0`: Claude Sonnet 4.5（Global、最高スループット）
+- `anthropic.claude-3-5-sonnet-20240620-v1:0`: Claude 3.5 Sonnet（ON_DEMAND）
 
 **重要**: 上記の例の値は実際には使用しないでください。必ず `openssl rand -hex 32` で生成した値を使用してください。
 

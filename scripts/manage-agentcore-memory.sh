@@ -7,9 +7,12 @@
 set -e
 
 # 設定
-REGION="us-east-1"
-# .envファイルから新しいMemory IDを読み込み
-source .env 2>/dev/null || true
+# .envファイルから設定を読み込み
+if [ -f .env ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
+
+REGION="${AWS_DEFAULT_REGION:-us-east-1}"
 MEMORY_ID="${AGENTCORE_MEMORY_ID:-CloudCoPassAgentMemory_1758807000-VM286QEJaJ}"
 SESSION_ID="AWS-SAP"
 ACTOR_ID="cloud-copass-agent"

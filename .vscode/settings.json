@@ -9,7 +9,7 @@
   "prettier.useEditorConfig": true,
 
   "kiroAgent.agentAutonomy": "Autopilot",
-  "kiroAgent.agentModelSelection": "claude-sonnet-4",
+  "kiroAgent.modelSelection": "claude-sonnet-4.5",
   "kiroAgent.trustedCommands": [
     "uv --version",
     "uvx --version",

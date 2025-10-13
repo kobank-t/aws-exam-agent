@@ -190,8 +190,8 @@ AccessDeniedException: User is not authorized to perform: bedrock:InvokeModelWit
 **診断:**
 
 ```bash
-# 使用しているモデルID確認
-grep -n "model_id\|MODEL_ID" app/agentcore/agent_main.py
+# 使用しているモデルID確認（.envファイル）
+grep "BEDROCK_MODEL_ID" .env
 
 # 利用可能なモデル確認
 aws bedrock list-foundation-models --region us-east-1 --profile $AWS_PROFILE
@@ -214,8 +214,8 @@ aws bedrock list-inference-profiles --region us-east-1 --profile $AWS_PROFILE
 2. **クロスリージョン推論の問題:**
 
    ```bash
-   # 直接モデルIDに変更（推論プロファイルを避ける）
-   # app/agentcore/agent_main.py の MODEL_ID を確認・修正
+   # .envファイルでモデルIDを変更（推論プロファイルを避ける）
+   # 例: BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v1:0
    ```
 
 3. **モデル利用権限の追加:**

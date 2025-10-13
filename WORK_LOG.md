@@ -10,11 +10,14 @@
 
 ### 現在の作業状況
 
-- **完了フェーズ**: タスク 12.1（試験リソース管理の改善）完了 ✅
-- **完了タスク**: exam_resources 統合・統一命名ルール適用・EXAM_TYPES 簡素化完了 ✅
+- **完了フェーズ**: Claude Sonnet 4.5 (US Cross-Region) 統合完了 ✅
+- **完了タスク**:
+  - Bedrock モデル設定の環境変数化（BEDROCK_MODEL_ID, BEDROCK_REGION）✅
+  - Claude Sonnet 4.5 (US Cross-Region) 設定・動作確認完了 ✅
+  - README.md 更新（推奨設定・注意事項追加）✅
 - **次回開始タスク**: タスク 12.2（品質評価カスタムツール基盤実装）から開始
 - **品質状況**: 57/57 テスト通過（100%）、全品質チェック 100% 達成
-- **デプロイ状況**: AgentCore 本番環境デプロイ完了、ジャンル分散機能運用中
+- **デプロイ状況**: AgentCore 本番環境デプロイ完了、Claude Sonnet 4.5 運用中
 
 ### 重要な技術的コンテキスト
 
@@ -25,6 +28,28 @@
 - **試験ガイド統合**: 16,235 文字の AWS SAP-C02 試験ガイドの動的読み込み・活用
 - **ジャンル分散機能**: AgentCore Memory を活用した学習分野の偏り解消機能
 - **Memory 管理**: `scripts/agentcore_memory/manage.py` による統合管理機能
+- **Claude Sonnet 4.5**: US Cross-Region Inference Profile による最新モデル活用
+
+#### Claude Sonnet 4.5 統合（2025 年 10 月 13 日）
+
+**背景・目的**:
+
+- Claude Sonnet 4.5 の最新機能を活用
+- 環境変数による柔軟なモデル・リージョン設定
+- 問題生成品質の向上
+
+**実装内容**:
+
+- **環境変数化**: `BEDROCK_MODEL_ID`, `BEDROCK_REGION` による柔軟な設定
+- **推奨モデル**: `us.anthropic.claude-sonnet-4-5-20250929-v1:0` (US Cross-Region)
+- **推奨リージョン**: `us-east-1`
+- **動作確認**: 問題生成・Teams 投稿の正常動作確認完了 ✅
+
+**技術的知見**:
+
+- **US Cross-Region Profile**: AgentCore CLI が生成するデフォルト IAM ポリシーで動作
+- **JP/Global Profile**: 追加の IAM 権限設定が必要（ターゲットリージョンへのアクセス権限）
+- **推奨設定**: US Profile を使用することで IAM 権限管理がシンプルに
 
 #### 設計完了機能（2025 年 9 月 27 日完了）
 
@@ -99,6 +124,19 @@
   - **EXAM_TYPES 簡素化**: 不要フィールド削除、`name` のみ保持
   - **テスト追加**: TestLoadSampleQuestions クラス実装完了
   - **品質保証**: 全テスト通過、ruff・mypy 100% 達成
+
+### Phase 6: Claude Sonnet 4.5 統合 (10/13)
+
+- ✅ **環境変数化**: Bedrock モデル設定の柔軟化
+  - `BEDROCK_MODEL_ID`: モデル ID の環境変数化
+  - `BEDROCK_REGION`: リージョンの環境変数化
+  - 複雑な MODEL_ID 辞書を削除、シンプルな実装に変更
+- ✅ **Claude Sonnet 4.5 設定**:
+  - モデル ID: `us.anthropic.claude-sonnet-4-5-20250929-v1:0` (US Cross-Region)
+  - リージョン: `us-east-1`
+  - AgentCore CLI デフォルト IAM ポリシーで動作確認完了
+- ✅ **動作確認完了**: 問題生成・Teams 投稿の正常動作確認 ✅
+- ✅ **README 更新**: 推奨設定・注意事項を追加、新規ユーザー向けガイド改善
 
 ## 🔗 詳細情報の参照先
 
@@ -191,4 +229,4 @@
 
 ---
 
-**最終更新**: 2025 年 9 月 27 日（タスク 12.1 試験リソース管理の改善完了）
+**最終更新**: 2025 年 10 月 13 日（Claude Sonnet 4.5 統合・動作確認完了）

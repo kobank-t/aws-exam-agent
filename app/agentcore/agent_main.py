@@ -148,16 +148,11 @@ def load_sample_questions(exam_type: str = "AWS-SAP") -> str:
         raise RuntimeError(f"サンプル問題ファイルの読み込みに失敗しました: {e}") from e
 
 
-# Bedrock基盤モデル（SCP制限対応: ON_DEMAND対応モデルはus.プレフィックスなし）
-MODEL_ID = {
-    # ON_DEMAND対応モデル（SCP制限回避）
-    "claude-3.5-sonnet": "anthropic.claude-3-5-sonnet-20240620-v1:0",
-    "nova-pro": "amazon.nova-pro-v1:0",
-    # INFERENCE_PROFILE のみ対応（SCP制限解除が必要）
-    "claude-3.5-sonnet-v2": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
-    "claude-3.7-sonnet": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
-    "claude-sonnet-4": "us.anthropic.claude-sonnet-4-20250514-v1:0",
-}
+# Bedrock設定（環境変数から取得）
+BEDROCK_MODEL_ID = os.getenv(
+    "BEDROCK_MODEL_ID", "jp.anthropic.claude-sonnet-4-5-20250929-v1:0"
+)
+BEDROCK_REGION = os.getenv("BEDROCK_REGION", "ap-northeast-1")
 
 
 class AgentInput(BaseModel):
@@ -238,8 +233,8 @@ try:
     with mcp_client:
         agent = Agent(
             model=BedrockModel(
-                model_id=MODEL_ID["claude-3.5-sonnet"],
-                region_name="us-east-1",  # バージニア北部に明示的に指定
+                model_id=BEDROCK_MODEL_ID,
+                region_name=BEDROCK_REGION,
                 boto_client_config=Config(
                     read_timeout=300,  # 5分（複数問題生成対応）
                     connect_timeout=60,  # 1分

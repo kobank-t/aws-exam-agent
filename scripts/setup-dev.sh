@@ -65,8 +65,19 @@ if [ ! -f ".env" ]; then
     echo "📝 .env ファイルを作成しています..."
     touch .env
     echo "# Cloud CoPassAgent 環境設定" >> .env
+    echo "# AWS設定" >> .env
     echo "# AWS_REGION=us-east-1" >> .env
-    echo "# TEAMS_WEBHOOK_URL=https://..." >> .env
+    echo "" >> .env
+    echo "# Bedrockモデル設定" >> .env
+    echo "# BEDROCK_MODEL_ID=jp.anthropic.claude-sonnet-4-5-20250929-v1:0" >> .env
+    echo "# BEDROCK_REGION=ap-northeast-1" >> .env
+    echo "" >> .env
+    echo "# Teams連携" >> .env
+    echo "# POWER_AUTOMATE_WEBHOOK_URL=https://..." >> .env
+    echo "# POWER_AUTOMATE_SECURITY_TOKEN=your-security-token" >> .env
+    echo "" >> .env
+    echo "# AgentCore Memory" >> .env
+    echo "# AGENTCORE_MEMORY_ID=your-memory-id" >> .env
     echo "✅ .env ファイルを作成しました（必要に応じて編集してください）"
 else
     echo "✅ .env ファイル存在確認"

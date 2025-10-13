@@ -47,6 +47,10 @@ cat > .env << EOF
 AWS_DEFAULT_REGION=us-east-1
 # AWS_PROFILE=sandbox  # 任意: 特定のプロファイルを使用する場合
 
+# Bedrock モデル設定
+BEDROCK_MODEL_ID=jp.anthropic.claude-sonnet-4-5-20250929-v1:0
+BEDROCK_REGION=ap-northeast-1
+
 # Teams 連携（必須）
 POWER_AUTOMATE_WEBHOOK_URL=https://prod-XX.japaneast.logic.azure.com/workflows/YOUR-WORKFLOW-ID/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=YOUR-SIGNATURE
 
@@ -54,6 +58,13 @@ POWER_AUTOMATE_WEBHOOK_URL=https://prod-XX.japaneast.logic.azure.com/workflows/Y
 POWER_AUTOMATE_SECURITY_TOKEN=$SECURITY_TOKEN
 EOF
 ```
+
+**Bedrock モデル設定の選択肢**:
+
+- `jp.anthropic.claude-sonnet-4-5-20250929-v1:0`: Claude Sonnet 4.5（JP Cross-Region、日本国内限定）
+- `us.anthropic.claude-sonnet-4-5-20250929-v1:0`: Claude Sonnet 4.5（US Cross-Region）
+- `global.anthropic.claude-sonnet-4-5-20250929-v1:0`: Claude Sonnet 4.5（Global、最高スループット）
+- `anthropic.claude-3-5-sonnet-20240620-v1:0`: Claude 3.5 Sonnet（ON_DEMAND）
 
 **重要**: 上記の例の値は実際には使用しないでください。必ず `openssl rand -hex 32` で生成した値を使用してください。
 

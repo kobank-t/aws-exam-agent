@@ -552,17 +552,24 @@ class TestConstants:
         assert isinstance(EXAM_TYPES["AWS-SAP"]["name"], str)
         assert len(EXAM_TYPES["AWS-SAP"]["name"]) > 0
 
-    def test_model_id_invariant(self) -> None:
+    def test_bedrock_config_invariant(self) -> None:
         """
-        不変条件: MODEL_ID の構造と内容が正しい
+        不変条件: BEDROCK_MODEL_ID と BEDROCK_REGION が正しく設定されている
         """
-        from app.agentcore.agent_main import MODEL_ID
+        from app.agentcore.agent_main import BEDROCK_MODEL_ID, BEDROCK_REGION
 
-        # 不変条件検証
-        assert isinstance(MODEL_ID, dict)
-        assert "claude-3.7-sonnet" in MODEL_ID
-        assert isinstance(MODEL_ID["claude-3.7-sonnet"], str)
-        assert MODEL_ID["claude-3.7-sonnet"].startswith("us.anthropic.claude")
+        # 不変条件検証: モデルIDが文字列で、適切な形式
+        assert isinstance(BEDROCK_MODEL_ID, str)
+        assert len(BEDROCK_MODEL_ID) > 0
+        assert (
+            "anthropic.claude" in BEDROCK_MODEL_ID or "amazon.nova" in BEDROCK_MODEL_ID
+        )
+
+        # 不変条件検証: リージョンが文字列で、適切な形式
+        assert isinstance(BEDROCK_REGION, str)
+        assert len(BEDROCK_REGION) > 0
+        # リージョンコードの形式チェック（例: us-east-1, ap-northeast-1）
+        assert "-" in BEDROCK_REGION
 
 
 class TestBusinessLogicContracts:
